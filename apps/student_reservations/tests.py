@@ -1,5 +1,7 @@
-from datetime import timedelta
+from datetime import timedelta, date
+from decimal import Decimal
 from django.test import TestCase, Client, RequestFactory
+from django.urls import reverse
 from django.utils import timezone
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.core.cache import cache
@@ -112,7 +114,7 @@ class StudentReservationBaseTestCase(TestCase):
         )
 
         # Default requested intervals
-        self.now = timezone.now()
+        self.now = timezone.localtime()
         self.t_start = self.now + timedelta(hours=2)
         self.t_end = self.t_start + timedelta(hours=2)
 
@@ -138,6 +140,7 @@ class StudentReservationLifecycleTestCase(StudentReservationBaseTestCase):
 
         self.assertEqual(res.status, StudentReservation.Status.PENDING)
         self.assertIsNone(res.asset)
+        self.assertEqual(len(res.lookup_token), 43)
         self.assertTrue(len(res.lookup_token) >= 32)
         self.assertEqual(res.student_id, '2024-10001')
         self.assertEqual(res.category, self.cat_av)
@@ -934,8 +937,8 @@ class StudentReservationFrontendViewTestCase(StudentReservationBaseTestCase):
             'contact_number': '09181234567',
             'category': self.cat_av.id,
             'equipment_type': 'HDMI Projector',
-            'requested_pickup': (timezone.now() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
-            'requested_return': (timezone.now() + timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M'),
+            'requested_pickup': (timezone.localtime() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
+            'requested_return': (timezone.localtime() + timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M'),
             'purpose': 'Marketing thesis oral defense in AVR',
             'room_venue': 'AVR Hall',
         }
@@ -1048,5 +1051,622 @@ class StudentReservationFrontendViewTestCase(StudentReservationBaseTestCase):
         self.assertTemplateUsed(response, 'student_reservations/partials/_availability_result.html')
         self.assertNotContains(response, '48 consecutive hours')
         self.assertContains(response, '3 / 3 Available')
+
+
+class StudentPortalUXSimplificationTestCase(StudentReservationBaseTestCase):
+    """
+    Comprehensive regression tests for Phase 2A Student Portal UX Simplification:
+    1. Mandatory inputs reduced (ID, Name, at least one contact method, Category, Pickup, Return, Purpose).
+    2. Optional inputs (Course/Section, Venue, Model preference) can be empty.
+    3. Purpose dropdown validation and conditional details.
+    4. Contact method validation (email-only, phone-only, rejecting missing contact).
+    5. Zero-stock category differentiation in catalog and availability checker.
+    6. Sensible Manila schedule defaults.
+    7. Phone-only and email-only confirmation and status lookup behavior.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client = Client()
+        self.pickup_str = (timezone.localtime() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M')
+        self.return_str = (timezone.localtime() + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M')
+
+        # Create zero-stock category (reservable, but 0 assets)
+        self.cat_zero = AssetCategory.objects.create(
+            code='DISP',
+            name='Display Equipment',
+            is_active=True,
+            is_reservable=True
+        )
+
+    def test_submission_with_email_only(self):
+        """Student can submit reservation using only an email address (no mobile number)."""
+        post_data = {
+            'student_id': '2024-11001',
+            'student_name': 'Maria Clara',
+            'course_year_section': '',
+            'email': 'm.clara@student.cba.edu',
+            'contact_number': '',
+            'category': self.cat_av.id,
+            'equipment_type': '',
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Class Presentation / Reporting',
+            'purpose_details': '',
+            'room_venue': '',
+        }
+        response = self.client.post('/student-reservations/request/', data=post_data)
+        self.assertEqual(response.status_code, 302)
+        res = StudentReservation.objects.get(student_id='2024-11001')
+        self.assertEqual(res.email, 'm.clara@student.cba.edu')
+        self.assertEqual(res.contact_number, '')
+        self.assertEqual(res.course_year_section, '')
+        self.assertEqual(res.room_venue, '')
+        self.assertEqual(res.equipment_type, '')
+        self.assertEqual(res.purpose, 'Class Presentation / Reporting')
+
+    def test_submission_with_phone_only(self):
+        """Student can submit reservation using only a mobile number (no email address)."""
+        post_data = {
+            'student_id': '2024-11002',
+            'student_name': 'Crisostomo Ibarra',
+            'course_year_section': '',
+            'email': '',
+            'contact_number': '09171234567',
+            'category': self.cat_av.id,
+            'equipment_type': '',
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Class Presentation / Reporting',
+            'purpose_details': '',
+            'room_venue': '',
+        }
+        response = self.client.post('/student-reservations/request/', data=post_data)
+        self.assertEqual(response.status_code, 302)
+        res = StudentReservation.objects.get(student_id='2024-11002')
+        self.assertEqual(res.contact_number, '09171234567')
+        self.assertEqual(res.email, '')
+
+    def test_submission_fails_without_any_contact_method(self):
+        """Submission is rejected when neither email nor mobile number is provided."""
+        post_data = {
+            'student_id': '2024-11003',
+            'student_name': 'Elias Salome',
+            'course_year_section': '',
+            'email': '',
+            'contact_number': '',
+            'category': self.cat_av.id,
+            'equipment_type': '',
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Class Presentation / Reporting',
+            'purpose_details': '',
+            'room_venue': '',
+        }
+        response = self.client.post('/student-reservations/request/', data=post_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please provide at least one contact method')
+
+    def test_purpose_other_requires_details(self):
+        """When 'Other' is chosen, purpose_details is required."""
+        post_data = {
+            'student_id': '2024-11004',
+            'student_name': 'Basilio Sisa',
+            'email': 'basilio@student.cba.edu',
+            'category': self.cat_av.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Other',
+            'purpose_details': '',
+        }
+        response = self.client.post('/student-reservations/request/', data=post_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Please briefly specify your activity purpose')
+
+    def test_purpose_other_formats_properly_with_details(self):
+        """When 'Other' is selected with details, stored purpose is 'Other: <details>'."""
+        post_data = {
+            'student_id': '2024-11005',
+            'student_name': 'Simoun Ibarra',
+            'email': 'simoun@student.cba.edu',
+            'category': self.cat_av.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Other',
+            'purpose_details': 'Inter-Collegiate Debate Championship',
+        }
+        response = self.client.post('/student-reservations/request/', data=post_data)
+        self.assertEqual(response.status_code, 302)
+        res = StudentReservation.objects.get(student_id='2024-11005')
+        self.assertEqual(res.purpose, 'Other: Inter-Collegiate Debate Championship')
+
+    def test_zero_stock_category_shows_not_currently_available(self):
+        """Categories with 0 total assets display 'Not currently available' and disabled CTA."""
+        response = self.client.get(
+            f'/student-reservations/check-availability/?pickup={self.pickup_str}&return={self.return_str}'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Display Equipment')
+        self.assertContains(response, 'Not currently available')
+        self.assertContains(response, '0 Units Tracked')
+
+    def test_confirmation_page_phone_only_user(self):
+        """Phone-only user sees tracking token, copy button, mobile number, and no SMS promise."""
+        res = student_services.submit_reservation(
+            student_id='2024-11006',
+            student_name='Isagani Rivera',
+            course_year_section='',
+            email='',
+            contact_number='09191112233',
+            category=self.cat_av,
+            requested_pickup=timezone.localtime() + timedelta(hours=2),
+            requested_return=timezone.localtime() + timedelta(hours=4),
+            purpose='Class Presentation / Reporting'
+        )
+        response = self.client.get(f'/student-reservations/confirmed/{res.lookup_token}/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Copy Token')
+        self.assertContains(response, res.lookup_token)
+        self.assertContains(response, '09191112233')
+        self.assertContains(response, 'No automated SMS or email notification is sent')
+        # Does not show empty course/section label
+        self.assertNotContains(response, '<dt class="col-sm-4 text-secondary">Course &amp; Section:</dt>')
+
+    def test_status_lookup_masks_email_and_phone_without_fallback_bug(self):
+        """Status lookup renders masked contact without hardcoded '0917****' for email-only users."""
+        res = student_services.submit_reservation(
+            student_id='2024-11007',
+            student_name='Paulita Gomez',
+            course_year_section='',
+            email='paulita.gomez@student.cba.edu',
+            contact_number='',
+            category=self.cat_av,
+            requested_pickup=timezone.localtime() + timedelta(hours=2),
+            requested_return=timezone.localtime() + timedelta(hours=4),
+            purpose='Class Presentation / Reporting'
+        )
+        response = self.client.get(f'/student-reservations/lookup/{res.lookup_token}/')
+        self.assertEqual(response.status_code, 200)
+        # Should NOT contain hardcoded fallback 0917****
+        self.assertNotContains(response, '0917****')
+        self.assertContains(response, 'pa***z@student.cba.edu')
+
+    def test_sensible_default_schedule_helper(self):
+        """get_sensible_default_schedule() returns office hours on a weekday."""
+        from apps.student_reservations.views import get_sensible_default_schedule
+        pickup, ret = get_sensible_default_schedule()
+        self.assertTrue(pickup < ret)
+        # Weekday check: Monday (0) to Friday (4)
+        self.assertIn(pickup.weekday(), [0, 1, 2, 3, 4])
+        # Office hour check (between 8am and 5pm)
+        self.assertGreaterEqual(pickup.hour, 8)
+        self.assertLessEqual(ret.hour, 17)
+
+
+class EquipmentTypeSelectionAndAllocationTestCase(StudentReservationBaseTestCase):
+    """
+    Comprehensive test suite for Phase 2A Equipment Type Selection & Allocation (Priority 1):
+    - Normalized EquipmentType model constraints and category integrity
+    - Server-side validation of category/type dependencies
+    - Strict Custodian allocation enforcement (rejection of mismatches and unassigned units)
+    - Legacy reservation backward compatibility
+    - Dynamic availability filtering by specific equipment type
+    - Equipment Type JSON API endpoint
+    """
+
+    def setUp(self):
+        super().setUp()
+        from apps.inventory.models import EquipmentType
+        # Create Equipment Types under cat_av
+        self.type_projector = EquipmentType.objects.create(
+            category=self.cat_av,
+            name='Multimedia Projector',
+            description='LCD/DLP video projector',
+            is_active=True
+        )
+        self.type_speaker = EquipmentType.objects.create(
+            category=self.cat_av,
+            name='Active Speaker',
+            description='Portable sound system',
+            is_active=True
+        )
+
+        # Create Category IT and Equipment Type under cat_it
+        self.cat_it = AssetCategory.objects.create(
+            code='IT',
+            name='Information Technology',
+            is_active=True,
+            is_reservable=True
+        )
+        self.type_laptop = EquipmentType.objects.create(
+            category=self.cat_it,
+            name='Laptop Computer',
+            description='Windows laptop',
+            is_active=True
+        )
+
+        # Assets with assigned equipment types
+        self.asset_proj1 = Asset.objects.create(
+            property_number='PROP-PRJ-01',
+            item_name='Epson Projector 1',
+            category=self.cat_av,
+            equipment_type=self.type_projector,
+            condition=Asset.Condition.GOOD,
+            status=Asset.Status.AVAILABLE,
+            is_reservable=True,
+            department=self.dept_cba,
+            current_location=self.loc_office,
+            acquisition_cost=Decimal('25000.00'),
+            acquisition_date=date(2025, 1, 1),
+            created_by=self.custodian_user
+        )
+        self.asset_speaker1 = Asset.objects.create(
+            property_number='PROP-SPK-01',
+            item_name='Sony Speaker 1',
+            category=self.cat_av,
+            equipment_type=self.type_speaker,
+            condition=Asset.Condition.GOOD,
+            status=Asset.Status.AVAILABLE,
+            is_reservable=True,
+            department=self.dept_cba,
+            current_location=self.loc_office,
+            acquisition_cost=Decimal('15000.00'),
+            acquisition_date=date(2025, 1, 1),
+            created_by=self.custodian_user
+        )
+        # Asset with unassigned equipment type (legacy inventory)
+        self.asset_unassigned = Asset.objects.create(
+            property_number='PROP-UNASSIGNED-01',
+            item_name='Generic AV Device',
+            category=self.cat_av,
+            equipment_type=None,
+            condition=Asset.Condition.GOOD,
+            status=Asset.Status.AVAILABLE,
+            is_reservable=True,
+            department=self.dept_cba,
+            current_location=self.loc_office,
+            acquisition_cost=Decimal('5000.00'),
+            acquisition_date=date(2025, 1, 1),
+            created_by=self.custodian_user
+        )
+
+    def test_equipment_type_uniqueness_and_category_integrity(self):
+        """EquipmentType enforces uniqueness per category; Asset.clean() enforces category match."""
+        from apps.inventory.models import EquipmentType
+        from django.db import IntegrityError
+
+        # Duplicate name under same category must be rejected by unique constraint
+        from django.db import transaction
+        with transaction.atomic():
+            with self.assertRaises(IntegrityError):
+                EquipmentType.objects.create(
+                    category=self.cat_av,
+                    name='Multimedia Projector'
+                )
+
+        # Same name under different category is permitted
+        other_proj = EquipmentType.objects.create(
+            category=self.cat_it,
+            name='Multimedia Projector'
+        )
+        self.assertEqual(other_proj.name, 'Multimedia Projector')
+
+        # Asset cannot be assigned an equipment type belonging to a different category
+        invalid_asset = Asset(
+            property_number='PROP-INVALID-01',
+            item_name='Mismatched Asset',
+            category=self.cat_av,
+            equipment_type=self.type_laptop,  # Belongs to cat_it, not cat_av
+            created_by=self.custodian_user
+        )
+        with self.assertRaises(ValidationError) as ctx:
+            invalid_asset.clean()
+        self.assertIn("does not match asset category", str(ctx.exception))
+
+    def test_public_form_requires_equipment_type_when_category_has_types(self):
+        """Form rejects submission without equipment_type_ref when category has active types."""
+        from apps.student_reservations.forms import PublicStudentReservationForm
+        form_data = {
+            'student_id': '2023-11001',
+            'student_name': 'Test Student',
+            'email': 'student@cba.edu',
+            'category': self.cat_av.id,
+            'equipment_type_ref': '',  # Omitted
+            'requested_pickup': (timezone.localtime() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
+            'requested_return': (timezone.localtime() + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M'),
+            'purpose': 'Class Presentation / Reporting',
+        }
+        form = PublicStudentReservationForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('equipment_type_ref', form.errors)
+        self.assertIn("Please select a specific equipment type", form.errors['equipment_type_ref'][0])
+
+    def test_public_form_rejects_mismatched_category_equipment_type(self):
+        """Form rejects equipment_type_ref that belongs to another category."""
+        from apps.student_reservations.forms import PublicStudentReservationForm
+        form_data = {
+            'student_id': '2023-11002',
+            'student_name': 'Test Student',
+            'email': 'student@cba.edu',
+            'category': self.cat_av.id,
+            'equipment_type_ref': self.type_laptop.id,  # Laptop belongs to cat_it
+            'requested_pickup': (timezone.localtime() + timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M'),
+            'requested_return': (timezone.localtime() + timedelta(hours=4)).strftime('%Y-%m-%dT%H:%M'),
+            'purpose': 'Class Presentation / Reporting',
+        }
+        form = PublicStudentReservationForm(data=form_data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('equipment_type_ref', form.errors)
+
+    def test_submit_reservation_with_equipment_type_ref(self):
+        """Submitting reservation with equipment_type_ref stores FK and populates text field."""
+        res = student_services.submit_reservation(
+            student_id='2023-11003',
+            student_name='Clara Santos',
+            course_year_section='BSBA 3-A',
+            email='clara@cba.edu',
+            contact_number='09171234567',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Class Presentation / Reporting',
+            equipment_type_ref=self.type_projector
+        )
+        self.assertEqual(res.equipment_type_ref, self.type_projector)
+        self.assertEqual(res.equipment_type, 'Multimedia Projector')
+
+    def test_custodian_approval_succeeds_when_asset_type_matches(self):
+        """Custodian approval succeeds when physical asset matches reservation equipment_type_ref."""
+        res = student_services.submit_reservation(
+            student_id='2023-11004',
+            student_name='Basilio Rizal',
+            course_year_section='BSBA 4-B',
+            email='basilio@cba.edu',
+            contact_number='09171234568',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Thesis Defense',
+            equipment_type_ref=self.type_projector
+        )
+        approved_res = student_services.approve_reservation(
+            reservation=res,
+            asset=self.asset_proj1,
+            reviewed_by=self.custodian_user
+        )
+        self.assertEqual(approved_res.status, StudentReservation.Status.APPROVED)
+        self.assertEqual(approved_res.asset, self.asset_proj1)
+
+    def test_custodian_approval_rejected_when_asset_has_different_type(self):
+        """Custodian approval is rejected if asset has a different equipment type in the same category."""
+        res = student_services.submit_reservation(
+            student_id='2023-11005',
+            student_name='Isagani Gomez',
+            course_year_section='BSBA 2-A',
+            email='isagani@cba.edu',
+            contact_number='09171234569',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Seminar',
+            equipment_type_ref=self.type_projector
+        )
+        # Attempting to allocate Speaker for a Projector reservation
+        with self.assertRaises(ValidationError) as ctx:
+            student_services.approve_reservation(
+                reservation=res,
+                asset=self.asset_speaker1,
+                reviewed_by=self.custodian_user
+            )
+        self.assertIn("does not match requested equipment type", str(ctx.exception))
+        self.assertIn("Multimedia Projector", str(ctx.exception))
+
+    def test_custodian_approval_rejected_when_asset_has_no_type_assigned(self):
+        """Custodian approval is rejected if physical asset has no assigned type when reservation requires one."""
+        res = student_services.submit_reservation(
+            student_id='2023-11006',
+            student_name='Simoun Ibarra',
+            course_year_section='BSBA 4-A',
+            email='simoun@cba.edu',
+            contact_number='09171234570',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Presentation',
+            equipment_type_ref=self.type_projector
+        )
+        # Attempting to allocate unassigned physical asset
+        with self.assertRaises(ValidationError) as ctx:
+            student_services.approve_reservation(
+                reservation=res,
+                asset=self.asset_unassigned,
+                reviewed_by=self.custodian_user
+            )
+        self.assertIn("physical asset has no assigned equipment type", str(ctx.exception))
+        self.assertIn("Multimedia Projector", str(ctx.exception))
+
+    def test_legacy_reservation_compatibility(self):
+        """Legacy reservation without equipment_type_ref can be approved normally."""
+        # Create legacy reservation directly without equipment_type_ref
+        legacy_res = StudentReservation.objects.create(
+            student_id='2022-99001',
+            student_name='Legacy Student',
+            course_year_section='BSBA 1-A',
+            email='legacy@cba.edu',
+            contact_number='09181112233',
+            category=self.cat_av,
+            equipment_type_ref=None,
+            equipment_type='Multimedia Projector',
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Old Curriculum Reporting',
+            lookup_token='LEGACYTOKEN' + '0' * 52
+        )
+        # Approving with asset having matching equipment_type or name
+        approved = student_services.approve_reservation(
+            reservation=legacy_res,
+            asset=self.asset_proj1,
+            reviewed_by=self.custodian_user
+        )
+        self.assertEqual(approved.status, StudentReservation.Status.APPROVED)
+        self.assertEqual(approved.asset, self.asset_proj1)
+
+    def test_availability_calculation_per_equipment_type(self):
+        """Availability queries correctly filter by exact equipment_type_ref."""
+        # Both Projector and Speaker are initially available
+        avail_proj = student_services.get_available_assets_for_category(
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            equipment_type_ref=self.type_projector
+        )
+        self.assertEqual(len(avail_proj), 1)
+        self.assertEqual(avail_proj[0], self.asset_proj1)
+
+        avail_spk = student_services.get_available_assets_for_category(
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            equipment_type_ref=self.type_speaker
+        )
+        self.assertEqual(len(avail_spk), 1)
+        self.assertEqual(avail_spk[0], self.asset_speaker1)
+
+        # Book the Projector
+        res = student_services.submit_reservation(
+            student_id='2023-11007',
+            student_name='Student User',
+            course_year_section='BSBA 3-A',
+            email='user@cba.edu',
+            contact_number='09171234571',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Class Activity',
+            equipment_type_ref=self.type_projector
+        )
+        student_services.approve_reservation(res, self.asset_proj1, self.custodian_user)
+
+        # Projector availability is now 0 for that interval
+        avail_proj_after = student_services.get_available_assets_for_category(
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            equipment_type_ref=self.type_projector
+        )
+        self.assertEqual(len(avail_proj_after), 0)
+
+        # Speaker remains fully available (1 unit)
+        avail_spk_after = student_services.get_available_assets_for_category(
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            equipment_type_ref=self.type_speaker
+        )
+        self.assertEqual(len(avail_spk_after), 1)
+
+    def test_equipment_types_api_endpoint(self):
+        """API endpoint /student-reservations/api/equipment-types/ returns active types for category."""
+        url = reverse('student_reservations:api_equipment_types')
+        response = self.client.get(f"{url}?category={self.cat_av.id}")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        type_names = [t['name'] for t in data['equipment_types']]
+        self.assertIn('Multimedia Projector', type_names)
+        self.assertIn('Active Speaker', type_names)
+        self.assertNotIn('Laptop Computer', type_names)
+
+    def test_custodian_list_view_access_and_rendering(self):
+        """Custodian list view requires admin and displays student reservations table."""
+        url = reverse('student_reservations:custodian_list')
+        # Anonymous -> redirect to login
+        resp_anon = self.client.get(url)
+        self.assertEqual(resp_anon.status_code, 302)
+        self.assertIn('/accounts/login/', resp_anon.url)
+
+        # Faculty -> 403 Forbidden
+        self.client.force_login(self.faculty_user)
+        resp_faculty = self.client.get(url)
+        self.assertEqual(resp_faculty.status_code, 403)
+
+        # Custodian -> 200 OK with template
+        self.client.force_login(self.custodian_user)
+        resp_admin = self.client.get(url)
+        self.assertEqual(resp_admin.status_code, 200)
+        self.assertTemplateUsed(resp_admin, 'student_reservations/custodian_list.html')
+        self.assertContains(resp_admin, 'Student Reservations Queue')
+
+    def test_custodian_detail_view_approval_matching_asset(self):
+        """Custodian can approve reservation with matching equipment type asset via detail view."""
+        res = student_services.submit_reservation(
+            student_id='2024-99001',
+            student_name='Maria Santos',
+            email='maria@cba.edu',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Class Presentation',
+            equipment_type_ref=self.type_projector
+        )
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        # GET detail view
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'student_reservations/custodian_detail.html')
+        self.assertContains(resp, 'Multimedia Projector')
+
+        # POST approve with matching asset
+        post_resp = self.client.post(url, {
+            'action': 'approve',
+            'asset': self.asset_proj1.pk,
+            'grace_period_minutes': 15,
+            'remarks': 'Assigned Projector 1'
+        })
+        self.assertEqual(post_resp.status_code, 302)
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+        self.assertEqual(res.asset, self.asset_proj1)
+        self.assertEqual(res.reviewed_by, self.custodian_user)
+
+    def test_custodian_detail_view_approval_mismatched_asset_rejected(self):
+        """Custodian cannot approve reservation with asset of mismatched equipment type."""
+        res = student_services.submit_reservation(
+            student_id='2024-99002',
+            student_name='Jose Rizal',
+            email='jose@cba.edu',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Class Presentation',
+            equipment_type_ref=self.type_projector
+        )
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        # POST approve with speaker asset (mismatched type)
+        post_resp = self.client.post(url, {
+            'action': 'approve',
+            'asset': self.asset_speaker1.pk,
+            'grace_period_minutes': 15
+        })
+        # Stays pending, does not approve
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.PENDING)
+        self.assertIsNone(res.asset)
+
+    def test_lookup_instructions_43_character_copy(self):
+        """Lookup screen instructions and placeholder specify 43 characters, not 32."""
+        url = reverse('student_reservations:public_lookup_search')
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, '43-character')
+        self.assertNotContains(resp, '32-character')
+
+
+# Demonstration Data Seed Management Command Tests
+from .test_seed_demo_equipment import SeedDemoEquipmentHardenedTestCase
 
 
