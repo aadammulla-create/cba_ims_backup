@@ -99,6 +99,9 @@
     <a href="{% url 'borrowing:history_list' %}" class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'borrowing' and request.resolver_match.url_name == 'history_list' %}active{% endif %}">
         <i class="bi bi-archive"></i> <span>Loan History</span>
     </a>
+    <a href="{% url 'student_reservations:custodian_list' %}" class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'student_reservations' and 'custodian' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-mortarboard"></i> <span>Student Reservations</span>
+    </a>
     {% endif %}
     {% if request.user.employee_profile or request.user.role == 'FACULTY' %}
     <a href="{% url 'borrowing:my_borrowings' %}" class="nav-link {% if request.resolver_match and request.resolver_match.app_name == 'borrowing' and request.resolver_match.url_name == 'my_borrowings' %}active{% endif %}">

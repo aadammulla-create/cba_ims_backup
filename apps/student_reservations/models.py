@@ -37,14 +37,20 @@ class StudentReservation(models.Model):
     )
     course_year_section = models.CharField(
         max_length=100,
-        help_text="Academic course, year, and section (e.g. BSBA 3-A)."
+        blank=True,
+        default='',
+        help_text="Academic course, year, and section (e.g. BSBA 3-A). Optional."
     )
     email = models.EmailField(
-        help_text="Student contact email address."
+        blank=True,
+        default='',
+        help_text="Student contact email address. (Either email or phone is required)."
     )
     contact_number = models.CharField(
         max_length=50,
-        help_text="Student contact mobile/telephone number."
+        blank=True,
+        default='',
+        help_text="Student contact mobile/telephone number. (Either email or phone is required)."
     )
 
     # 2. Requested Equipment Information
@@ -53,6 +59,14 @@ class StudentReservation(models.Model):
         on_delete=models.PROTECT,
         related_name='student_reservations',
         help_text="Requested equipment category."
+    )
+    equipment_type_ref = models.ForeignKey(
+        'inventory.EquipmentType',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='student_reservations',
+        help_text="Structured reference to requested EquipmentType."
     )
     equipment_type = models.CharField(
         max_length=150,
@@ -247,14 +261,27 @@ class StudentReservation(models.Model):
                 raise ValidationError({
                     'requested_return': 'Requested return time must be strictly after the pickup time.'
                 })
+        if self.equipment_type_ref_id and self.category_id:
+            if self.equipment_type_ref.category_id != self.category_id:
+                raise ValidationError({
+                    'equipment_type_ref': f"Requested equipment type '{self.equipment_type_ref.name}' does not belong to category '{self.category.name}'."
+                })
         if self.asset and self.category_id and self.asset.category_id != self.category_id:
             raise ValidationError({
                 'asset': f"Allocated asset '{self.asset.asset_code}' does not belong to category '{self.category.name}'."
             })
+        if self.asset and self.equipment_type_ref_id:
+            if self.asset.equipment_type_id != self.equipment_type_ref_id:
+                asset_type_name = self.asset.equipment_type.name if self.asset.equipment_type else "None (Unassigned)"
+                raise ValidationError({
+                    'asset': f"Allocated asset '{self.asset.asset_code}' with type '{asset_type_name}' does not match requested equipment type '{self.equipment_type_ref.name}'."
+                })
 
     def save(self, *args, **kwargs):
         if not self.lookup_token:
             self.lookup_token = secrets.token_urlsafe(32)
+        if self.equipment_type_ref and not self.equipment_type:
+            self.equipment_type = self.equipment_type_ref.name
         super().save(*args, **kwargs)
 
     # Computed / Business Logic Properties

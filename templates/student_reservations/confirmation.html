@@ -34,13 +34,14 @@
                           style="font-size: 0.85rem; user-select: all;" x-text="token">{{ reservation.lookup_token }}</code>
                     <button type="button" class="btn btn-sm btn-primary-cba text-nowrap px-3"
                             @click="navigator.clipboard.writeText(token); copied = true; setTimeout(() => copied = false, 2500)">
-                        <span x-show="!copied"><i class="bi bi-clipboard me-1"></i> Copy</span>
+                        <span x-show="!copied"><i class="bi bi-clipboard me-1"></i> Copy Token</span>
                         <span x-show="copied" x-cloak><i class="bi bi-check-circle-fill me-1"></i> Copied!</span>
                     </button>
                 </div>
-                <small class="text-muted d-block mt-1.5" style="font-size: 0.725rem;">
-                    Students do not have accounts. You must use this secure token or your tracking link to check your approval status.
-                </small>
+                <div class="alert alert-warning py-1.5 px-2 mt-2 mb-0 d-flex align-items-center gap-1.5 small" style="font-size: 0.75rem;">
+                    <i class="bi bi-info-circle-fill text-warning flex-shrink-0"></i>
+                    <span><strong>Notice:</strong> No automated SMS or email notification is sent. Please copy or bookmark your tracking token now to check your reservation status.</span>
+                </div>
             </div>
 
             <!-- Direct Actions -->
@@ -67,13 +68,28 @@
                 <dt class="col-sm-4 text-secondary">Student ID Number:</dt>
                 <dd class="col-sm-8 font-mono text-dark">{{ reservation.student_id }}</dd>
 
+                {% if reservation.course_year_section %}
                 <dt class="col-sm-4 text-secondary">Course &amp; Section:</dt>
                 <dd class="col-sm-8 text-dark">{{ reservation.course_year_section }}</dd>
+                {% endif %}
+
+                {% if reservation.email %}
+                <dt class="col-sm-4 text-secondary">Email Address:</dt>
+                <dd class="col-sm-8 text-dark">{{ reservation.email }}</dd>
+                {% endif %}
+
+                {% if reservation.contact_number %}
+                <dt class="col-sm-4 text-secondary">Mobile Contact:</dt>
+                <dd class="col-sm-8 text-dark font-mono">{{ reservation.contact_number }}</dd>
+                {% endif %}
 
                 <dt class="col-sm-4 text-secondary">Equipment Category:</dt>
                 <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.category.name }}</dd>
 
-                {% if reservation.equipment_type %}
+                {% if reservation.equipment_type_ref %}
+                <dt class="col-sm-4 text-secondary">Equipment Type:</dt>
+                <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.equipment_type_ref.name }}</dd>
+                {% elif reservation.equipment_type %}
                 <dt class="col-sm-4 text-secondary">Requested Model/Type:</dt>
                 <dd class="col-sm-8 text-dark">{{ reservation.equipment_type }}</dd>
                 {% endif %}

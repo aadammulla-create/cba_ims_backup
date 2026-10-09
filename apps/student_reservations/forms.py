@@ -7,12 +7,30 @@ from apps.inventory.models import Asset, AssetCategory
 from .models import StudentReservation
 
 
+PURPOSE_CHOICES = [
+    ('', '-- Select Purpose of Use --'),
+    ('Class Presentation / Reporting', 'Class Presentation / Reporting'),
+    ('Department / College Seminar or Event', 'Department / College Seminar or Event'),
+    ('Student Organization Activity', 'Student Organization Activity'),
+    ('Thesis / Capstone / Research Defense', 'Thesis / Capstone / Research Defense'),
+    ('Other', 'Other (specify below)'),
+]
+
+
 class PublicStudentReservationForm(forms.ModelForm):
     """
-    Public reservation form for students.
+    Streamlined public reservation form for students.
     Students do not require accounts or passwords.
-    Applies strict server-side validation and input sanitation.
+    Requires only: ID, Name, Email OR Phone, Category, Pickup, Return, Purpose.
+    Optional fields (course/section, venue, equipment preference) placed in collapsible section.
     """
+    purpose_details = forms.CharField(
+        max_length=300,
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Please specify brief activity purpose...'}),
+        help_text="Required when 'Other' is selected."
+    )
+
     class Meta:
         model = StudentReservation
         fields = [
@@ -22,6 +40,7 @@ class PublicStudentReservationForm(forms.ModelForm):
             'email',
             'contact_number',
             'category',
+            'equipment_type_ref',
             'equipment_type',
             'requested_pickup',
             'requested_return',
@@ -31,16 +50,58 @@ class PublicStudentReservationForm(forms.ModelForm):
         widgets = {
             'requested_pickup': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'requested_return': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'purpose': forms.Textarea(attrs={'rows': 3}),
+            'purpose': forms.Select(choices=PURPOSE_CHOICES),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from apps.inventory.models import EquipmentType
         # Only expose active, reservable categories in the public catalog
         self.fields['category'].queryset = AssetCategory.objects.filter(
             is_active=True,
             is_reservable=True
         )
+
+        # Expose active equipment types
+        self.fields['equipment_type_ref'].queryset = EquipmentType.objects.filter(
+            is_active=True,
+            category__is_active=True,
+            category__is_reservable=True
+        ).select_related('category')
+        self.fields['equipment_type_ref'].required = False
+        self.fields['equipment_type_ref'].empty_label = "-- Select Equipment Type --"
+
+        # Filter equipment_type_ref queryset if category is already selected/bound
+        category_id = self.data.get('category') or self.initial.get('category')
+        if category_id:
+            try:
+                cat_pk = getattr(category_id, 'pk', category_id)
+                self.fields['equipment_type_ref'].queryset = self.fields['equipment_type_ref'].queryset.filter(
+                    category_id=cat_pk
+                )
+            except (ValueError, TypeError):
+                pass
+
+        # Make course/year/section, email, and contact_number optional on the individual field level;
+        # contact enforcement (email OR phone) is checked in clean().
+        self.fields['course_year_section'].required = False
+        self.fields['email'].required = False
+        self.fields['contact_number'].required = False
+        self.fields['room_venue'].required = False
+        self.fields['equipment_type'].required = False
+
+        # If existing purpose instance value doesn't match predefined choices, preserve it in details
+        initial_purpose = self.initial.get('purpose') or (self.instance.purpose if self.instance.pk else None)
+        if initial_purpose:
+            known_choices = [c[0] for c in PURPOSE_CHOICES if c[0]]
+            if initial_purpose not in known_choices:
+                # Value was entered freeform or with 'Other:'
+                if initial_purpose.startswith('Other: '):
+                    self.initial['purpose'] = 'Other'
+                    self.initial['purpose_details'] = initial_purpose[7:]
+                else:
+                    self.initial['purpose'] = 'Other'
+                    self.initial['purpose_details'] = initial_purpose
 
     def clean_student_id(self):
         val = self.cleaned_data.get('student_id', '').strip()
@@ -60,17 +121,26 @@ class PublicStudentReservationForm(forms.ModelForm):
         return val
 
     def clean_course_year_section(self):
-        val = self.cleaned_data.get('course_year_section', '').strip()
-        if not val or len(val) < 2:
-            raise ValidationError("Course, year, and section are required (e.g. BSBA 3-A).")
-        return val
+        val = self.cleaned_data.get('course_year_section', '')
+        return val.strip() if val else ''
+
+    def clean_email(self):
+        val = self.cleaned_data.get('email', '')
+        return val.strip().lower() if val else ''
 
     def clean_contact_number(self):
-        val = self.cleaned_data.get('contact_number', '').strip()
-        # Allows formats like 09171234567, +639171234567, 0917-123-4567
-        cleaned_phone = re.sub(r'[\s\-\(\)]', '', val)
+        val = self.cleaned_data.get('contact_number', '')
+        if not val:
+            return ''
+        cleaned_phone = re.sub(r'[\s\-\(\)]', '', val.strip())
         if not re.match(r'^\+?[0-9]{7,15}$', cleaned_phone):
             raise ValidationError("Please enter a valid mobile or phone number (e.g. 09171234567).")
+        return val.strip()
+
+    def clean_purpose(self):
+        val = self.cleaned_data.get('purpose', '').strip()
+        if not val:
+            raise ValidationError("Please select the purpose of equipment use.")
         return val
 
     def clean(self):
@@ -78,7 +148,27 @@ class PublicStudentReservationForm(forms.ModelForm):
         pickup = cleaned_data.get('requested_pickup')
         ret = cleaned_data.get('requested_return')
         category = cleaned_data.get('category')
+        email = cleaned_data.get('email', '')
+        contact = cleaned_data.get('contact_number', '')
+        purpose = cleaned_data.get('purpose', '')
+        purpose_details = cleaned_data.get('purpose_details', '').strip()
 
+        # Enforce at least one contact method (email OR phone)
+        if not email and not contact:
+            err_msg = "Please provide at least one contact method (email or mobile number)."
+            self.add_error('email', err_msg)
+            self.add_error('contact_number', err_msg)
+
+        # Handle Purpose dropdown + conditional 'Other' details
+        if purpose == 'Other':
+            if not purpose_details:
+                self.add_error('purpose_details', "Please briefly specify your activity purpose.")
+            else:
+                cleaned_data['purpose'] = f"Other: {purpose_details}"
+        elif purpose_details:
+            cleaned_data['purpose'] = f"{purpose} - {purpose_details}"
+
+        # Schedule validation
         if pickup and ret:
             if pickup >= ret:
                 self.add_error('requested_return', "Requested return time must be strictly after the pickup time.")
@@ -91,6 +181,18 @@ class PublicStudentReservationForm(forms.ModelForm):
         if category:
             if not getattr(category, 'is_reservable', True) or not getattr(category, 'is_active', True):
                 self.add_error('category', f"Category '{category.name}' is not currently available for reservations.")
+
+            from apps.inventory.models import EquipmentType
+            active_types = EquipmentType.objects.filter(category=category, is_active=True)
+            equipment_type_ref = cleaned_data.get('equipment_type_ref')
+            if active_types.exists():
+                if not equipment_type_ref:
+                    self.add_error('equipment_type_ref', f"Please select a specific equipment type for {category.name}.")
+                elif equipment_type_ref.category_id != category.id:
+                    self.add_error('equipment_type_ref', f"Selected equipment type does not belong to category '{category.name}'.")
+
+            if equipment_type_ref and not cleaned_data.get('equipment_type'):
+                cleaned_data['equipment_type'] = equipment_type_ref.name
 
         return cleaned_data
 
@@ -124,6 +226,7 @@ class CustodianApprovalForm(forms.Form):
             requested_pickup=reservation.requested_pickup,
             requested_return=reservation.requested_return,
             equipment_type=reservation.equipment_type,
+            equipment_type_ref=reservation.equipment_type_ref,
             exclude_student_reservation_id=reservation.pk
         )
         pks = [a.pk for a in available]

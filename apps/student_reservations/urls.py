@@ -12,6 +12,7 @@ urlpatterns = [
     path('confirmed/<str:token>/', views.PublicReservationConfirmationView.as_view(), name='public_confirmation'),
     path('lookup/', views.PublicReservationLookupView.as_view(), name='public_lookup_search'),
     path('lookup/<str:token>/', views.PublicReservationLookupView.as_view(), name='public_lookup'),
+    path('api/equipment-types/', views.EquipmentTypeLookupView.as_view(), name='api_equipment_types'),
 
     # Custodian office queue
     path('manage/', views.CustodianReservationListView.as_view(), name='custodian_list'),

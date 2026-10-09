@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Student Reservations Queue — CBA IMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Student Reservations</li>
+                </ol>
+            </nav>
+            <h1 class="h4 fw-bold text-dark mb-0">Student Reservations Queue</h1>
+            <p class="text-secondary small mb-0">Property Office management queue for student equipment requests.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'student_reservations:catalog' %}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Public Catalog
+            </a>
+            <a href="{% url 'student_reservations:public_request' %}" target="_blank" class="btn btn-sm btn-primary-cba">
+                <i class="bi bi-plus-circle me-1"></i> New Request
+            </a>
+        </div>
+    </div>
+
+    <!-- Metric / Filter Tabs -->
+    <div class="card mb-3">
+        <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="d-flex flex-wrap gap-1">
+                <a href="{% url 'student_reservations:custodian_list' %}" 
+                   class="btn btn-sm {% if not current_status %}btn-primary{% else %}btn-light text-secondary border{% endif %}">
+                    All <span class="badge {% if not current_status %}bg-white text-primary{% else %}bg-secondary text-white{% endif %} ms-1">{{ total_count }}</span>
+                </a>
+                <a href="{% url 'student_reservations:custodian_list' %}?status=PENDING" 
+                   class="btn btn-sm {% if current_status == 'PENDING' %}btn-warning text-dark fw-semibold{% else %}btn-light text-secondary border{% endif %}">
+                    <i class="bi bi-clock me-1"></i> Pending 
+                    <span class="badge {% if current_status == 'PENDING' %}bg-dark text-white{% else %}bg-warning text-dark{% endif %} ms-1">{{ pending_count }}</span>
+                </a>
+                <a href="{% url 'student_reservations:custodian_list' %}?status=APPROVED" 
+                   class="btn btn-sm {% if current_status == 'APPROVED' %}btn-info text-white fw-semibold{% else %}btn-light text-secondary border{% endif %}">
+                    <i class="bi bi-check2-circle me-1"></i> Approved 
+                    <span class="badge {% if current_status == 'APPROVED' %}bg-white text-info{% else %}bg-info text-white{% endif %} ms-1">{{ approved_count }}</span>
+                </a>
+                <a href="{% url 'student_reservations:custodian_list' %}?status=RELEASED" 
+                   class="btn btn-sm {% if current_status == 'RELEASED' %}btn-success fw-semibold{% else %}btn-light text-secondary border{% endif %}">
+                    <i class="bi bi-box-arrow-right me-1"></i> Released 
+                    <span class="badge {% if current_status == 'RELEASED' %}bg-white text-success{% else %}bg-success text-white{% endif %} ms-1">{{ released_count }}</span>
+                </a>
+                <a href="{% url 'student_reservations:custodian_list' %}?status=OVERDUE" 
+                   class="btn btn-sm {% if current_status == 'OVERDUE' %}btn-danger fw-semibold{% else %}btn-light text-secondary border{% endif %}">
+                    <i class="bi bi-exclamation-triangle me-1"></i> Overdue 
+                    <span class="badge {% if current_status == 'OVERDUE' %}bg-white text-danger{% else %}bg-danger text-white{% endif %} ms-1">{{ overdue_count }}</span>
+                </a>
+            </div>
+
+            <!-- Search Form -->
+            <form method="get" class="d-flex gap-1" style="max-width: 280px; width: 100%;">
+                {% if current_status %}
+                <input type="hidden" name="status" value="{{ current_status }}">
+                {% endif %}
+                <div class="input-group input-group-sm">
+                    <input type="text" name="q" class="form-control" placeholder="Search student or token..." value="{{ search_query }}">
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Reservations Table -->
+    <div class="card shadow-xs">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary small text-uppercase" style="font-size: 0.75rem;">
+                    <tr>
+                        <th class="ps-3" style="width: 70px;">ID</th>
+                        <th>Student Requester</th>
+                        <th>Requested Equipment</th>
+                        <th>Schedule</th>
+                        <th>Allocated Asset</th>
+                        <th>Status</th>
+                        <th class="text-end pe-3" style="width: 130px;">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-light-subtle">
+                    {% for res in reservations %}
+                    <tr>
+                        <td class="ps-3 fw-bold text-dark font-mono small">
+                            #{{ res.pk }}
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-dark">{{ res.student_name }}</div>
+                            <div class="text-secondary small font-mono">{{ res.student_id }}</div>
+                            {% if res.course_year_section %}
+                            <div class="text-muted" style="font-size: 0.725rem;">{{ res.course_year_section }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-light text-secondary border font-sans" style="font-size: 0.725rem;">
+                                    {{ res.category.name }}
+                                </span>
+                                {% if res.equipment_type_ref %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-sans" style="font-size: 0.725rem;">
+                                    {{ res.equipment_type_ref.name }}
+                                </span>
+                                {% elif res.equipment_type %}
+                                <span class="badge bg-light text-dark border font-sans" style="font-size: 0.725rem;">
+                                    {{ res.equipment_type }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted text-truncate mt-0.5" style="font-size: 0.75rem; max-width: 220px;" title="{{ res.purpose }}">
+                                {{ res.purpose }}
+                            </div>
+                        </td>
+                        <td class="small">
+                            <div><strong class="text-secondary">Pickup:</strong> {{ res.requested_pickup|date:"M d, Y h:i A" }}</div>
+                            <div><strong class="text-secondary">Return:</strong> {{ res.requested_return|date:"M d, Y h:i A" }}</div>
+                        </td>
+                        <td class="small">
+                            {% if res.asset %}
+                            <div class="fw-semibold text-dark font-mono">{{ res.asset.asset_code }}</div>
+                            <div class="text-secondary" style="font-size: 0.725rem;">{{ res.asset.item_name }}</div>
+                            {% else %}
+                            <span class="text-muted fst-italic">None (Pending)</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if res.status == 'PENDING' %}
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                <i class="bi bi-clock me-1"></i> PENDING
+                            </span>
+                            {% elif res.status == 'APPROVED' %}
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                <i class="bi bi-check-circle me-1"></i> APPROVED
+                            </span>
+                            {% elif res.status == 'RELEASED' %}
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> RELEASED
+                            </span>
+                            {% elif res.status == 'RETURNED' %}
+                            <span class="badge bg-light text-secondary border">
+                                <i class="bi bi-archive me-1"></i> RETURNED
+                            </span>
+                            {% elif res.status == 'OVERDUE' %}
+                            <span class="badge bg-danger text-white">
+                                <i class="bi bi-exclamation-octagon me-1"></i> OVERDUE
+                            </span>
+                            {% elif res.status == 'CANCELLED' %}
+                            <span class="badge bg-light text-muted border">
+                                CANCELLED
+                            </span>
+                            {% elif res.status == 'REJECTED' %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                REJECTED
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary text-white">{{ res.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <a href="{% url 'student_reservations:custodian_detail' pk=res.pk %}" class="btn btn-sm btn-outline-primary py-1 px-2.5">
+                                <i class="bi bi-eye me-1"></i> Manage
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            No student reservations found matching this criteria.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="card-footer bg-white border-top border-light-subtle d-flex justify-content-between align-items-center py-2 px-3 small">
+            <span class="text-secondary">Showing page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}">Previous</a></li>
+                {% endif %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}">Next</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

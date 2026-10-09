@@ -1,61 +1,134 @@
 {% if error %}
-<div class="alert alert-warning py-2 px-3 mb-0 d-flex align-items-center gap-2 small" role="alert">
-    <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
+<div class="alert alert-warning py-2.5 px-3 mb-0 d-flex align-items-center gap-2 small rounded border" role="alert">
+    <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0 fs-5"></i>
     <div>{{ error }}</div>
 </div>
 {% else %}
-<div class="schedule-check-summary p-2.5 bg-light rounded border border-light-subtle">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+<div class="schedule-check-summary p-2.5 bg-light rounded border border-light-subtle mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div class="small text-secondary">
-            <i class="bi bi-clock-history me-1 text-primary"></i>
+            <i class="bi bi-clock-history me-1.5 text-primary"></i>
             Schedule Checked: <strong class="text-dark">{{ pickup_display }}</strong> &rarr; <strong class="text-dark">{{ return_display }}</strong>
         </div>
         <span class="badge bg-white text-secondary border font-mono small">
             Duration: {{ duration_hours }} hr{{ duration_hours|pluralize }}
         </span>
     </div>
+</div>
 
-    <div class="row g-2">
-        {% for item in availability_data %}
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="p-2.5 rounded bg-white border border-light-subtle h-100 d-flex flex-column justify-content-between">
+<div class="row g-3">
+    {% for item in catalog_cards %}
+    <div class="col-12 col-md-6">
+        <div class="card h-100 border border-light-subtle shadow-xs" style="border-radius: 8px;">
+            <div class="card-body p-3 p-md-3.5 d-flex flex-column justify-content-between">
                 <div>
-                    <div class="d-flex justify-content-between align-items-start gap-1 mb-1">
-                        <span class="fw-bold text-dark small">{{ item.category.name }}</span>
-                        {% if item.available_count > 0 %}
-                            <span class="badge" style="background-color: var(--cba-status-available-bg); color: var(--cba-status-available-text); border: 1px solid var(--cba-status-available-border); font-size: 0.7rem;">
-                                <i class="bi bi-check-circle-fill me-1"></i>{{ item.available_count }} / {{ item.total_count }} Available
+                    <!-- Category Header with Compact Icon Badge & Status -->
+                    <div class="d-flex align-items-start gap-2.5 mb-2.5">
+                        <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0"
+                             style="width: 44px; height: 44px; background-color: var(--cba-primary-light); color: var(--cba-primary); border: 1px solid rgba(29, 78, 216, 0.15);">
+                            {% if item.sample_image_url %}
+                                <img src="{{ item.sample_image_url }}" alt="{{ item.category.name }}" class="img-fluid rounded" style="max-height: 38px; object-fit: contain;">
+                            {% else %}
+                                <i class="{{ item.icon|default:'bi bi-projector' }} fs-4"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-1.5 mb-1">
+                                <h3 class="h6 fw-bold text-dark mb-0 text-truncate" title="{{ item.category.name }}">{{ item.category.name }}</h3>
+                                {% if item.is_zero_stock %}
+                                    <span class="badge bg-light text-secondary border font-sans" style="font-size: 0.7rem;">
+                                        Not currently available
+                                    </span>
+                                {% elif item.is_fully_booked %}
+                                    <span class="badge" style="background-color: var(--cba-status-warning-bg); color: var(--cba-status-warning-text); border: 1px solid var(--cba-status-warning-border); font-size: 0.7rem;">
+                                        <i class="bi bi-clock-history me-1"></i>Fully Booked
+                                    </span>
+                                {% else %}
+                                    <span class="badge" style="background-color: var(--cba-status-available-bg); color: var(--cba-status-available-text); border: 1px solid var(--cba-status-available-border); font-size: 0.7rem;">
+                                        <i class="bi bi-check-circle-fill me-1"></i>{{ item.available_units }} / {{ item.total_units }} Available
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.675rem;">
+                                {{ item.total_units }} Unit{{ item.total_units|pluralize }} Tracked
                             </span>
-                        {% else %}
-                            <span class="badge" style="background-color: var(--cba-status-critical-bg); color: var(--cba-status-critical-text); border: 1px solid var(--cba-status-critical-border); font-size: 0.7rem;">
-                                <i class="bi bi-x-circle-fill me-1"></i>Fully Booked
-                            </span>
-                        {% endif %}
+                        </div>
                     </div>
-                    <div class="text-muted small" style="font-size: 0.75rem;">
-                        {{ item.sample_models|default:"Standard CBA Inventory Items" }}
+
+                    <p class="text-secondary small mb-2.5" style="font-size: 0.8125rem; line-height: 1.45;">
+                        {{ item.category.description|default:"Standard instructional equipment managed by the CBA Property Office." }}
+                    </p>
+
+                    {% if item.equipment_types %}
+                    <!-- Equipment Types Live Availability Breakdown -->
+                    <div class="bg-light p-2.5 rounded border border-light-subtle mb-3">
+                        <div class="text-muted text-uppercase fw-semibold mb-1.5" style="font-size: 0.65rem; letter-spacing: 0.05em;">
+                            Equipment Types &amp; Availability:
+                        </div>
+                        <div class="d-flex flex-column gap-1.5">
+                            {% for et in item.equipment_types %}
+                            <div class="d-flex align-items-center justify-content-between p-1.5 px-2 rounded bg-white border border-light-subtle small">
+                                <span class="fw-medium text-dark" style="font-size: 0.8rem;">{{ et.name }}</span>
+                                <div class="d-flex align-items-center gap-1.5">
+                                    {% if et.available_units > 0 %}
+                                        <span class="badge" style="background-color: var(--cba-status-available-bg); color: var(--cba-status-available-text); border: 1px solid var(--cba-status-available-border); font-size: 0.675rem;">
+                                            {{ et.available_units }} / {{ et.total_units }} avail
+                                        </span>
+                                        <a href="{% url 'student_reservations:public_request' %}?category={{ item.category.id }}&type={{ et.id }}&pickup={{ pickup_raw }}&return={{ return_raw }}"
+                                           class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.725rem; line-height: 1.5;">
+                                            Select
+                                        </a>
+                                    {% else %}
+                                        <span class="badge" style="background-color: var(--cba-status-warning-bg); color: var(--cba-status-warning-text); border: 1px solid var(--cba-status-warning-border); font-size: 0.675rem;">
+                                            0 / {{ et.total_units }} avail
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
                     </div>
+                    {% else %}
+                    <!-- Office Units / Models Summary -->
+                    <div class="bg-light p-2.5 rounded border border-light-subtle mb-3">
+                        <div class="text-muted text-uppercase fw-semibold mb-1" style="font-size: 0.65rem; letter-spacing: 0.05em;">
+                            Office Inventory &amp; Available Models:
+                        </div>
+                        <div class="fw-medium text-dark small" style="font-size: 0.775rem; line-height: 1.4;">
+                            {{ item.models_preview }}
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
 
-                <div class="mt-2 pt-2 border-top border-light-subtle d-flex justify-content-between align-items-center">
-                    <small class="text-secondary" style="font-size: 0.725rem;">
-                        Total inventory: {{ item.total_count }} unit{{ item.total_count|pluralize }}
-                    </small>
-                    {% if item.available_count > 0 %}
-                    <a href="{% url 'student_reservations:public_request' %}?category={{ item.category.id }}&pickup={{ pickup_raw }}&return={{ return_raw }}" class="btn btn-sm btn-primary-cba py-1 px-2" style="font-size: 0.75rem;">
-                        Reserve <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
+                <!-- Primary Action -->
+                <div>
+                    {% if item.is_zero_stock %}
+                        <button type="button" class="btn btn-sm btn-light border text-muted w-100 py-1.5 disabled" disabled aria-disabled="true" style="font-size: 0.8125rem;">
+                            <i class="bi bi-slash-circle me-1"></i> Unavailable
+                        </button>
+                    {% elif item.is_fully_booked %}
+                        <button type="button" class="btn btn-sm btn-outline-secondary w-100 py-1.5" onclick="document.getElementById('pickup-input').focus();" style="font-size: 0.8125rem;">
+                            <i class="bi bi-calendar-x me-1"></i> Fully Booked (Change Time)
+                        </button>
                     {% else %}
-                    <span class="text-muted small" style="font-size: 0.75rem;">Try another time</span>
+                        <a href="{% url 'student_reservations:public_request' %}?category={{ item.category.id }}&pickup={{ pickup_raw }}&return={{ return_raw }}"
+                           class="btn btn-sm btn-primary-cba w-100 py-1.5" style="font-size: 0.8125rem;">
+                            <i class="bi bi-calendar-plus me-1.5"></i> Reserve {{ item.category.name }} &rarr;
+                        </a>
                     {% endif %}
                 </div>
             </div>
         </div>
-        {% empty %}
-        <div class="col-12 text-center py-2 text-muted small">
-            No equipment categories configured.
-        </div>
-        {% endfor %}
     </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="bg-white p-5 rounded border border-light-subtle text-center text-muted">
+            <i class="bi bi-inbox fs-1 text-secondary mb-2 d-block"></i>
+            <h5 class="fw-bold text-dark">No Equipment Categories Available</h5>
+            <p class="small mb-0">The Property Custodian has not marked any equipment categories as reservable yet.</p>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endif %}

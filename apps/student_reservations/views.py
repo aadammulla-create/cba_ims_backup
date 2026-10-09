@@ -1,4 +1,5 @@
 from datetime import timedelta
+from django.db import models
 from django.views import View
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -34,81 +35,148 @@ class CustodianRequiredMixin(LoginRequiredMixin):
 # PUBLIC STUDENT VIEWS — NO LOGIN REQUIRED
 # ==============================================================================
 
+def get_sensible_default_schedule():
+    """
+    Computes a sensible default pickup and return schedule during active office hours in Asia/Manila.
+    - Considers weekdays (Monday=0 to Friday=4).
+    - If today is a weekend, suggests next Monday morning session (8:00 AM - 12:00 PM).
+    - If weekday before 8:00 AM: suggests today 8:00 AM - 12:00 PM.
+    - If weekday 8:00 AM - 12:00 PM: suggests today 1:00 PM - 5:00 PM.
+    - If weekday 12:00 PM - 3:00 PM: suggests today (next round hour) to 5:00 PM.
+    - If weekday after 3:00 PM: suggests next weekday 8:00 AM - 12:00 PM.
+    """
+    now = timezone.localtime()
+    weekday = now.weekday()  # 0=Mon, ..., 6=Sun
+    hour = now.hour
+
+    if weekday in (5, 6):  # Saturday or Sunday -> suggest next Monday
+        days_ahead = 7 - weekday
+        target_date = (now + timedelta(days=days_ahead)).date()
+        pickup = timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time().replace(hour=8)))
+        ret = timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time().replace(hour=12)))
+    else:  # Monday to Friday
+        if hour < 8:
+            pickup = now.replace(hour=8, minute=0, second=0, microsecond=0)
+            ret = now.replace(hour=12, minute=0, second=0, microsecond=0)
+        elif 8 <= hour < 12:
+            pickup = now.replace(hour=13, minute=0, second=0, microsecond=0)
+            ret = now.replace(hour=17, minute=0, second=0, microsecond=0)
+        elif 12 <= hour < 15:
+            pickup = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+            ret = now.replace(hour=17, minute=0, second=0, microsecond=0)
+        else:  # After 3:00 PM -> suggest next weekday
+            days_ahead = 3 if weekday == 4 else 1  # Jump to Monday if Friday
+            target_date = (now + timedelta(days=days_ahead)).date()
+            pickup = timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time().replace(hour=8)))
+            ret = timezone.make_aware(timezone.datetime.combine(target_date, timezone.datetime.min.time().replace(hour=12)))
+
+    return pickup, ret
+
+
+def _build_catalog_cards(categories, pickup_dt, return_dt):
+    """Builds unified category cards reflecting inventory and availability for selected schedule."""
+    catalog_cards = []
+    for cat in categories:
+        tot_assets = services.get_reservable_assets(category=cat)
+        total_count = tot_assets.count()
+        avail_assets = services.get_available_assets_for_category(cat, pickup_dt, return_dt)
+        avail_count = len(avail_assets)
+
+        models_list = list(tot_assets.exclude(model='').values_list('model', flat=True).distinct()[:3])
+        models_preview = ", ".join(models_list) if models_list else (
+            "Standard CBA Instructional Inventory" if total_count > 0 else "No units registered in service"
+        )
+
+        # Build equipment types breakdown under this category
+        equipment_types_data = []
+        active_types = cat.equipment_types.filter(is_active=True).order_by('name')
+        for eq_type in active_types:
+            type_assets = tot_assets.filter(equipment_type=eq_type)
+            type_total = type_assets.count()
+            type_avail = len(services.get_available_assets_for_category(
+                cat, pickup_dt, return_dt, equipment_type_ref=eq_type
+            ))
+            equipment_types_data.append({
+                'id': eq_type.id,
+                'name': eq_type.name,
+                'total_units': type_total,
+                'available_units': type_avail,
+                'is_available': type_avail > 0,
+            })
+
+        asset_with_img = tot_assets.filter(asset_image__isnull=False).exclude(asset_image='').first()
+        sample_image_url = asset_with_img.asset_image.url if asset_with_img and asset_with_img.asset_image else None
+
+        cat_name_lower = cat.name.lower()
+        if 'projector' in cat_name_lower or 'av' in cat.code.lower() or 'audio-visual' in cat_name_lower:
+            icon = 'bi bi-projector'
+        elif 'speaker' in cat_name_lower or 'sound' in cat_name_lower or 'audio' in cat_name_lower or 'mic' in cat_name_lower:
+            icon = 'bi bi-speaker'
+        elif 'laptop' in cat_name_lower or 'it' in cat.code.lower() or 'computer' in cat_name_lower:
+            icon = 'bi bi-laptop'
+        elif 'display' in cat_name_lower or 'monitor' in cat_name_lower or 'screen' in cat_name_lower:
+            icon = 'bi bi-display'
+        elif 'cable' in cat_name_lower or 'adapter' in cat_name_lower or 'accessories' in cat_name_lower or 'clicker' in cat_name_lower:
+            icon = 'bi bi-plug'
+        else:
+            icon = 'bi bi-box-seam'
+
+        catalog_cards.append({
+            'category': cat,
+            'total_units': total_count,
+            'available_units': avail_count,
+            'is_zero_stock': total_count == 0,
+            'is_fully_booked': total_count > 0 and avail_count == 0,
+            'is_available': avail_count > 0,
+            'models_preview': models_preview,
+            'equipment_types': equipment_types_data,
+            'sample_image_url': sample_image_url,
+            'icon': icon,
+        })
+    return catalog_cards
+
+
+# ==============================================================================
+# PUBLIC STUDENT VIEWS — NO LOGIN REQUIRED
+# ==============================================================================
+
 class StudentCatalogView(View):
     """
     Public equipment catalog screen for students.
-    Displays reservable categories, tracked physical asset counts, sample models,
-    and interactive schedule-based availability checker.
+    Displays single unified browse grid with schedule-based availability, stock indicators,
+    sensible Asia/Manila office-hour presets, and clear reservation CTAs.
     """
     def get(self, request, *args, **kwargs):
         categories = services.get_reservable_categories()
 
-        # Build category summary cards
-        catalog_cards = []
-        for cat in categories:
-            assets = services.get_reservable_assets(category=cat)
-            total_count = assets.count()
-            
-            # Find distinct model names
-            models_list = list(assets.exclude(model='').values_list('model', flat=True).distinct()[:3])
-            models_preview = ", ".join(models_list) if models_list else f"{total_count} tracked units"
-
-            # Check if any asset has an uploaded image
-            asset_with_img = assets.filter(asset_image__isnull=False).exclude(asset_image='').first()
-            sample_image_url = asset_with_img.asset_image.url if asset_with_img and asset_with_img.asset_image else None
-
-            # Choose an appropriate icon
-            cat_name_lower = cat.name.lower()
-            if 'projector' in cat_name_lower or 'av' in cat.code.lower() or 'audio-visual' in cat_name_lower:
-                icon = 'bi bi-projector'
-            elif 'speaker' in cat_name_lower or 'sound' in cat_name_lower or 'audio' in cat_name_lower:
-                icon = 'bi bi-speaker'
-            elif 'laptop' in cat_name_lower or 'it' in cat.code.lower() or 'computer' in cat_name_lower:
-                icon = 'bi bi-laptop'
-            else:
-                icon = 'bi bi-box-seam'
-
-            catalog_cards.append({
-                'category': cat,
-                'total_units': total_count,
-                'models_preview': models_preview,
-                'sample_image_url': sample_image_url,
-                'icon': icon,
-            })
-
-        # Default schedule for availability checker (today 1:00 PM - 5:00 PM or next round hour)
-        now = timezone.localtime()
-        default_pickup = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-        default_return = default_pickup + timedelta(hours=3)
-
+        default_pickup, default_return = get_sensible_default_schedule()
         default_pickup_str = default_pickup.strftime('%Y-%m-%dT%H:%M')
         default_return_str = default_return.strftime('%Y-%m-%dT%H:%M')
 
-        # Initial availability data for default timeslot
-        availability_data = []
-        for cat in categories:
-            avail_assets = services.get_available_assets_for_category(cat, default_pickup, default_return)
-            tot_assets = services.get_reservable_assets(category=cat)
-            models_list = list(tot_assets.exclude(model='').values_list('model', flat=True).distinct()[:2])
-            sample_models = ", ".join(models_list) if models_list else "Standard CBA Inventory Items"
+        catalog_cards = _build_catalog_cards(categories, default_pickup, default_return)
+        duration_hours = round((default_return - default_pickup).total_seconds() / 3600, 1)
 
-            availability_data.append({
-                'category': cat,
-                'total_count': tot_assets.count(),
-                'available_count': len(avail_assets),
-                'sample_models': sample_models,
-            })
+        # Backwards-compatible availability_data list
+        availability_data = [
+            {
+                'category': c['category'],
+                'total_count': c['total_units'],
+                'available_count': c['available_units'],
+                'sample_models': c['models_preview'],
+            }
+            for c in catalog_cards
+        ]
 
         context = {
             'categories': categories,
             'catalog_cards': catalog_cards,
             'default_pickup': default_pickup_str,
             'default_return': default_return_str,
-            'pickup_display': default_pickup.strftime('%b %d, %Y %I:%M %p'),
-            'return_display': default_return.strftime('%b %d, %Y %I:%M %p'),
+            'pickup_display': default_pickup.strftime('%b %d, %Y — %I:%M %p'),
+            'return_display': default_return.strftime('%b %d, %Y — %I:%M %p'),
             'pickup_raw': default_pickup_str,
             'return_raw': default_return_str,
-            'duration_hours': 3,
+            'duration_hours': duration_hours,
             'availability_data': availability_data,
         }
         return render(request, 'student_reservations/catalog.html', context)
@@ -125,7 +193,7 @@ class CheckAvailabilityView(View):
 
         if not pickup_str or not return_str:
             return render(request, 'student_reservations/partials/_availability_result.html', {
-                'error': "Please enter both pickup and return date and time."
+                'error': "Please select both pickup and return date and time."
             })
 
         try:
@@ -142,41 +210,39 @@ class CheckAvailabilityView(View):
                 'error': "Invalid date and time format. Please select valid dates."
             })
 
+        if pickup >= return_dt:
+            return render(request, 'student_reservations/partials/_availability_result.html', {
+                'error': "Requested return time must be strictly after pickup time."
+            })
+
         now = timezone.now()
         if pickup < now - timedelta(minutes=15):
             return render(request, 'student_reservations/partials/_availability_result.html', {
                 'error': "Requested pickup time cannot be in the past."
             })
 
-        if pickup >= return_dt:
-            return render(request, 'student_reservations/partials/_availability_result.html', {
-                'error': "Requested return time must be strictly after pickup time."
-            })
-
         categories = services.get_reservable_categories()
-        availability_data = []
-        for cat in categories:
-            avail_assets = services.get_available_assets_for_category(cat, pickup, return_dt)
-            tot_assets = services.get_reservable_assets(category=cat)
-            models_list = list(tot_assets.exclude(model='').values_list('model', flat=True).distinct()[:2])
-            sample_models = ", ".join(models_list) if models_list else "Standard CBA Inventory Items"
-
-            availability_data.append({
-                'category': cat,
-                'total_count': tot_assets.count(),
-                'available_count': len(avail_assets),
-                'sample_models': sample_models,
-            })
-
+        catalog_cards = _build_catalog_cards(categories, pickup, return_dt)
         duration_hours = round((return_dt - pickup).total_seconds() / 3600, 1)
+
+        availability_data = [
+            {
+                'category': c['category'],
+                'total_count': c['total_units'],
+                'available_count': c['available_units'],
+                'sample_models': c['models_preview'],
+            }
+            for c in catalog_cards
+        ]
 
         context = {
             'error': None,
-            'pickup_display': pickup.strftime('%b %d, %Y %I:%M %p'),
-            'return_display': return_dt.strftime('%b %d, %Y %I:%M %p'),
+            'pickup_display': pickup.strftime('%b %d, %Y — %I:%M %p'),
+            'return_display': return_dt.strftime('%b %d, %Y — %I:%M %p'),
             'pickup_raw': pickup_str,
             'return_raw': return_str,
             'duration_hours': duration_hours,
+            'catalog_cards': catalog_cards,
             'availability_data': availability_data,
         }
         return render(request, 'student_reservations/partials/_availability_result.html', context)
@@ -185,10 +251,32 @@ class CheckAvailabilityView(View):
 class PublicReservationSubmitView(View):
     """
     Public student reservation submission view and endpoint.
-    GET: Renders mobile-friendly reservation form with optional prefilled category/dates.
+    GET: Renders mobile-friendly reservation form with optional prefilled category/dates/equipment-type.
     POST: Validates form, checks rate limiting, calls submit_reservation, and redirects to confirmation.
     Also maintains JSON API responses for programmatic requests.
     """
+    @staticmethod
+    def _get_category_types_data():
+        from apps.inventory.models import EquipmentType
+        all_types = EquipmentType.objects.filter(
+            is_active=True,
+            category__is_active=True,
+            category__is_reservable=True
+        ).values('id', 'name', 'category_id').order_by('name')
+
+        mapping = {}
+        for t in all_types:
+            cid = str(t['category_id'])
+            if cid not in mapping:
+                mapping[cid] = []
+            mapping[cid].append({'id': t['id'], 'name': t['name']})
+        return mapping
+
+    @classmethod
+    def _get_category_types_json(cls):
+        import json
+        return json.dumps(cls._get_category_types_data())
+
     def get(self, request, *args, **kwargs):
         initial_data = {}
         category_id = request.GET.get('category')
@@ -197,6 +285,21 @@ class PublicReservationSubmitView(View):
                 cat = AssetCategory.objects.get(pk=category_id, is_active=True, is_reservable=True)
                 initial_data['category'] = cat
             except AssetCategory.DoesNotExist:
+                pass
+
+        type_id = request.GET.get('type') or request.GET.get('equipment_type_id') or request.GET.get('equipment_type')
+        if type_id:
+            try:
+                from apps.inventory.models import EquipmentType
+                if str(type_id).isdigit():
+                    eq_type = EquipmentType.objects.select_related('category').get(pk=int(type_id), is_active=True)
+                else:
+                    eq_type = EquipmentType.objects.select_related('category').filter(name__iexact=str(type_id).strip(), is_active=True).first()
+                if eq_type and eq_type.category.is_active and eq_type.category.is_reservable:
+                    initial_data['equipment_type_ref'] = eq_type
+                    if 'category' not in initial_data:
+                        initial_data['category'] = eq_type.category
+            except Exception:
                 pass
 
         pickup = request.GET.get('pickup')
@@ -208,7 +311,12 @@ class PublicReservationSubmitView(View):
             initial_data['requested_return'] = ret
 
         form = PublicStudentReservationForm(initial=initial_data)
-        return render(request, 'student_reservations/reservation_form.html', {'form': form})
+        category_types_data = self._get_category_types_data()
+        return render(request, 'student_reservations/reservation_form.html', {
+            'form': form,
+            'category_types_data': category_types_data,
+            'category_types_json': self._get_category_types_json(),
+        })
 
     def post(self, request, *args, **kwargs):
         is_json_request = (
@@ -224,7 +332,12 @@ class PublicReservationSubmitView(View):
                     'success': False,
                     'errors': form.errors.get_json_data()
                 }, status=400)
-            return render(request, 'student_reservations/reservation_form.html', {'form': form})
+            category_types_data = self._get_category_types_data()
+            return render(request, 'student_reservations/reservation_form.html', {
+                'form': form,
+                'category_types_data': category_types_data,
+                'category_types_json': self._get_category_types_json(),
+            })
 
         data = form.cleaned_data
         try:
@@ -240,6 +353,7 @@ class PublicReservationSubmitView(View):
                 purpose=data['purpose'],
                 room_venue=data.get('room_venue', ''),
                 equipment_type=data.get('equipment_type', ''),
+                equipment_type_ref=data.get('equipment_type_ref'),
                 remarks='',
                 created_by=request.user if request.user.is_authenticated else None,
                 request=request
@@ -251,6 +365,7 @@ class PublicReservationSubmitView(View):
                     'reservation_id': reservation.pk,
                     'lookup_token': reservation.lookup_token,
                     'status': reservation.status,
+                    'equipment_type_ref': reservation.equipment_type_ref.name if reservation.equipment_type_ref else None,
                     'message': "Reservation submitted successfully. Please save your lookup token to track status."
                 }, status=201)
 
@@ -274,7 +389,12 @@ class PublicReservationSubmitView(View):
             else:
                 form.add_error(None, str(e.message if hasattr(e, 'message') else e))
 
-            return render(request, 'student_reservations/reservation_form.html', {'form': form})
+            category_types_data = self._get_category_types_data()
+            return render(request, 'student_reservations/reservation_form.html', {
+                'form': form,
+                'category_types_data': category_types_data,
+                'category_types_json': self._get_category_types_json(),
+            })
 
 
 class PublicReservationConfirmationView(View):
@@ -347,6 +467,8 @@ class PublicReservationLookupView(View):
                 'masked_phone': masked_phone,
                 'category_name': reservation.category.name,
                 'equipment_type': reservation.equipment_type,
+                'equipment_type_id': reservation.equipment_type_ref_id,
+                'equipment_type_name': reservation.equipment_type_ref.name if reservation.equipment_type_ref else (reservation.equipment_type or None),
                 'requested_pickup': reservation.requested_pickup.isoformat(),
                 'requested_return': reservation.requested_return.isoformat(),
                 'purpose': reservation.purpose,
@@ -380,6 +502,39 @@ class PublicReservationLookupView(View):
         return render(request, 'student_reservations/lookup.html', context)
 
 
+class EquipmentTypeLookupView(View):
+    """
+    Public JSON API endpoint returning active EquipmentTypes for a given category.
+    GET /student-reservations/api/equipment-types/?category=<id>
+    """
+    def get(self, request, *args, **kwargs):
+        from apps.inventory.models import EquipmentType
+        category_id = request.GET.get('category')
+        qs = EquipmentType.objects.filter(
+            is_active=True,
+            category__is_active=True,
+            category__is_reservable=True
+        ).order_by('name')
+
+        if category_id:
+            try:
+                qs = qs.filter(category_id=int(category_id))
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'Invalid category ID.'}, status=400)
+
+        data = [
+            {
+                'id': t.id,
+                'name': t.name,
+                'category_id': t.category_id,
+                'category_name': t.category.name,
+                'description': t.description,
+            }
+            for t in qs.select_related('category')
+        ]
+        return JsonResponse({'success': True, 'equipment_types': data})
+
+
 # ==============================================================================
 # CUSTODIAN BACKEND VIEWS (ADMINISTRATOR ONLY)
 # ==============================================================================
@@ -389,30 +544,202 @@ class CustodianReservationListView(CustodianRequiredMixin, ListView):
     Office management queue of student reservations for Property Custodians.
     """
     model = StudentReservation
+    template_name = 'student_reservations/custodian_list.html'
     context_object_name = 'reservations'
     paginate_by = 25
 
     def get_queryset(self):
         services.auto_expire_uncollected_reservations()
         qs = StudentReservation.objects.select_related(
-            'category', 'asset', 'reviewed_by', 'released_by', 'returned_to'
-        )
+            'category', 'equipment_type_ref', 'asset', 'reviewed_by', 'released_by', 'returned_to'
+        ).order_by('-created_at')
+
         status_filter = self.request.GET.get('status')
-        if status_filter:
+        if status_filter == 'OVERDUE':
+            qs = qs.filter(status=StudentReservation.Status.RELEASED, requested_return__lt=timezone.now())
+        elif status_filter:
             qs = qs.filter(status=status_filter)
+
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                models.Q(student_id__icontains=q) |
+                models.Q(student_name__icontains=q) |
+                models.Q(lookup_token__icontains=q)
+            )
         return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        base_qs = StudentReservation.objects.all()
+        now = timezone.now()
+        context['pending_count'] = base_qs.filter(status=StudentReservation.Status.PENDING).count()
+        context['approved_count'] = base_qs.filter(status=StudentReservation.Status.APPROVED).count()
+        context['released_count'] = base_qs.filter(status=StudentReservation.Status.RELEASED).count()
+        context['overdue_count'] = base_qs.filter(status=StudentReservation.Status.RELEASED, requested_return__lt=now).count()
+        context['total_count'] = base_qs.count()
+        context['current_status'] = self.request.GET.get('status', '')
+        context['search_query'] = self.request.GET.get('q', '')
+        return context
 
 
 class CustodianReservationDetailView(CustodianRequiredMixin, DetailView):
     """
     Detail view of a specific student reservation for Custodian inspection and actions.
+    Handles approval (with asset allocation), rejection, release, and return actions.
     """
     model = StudentReservation
+    template_name = 'student_reservations/custodian_detail.html'
     context_object_name = 'reservation'
 
     def get_queryset(self):
         services.auto_expire_uncollected_reservations()
         return StudentReservation.objects.select_related(
-            'category', 'asset', 'reviewed_by', 'released_by', 'returned_to',
+            'category', 'equipment_type_ref', 'asset', 'reviewed_by', 'released_by', 'returned_to',
             'guard_recorded_by', 'cba_inspected_by', 'id_returned_by'
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        res = self.object
+        from .forms import (
+            CustodianApprovalForm,
+            CustodianRejectionForm,
+            CustodianReleaseForm,
+            CustodianOfficeReturnForm,
+            CustodianGuardReturnForm,
+        )
+        context['approval_form'] = CustodianApprovalForm(reservation=res)
+        context['rejection_form'] = CustodianRejectionForm()
+        context['release_form'] = CustodianReleaseForm()
+        context['office_return_form'] = CustodianOfficeReturnForm()
+        context['guard_return_form'] = CustodianGuardReturnForm()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        res = self.object
+        action = request.POST.get('action')
+
+        from .forms import (
+            CustodianApprovalForm,
+            CustodianRejectionForm,
+            CustodianReleaseForm,
+            CustodianOfficeReturnForm,
+            CustodianGuardReturnForm,
+        )
+
+        try:
+            if action == 'approve':
+                form = CustodianApprovalForm(res, request.POST)
+                if form.is_valid():
+                    asset = form.cleaned_data['asset']
+                    grace = form.cleaned_data.get('grace_period_minutes', 15)
+                    remarks = form.cleaned_data.get('remarks', '')
+                    services.approve_reservation(
+                        reservation=res,
+                        asset=asset,
+                        reviewed_by=request.user,
+                        grace_period_minutes=grace,
+                        remarks=remarks,
+                        request=request
+                    )
+                    messages.success(request, f"Reservation #{res.pk} approved. Asset '{asset.asset_code}' ({asset.item_name}) allocated.")
+                    return redirect('student_reservations:custodian_detail', pk=res.pk)
+                else:
+                    context = self.get_context_data()
+                    context['approval_form'] = form
+                    messages.error(request, "Failed to approve: please select a valid matching physical asset.")
+                    return self.render_to_response(context)
+
+            elif action == 'reject':
+                form = CustodianRejectionForm(request.POST)
+                if form.is_valid():
+                    reason = form.cleaned_data['rejection_reason']
+                    services.reject_reservation(
+                        reservation=res,
+                        reviewed_by=request.user,
+                        rejection_reason=reason,
+                        request=request
+                    )
+                    messages.warning(request, f"Reservation #{res.pk} rejected.")
+                    return redirect('student_reservations:custodian_detail', pk=res.pk)
+                else:
+                    context = self.get_context_data()
+                    context['rejection_form'] = form
+                    messages.error(request, "Failed to reject: rejection reason is required.")
+                    return self.render_to_response(context)
+
+            elif action == 'release':
+                form = CustodianReleaseForm(request.POST)
+                if form.is_valid():
+                    cond = form.cleaned_data['condition_at_release']
+                    id_dep = form.cleaned_data.get('id_deposited', False)
+                    remarks = form.cleaned_data.get('remarks', '')
+                    services.release_equipment(
+                        reservation=res,
+                        released_by=request.user,
+                        condition_at_release=cond,
+                        id_deposited=id_dep,
+                        remarks=remarks,
+                        request=request
+                    )
+                    messages.success(request, f"Equipment for reservation #{res.pk} marked as RELEASED to student.")
+                    return redirect('student_reservations:custodian_detail', pk=res.pk)
+                else:
+                    context = self.get_context_data()
+                    context['release_form'] = form
+                    messages.error(request, "Failed to release: student ID must be deposited.")
+                    return self.render_to_response(context)
+
+            elif action == 'return_office':
+                form = CustodianOfficeReturnForm(request.POST)
+                if form.is_valid():
+                    cond = form.cleaned_data['condition_at_return']
+                    remarks = form.cleaned_data.get('return_remarks', '')
+                    id_col = form.cleaned_data.get('id_collected_now', True)
+                    services.return_equipment_office(
+                        reservation=res,
+                        returned_to=request.user,
+                        condition_at_return=cond,
+                        return_remarks=remarks,
+                        id_collected_now=id_col,
+                        request=request
+                    )
+                    messages.success(request, f"Reservation #{res.pk} completed and returned to CBA Property Office.")
+                    return redirect('student_reservations:custodian_detail', pk=res.pk)
+                else:
+                    context = self.get_context_data()
+                    context['office_return_form'] = form
+                    messages.error(request, "Failed to record return: condition is required.")
+                    return self.render_to_response(context)
+
+            elif action == 'return_guard':
+                form = CustodianGuardReturnForm(request.POST)
+                if form.is_valid():
+                    g_time = form.cleaned_data['guard_returned_at']
+                    g_details = form.cleaned_data['guard_handover_details']
+                    remarks = form.cleaned_data.get('remarks', '')
+                    services.return_equipment_guard(
+                        reservation=res,
+                        recorded_by=request.user,
+                        guard_returned_at=g_time,
+                        guard_handover_details=g_details,
+                        remarks=remarks,
+                        request=request
+                    )
+                    messages.success(request, f"After-hours guard return logged for reservation #{res.pk}.")
+                    return redirect('student_reservations:custodian_detail', pk=res.pk)
+                else:
+                    context = self.get_context_data()
+                    context['guard_return_form'] = form
+                    messages.error(request, "Failed to record guard handover.")
+                    return self.render_to_response(context)
+
+            else:
+                messages.error(request, f"Unknown action: {action}")
+                return redirect('student_reservations:custodian_detail', pk=res.pk)
+
+        except ValidationError as e:
+            messages.error(request, e.message if hasattr(e, 'message') else str(e))
+            return redirect('student_reservations:custodian_detail', pk=res.pk)

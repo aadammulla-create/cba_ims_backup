@@ -221,21 +221,34 @@ def check_asset_availability(asset, requested_pickup, requested_return, exclude_
     return True, "Available"
 
 
-def get_available_assets_for_category(category, requested_pickup, requested_return, equipment_type=None, exclude_student_reservation_id=None):
+def get_available_assets_for_category(category, requested_pickup, requested_return, equipment_type=None, equipment_type_ref=None, exclude_student_reservation_id=None):
     """
     Returns list of eligible Asset objects in the specified category that are fully available
     for the requested [requested_pickup, requested_return] interval.
     Enables Property Custodians to allocate specific units (e.g. one of 3 projectors).
+    If equipment_type_ref is provided, restricts strictly to assets assigned to that EquipmentType.
+    If equipment_type string is provided, matches against EquipmentType name, or falls back to legacy substring.
     """
     auto_expire_uncollected_reservations()
     eligible_assets = get_reservable_assets(category=category)
-    if equipment_type:
-        # Match equipment_type in item_name or model or category name
-        eligible_assets = eligible_assets.filter(
-            Q(item_name__icontains=equipment_type) |
-            Q(model__icontains=equipment_type) |
-            Q(category__name__icontains=equipment_type)
-        )
+
+    if equipment_type_ref:
+        eligible_assets = eligible_assets.filter(equipment_type=equipment_type_ref)
+    elif equipment_type:
+        from apps.inventory.models import EquipmentType
+        eq_type_match = EquipmentType.objects.filter(
+            category=category,
+            name__iexact=str(equipment_type).strip()
+        ).first()
+        if eq_type_match:
+            eligible_assets = eligible_assets.filter(equipment_type=eq_type_match)
+        else:
+            # Legacy fallback: match equipment_type in item_name or model or category name
+            eligible_assets = eligible_assets.filter(
+                Q(item_name__icontains=equipment_type) |
+                Q(model__icontains=equipment_type) |
+                Q(category__name__icontains=equipment_type)
+            )
 
     available = []
     for asset in eligible_assets:
@@ -257,15 +270,16 @@ def get_available_assets_for_category(category, requested_pickup, requested_retu
 def submit_reservation(
     student_id,
     student_name,
-    course_year_section,
-    email,
-    contact_number,
-    category,
-    requested_pickup,
-    requested_return,
-    purpose,
+    course_year_section='',
+    email='',
+    contact_number='',
+    category=None,
+    requested_pickup=None,
+    requested_return=None,
+    purpose='',
     room_venue='',
     equipment_type='',
+    equipment_type_ref=None,
     remarks='',
     created_by=None,
     request=None
@@ -285,23 +299,25 @@ def submit_reservation(
     # 1. Input hygiene & validation
     student_id = str(student_id).strip()
     student_name = str(student_name).strip()
-    course_year_section = str(course_year_section).strip()
-    email = str(email).strip().lower()
-    contact_number = str(contact_number).strip()
-    purpose = str(purpose).strip()
-    room_venue = str(room_venue).strip()
-    equipment_type = str(equipment_type).strip()
+    course_year_section = str(course_year_section or '').strip()
+    email = str(email or '').strip().lower()
+    contact_number = str(contact_number or '').strip()
+    purpose = str(purpose or '').strip()
+    room_venue = str(room_venue or '').strip()
+    equipment_type = str(equipment_type or '').strip()
 
     if not student_id:
         raise ValidationError({'student_id': "Student ID number is required."})
     if not student_name:
         raise ValidationError({'student_name': "Student full name is required."})
-    if not course_year_section:
-        raise ValidationError({'course_year_section': "Course, year, and section are required."})
-    if not email:
-        raise ValidationError({'email': "Valid email address is required."})
-    if not contact_number:
-        raise ValidationError({'contact_number': "Contact number is required."})
+    # At least one contact method (email OR phone) is required
+    if not email and not contact_number:
+        raise ValidationError({
+            'email': "At least one contact method (email or mobile number) is required.",
+            'contact_number': "At least one contact method (email or mobile number) is required.",
+        })
+    if not category:
+        raise ValidationError({'category': "Equipment category is required."})
     if not purpose:
         raise ValidationError({'purpose': "Official purpose is required."})
     if not requested_pickup or not requested_return:
@@ -317,6 +333,17 @@ def submit_reservation(
     if not getattr(category, 'is_active', True) or not getattr(category, 'is_reservable', True):
         raise ValidationError({'category': f"Category '{category.name}' is not currently available for reservations."})
 
+    # Server-side validation of EquipmentType relationship
+    if equipment_type_ref:
+        if not getattr(equipment_type_ref, 'is_active', True):
+            raise ValidationError({'equipment_type_ref': f"Equipment type '{equipment_type_ref.name}' is not currently active."})
+        if equipment_type_ref.category_id != category.id:
+            raise ValidationError({
+                'equipment_type_ref': f"Requested equipment type '{equipment_type_ref.name}' does not belong to selected category '{category.name}'."
+            })
+        if not equipment_type:
+            equipment_type = equipment_type_ref.name
+
     # Basic verification: Ensure at least one reservable asset exists for this category
     total_assets = get_reservable_assets(category=category)
     if not total_assets.exists():
@@ -330,6 +357,7 @@ def submit_reservation(
             email=email,
             contact_number=contact_number,
             category=category,
+            equipment_type_ref=equipment_type_ref,
             equipment_type=equipment_type,
             requested_pickup=requested_pickup,
             requested_return=requested_return,
@@ -350,6 +378,7 @@ def submit_reservation(
                 'student_name': student_name,
                 'category': category.name,
                 'equipment_type': equipment_type,
+                'equipment_type_ref_id': equipment_type_ref.id if equipment_type_ref else None,
                 'requested_pickup': requested_pickup.isoformat(),
                 'requested_return': requested_return.isoformat(),
                 'lookup_token': reservation.lookup_token,
@@ -366,14 +395,15 @@ def approve_reservation(reservation, asset, reviewed_by, grace_period_minutes=15
     Acquires database row locks on reservation and asset records to guarantee no double-booking
     even under simultaneous concurrent approvals by multiple staff members.
     Requires Custodian authorization.
+    Strictly verifies category match and equipment type match.
     """
     check_custodian_permission(reviewed_by)
     auto_expire_uncollected_reservations()
 
     with transaction.atomic():
         # Row-lock reservation and asset to prevent race conditions
-        locked_reservation = StudentReservation.objects.select_for_update().select_related('category').get(pk=reservation.pk)
-        locked_asset = Asset.objects.select_for_update().select_related('category').get(pk=asset.pk)
+        locked_reservation = StudentReservation.objects.select_for_update().select_related('category', 'equipment_type_ref').get(pk=reservation.pk)
+        locked_asset = Asset.objects.select_for_update().select_related('category', 'equipment_type').get(pk=asset.pk)
 
         if locked_reservation.status != StudentReservation.Status.PENDING:
             raise ValidationError(
@@ -386,6 +416,27 @@ def approve_reservation(reservation, asset, reviewed_by, grace_period_minutes=15
                 f"Asset '{locked_asset.asset_code}' ({locked_asset.category.name}) does not match "
                 f"requested category '{locked_reservation.category.name}'."
             )
+
+        # Exact equipment type matching validation
+        if locked_reservation.equipment_type_ref_id:
+            if not locked_asset.equipment_type_id:
+                raise ValidationError(
+                    f"Cannot allocate asset '{locked_asset.asset_code}': physical asset has no assigned equipment type, "
+                    f"but reservation #{locked_reservation.pk} specifically requires '{locked_reservation.equipment_type_ref.name}'."
+                )
+            if locked_asset.equipment_type_id != locked_reservation.equipment_type_ref_id:
+                asset_type_name = locked_asset.equipment_type.name if locked_asset.equipment_type else "None (Unassigned)"
+                raise ValidationError(
+                    f"Cannot allocate asset '{locked_asset.asset_code}' with equipment type '{asset_type_name}': "
+                    f"does not match requested equipment type '{locked_reservation.equipment_type_ref.name}'."
+                )
+        elif locked_reservation.equipment_type:
+            # Legacy compatibility path: if reservation has legacy string equipment_type
+            if locked_asset.equipment_type and locked_asset.equipment_type.name.strip().lower() != locked_reservation.equipment_type.strip().lower():
+                raise ValidationError(
+                    f"Cannot allocate asset '{locked_asset.asset_code}' ({locked_asset.equipment_type.name}): "
+                    f"does not match legacy requested equipment type '{locked_reservation.equipment_type}'."
+                )
 
         # Check availability of the selected asset for the requested interval
         is_avail, reason = check_asset_availability(

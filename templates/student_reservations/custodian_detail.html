@@ -1,0 +1,464 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reservation #{{ reservation.pk }} — CBA IMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Breadcrumb & Top Bar -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1 small">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'student_reservations:custodian_list' %}" class="text-decoration-none">Student Reservations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">#{{ reservation.pk }}</li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-2">
+                <h1 class="h4 fw-bold text-dark mb-0">Reservation #{{ reservation.pk }}</h1>
+                {% if reservation.status == 'PENDING' %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                    <i class="bi bi-clock me-1"></i> PENDING REVIEW
+                </span>
+                {% elif reservation.status == 'APPROVED' %}
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                    <i class="bi bi-check-circle me-1"></i> APPROVED &bull; AWAITING PICKUP
+                </span>
+                {% elif reservation.status == 'RELEASED' %}
+                <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> RELEASED &bull; IN USE
+                </span>
+                {% elif reservation.status == 'RETURNED' %}
+                <span class="badge bg-light text-secondary border">
+                    <i class="bi bi-archive me-1"></i> COMPLETED &amp; RETURNED
+                </span>
+                {% elif reservation.status == 'OVERDUE' %}
+                <span class="badge bg-danger text-white">
+                    <i class="bi bi-exclamation-octagon me-1"></i> OVERDUE
+                </span>
+                {% elif reservation.status == 'CANCELLED' %}
+                <span class="badge bg-light text-muted border">CANCELLED</span>
+                {% elif reservation.status == 'REJECTED' %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">REJECTED</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'student_reservations:custodian_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Queue
+            </a>
+            <a href="{% url 'student_reservations:public_lookup' token=reservation.lookup_token %}" target="_blank" class="btn btn-sm btn-light border text-secondary">
+                <i class="bi bi-box-arrow-up-right me-1"></i> Student View
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- LEFT COLUMN: Particulars & Audit Trail -->
+        <div class="col-12 col-lg-7">
+            <!-- Requester Details Card -->
+            <div class="card mb-3 shadow-xs">
+                <div class="card-header bg-white py-2.5 px-3 border-bottom border-light-subtle d-flex justify-content-between align-items-center">
+                    <h2 class="h6 fw-bold text-dark mb-0">Student Requester</h2>
+                    <span class="font-mono text-muted small" style="font-size: 0.75rem;">Token: {{ reservation.lookup_token|truncatechars:16 }}</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Full Legal Name</label>
+                            <span class="fw-semibold text-dark">{{ reservation.student_name }}</span>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Student ID Number</label>
+                            <span class="font-mono text-dark fw-medium">{{ reservation.student_id }}</span>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Email Address</label>
+                            {% if reservation.email %}
+                            <a href="mailto:{{ reservation.email }}" class="text-decoration-none">{{ reservation.email }}</a>
+                            {% else %}
+                            <span class="text-muted fst-italic">Not provided</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Mobile Contact</label>
+                            {% if reservation.contact_number %}
+                            <a href="tel:{{ reservation.contact_number }}" class="text-decoration-none">{{ reservation.contact_number }}</a>
+                            {% else %}
+                            <span class="text-muted fst-italic">Not provided</span>
+                            {% endif %}
+                        </div>
+                        {% if reservation.course_year_section %}
+                        <div class="col-12">
+                            <label class="text-secondary small d-block">Course, Year &amp; Section</label>
+                            <span class="text-dark">{{ reservation.course_year_section }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment & Schedule Card -->
+            <div class="card mb-3 shadow-xs">
+                <div class="card-header bg-white py-2.5 px-3 border-bottom border-light-subtle">
+                    <h2 class="h6 fw-bold text-dark mb-0">Equipment &amp; Schedule</h2>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Equipment Category</label>
+                            <span class="badge bg-light text-secondary border font-sans">{{ reservation.category.name }}</span>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Equipment Type</label>
+                            {% if reservation.equipment_type_ref %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle font-sans">
+                                <i class="bi bi-tag-fill me-1"></i> {{ reservation.equipment_type_ref.name }}
+                            </span>
+                            {% elif reservation.equipment_type %}
+                            <span class="badge bg-light text-dark border font-sans">{{ reservation.equipment_type }}</span>
+                            {% else %}
+                            <span class="text-muted">Unspecified</span>
+                            {% endif %}
+                        </div>
+                        {% if reservation.equipment_type and reservation.equipment_type_ref %}
+                        <div class="col-12">
+                            <label class="text-secondary small d-block">Specific Preference / Model Note</label>
+                            <span class="text-secondary">{{ reservation.equipment_type }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Requested Pickup</label>
+                            <span class="fw-semibold text-dark">{{ reservation.requested_pickup|date:"M d, Y h:i A" }}</span>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary small d-block">Requested Return</label>
+                            <span class="fw-semibold text-dark">{{ reservation.requested_return|date:"M d, Y h:i A" }}</span>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-secondary small d-block">Purpose of Use</label>
+                            <span class="text-dark">{{ reservation.purpose }}</span>
+                        </div>
+                        {% if reservation.room_venue %}
+                        <div class="col-12">
+                            <label class="text-secondary small d-block">Intended Room / Venue</label>
+                            <span class="text-dark">{{ reservation.room_venue }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custody & Physical ID Tracking Card -->
+            <div class="card mb-3 shadow-xs">
+                <div class="card-header bg-white py-2.5 px-3 border-bottom border-light-subtle">
+                    <h2 class="h6 fw-bold text-dark mb-0">Custody &amp; Physical ID Tracking</h2>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-2 small">
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Physical School ID Status</label>
+                            {% if reservation.id_deposit_verified %}
+                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
+                                <i class="bi bi-shield-check me-1"></i> ID Deposited at Property Office
+                            </span>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">
+                                <i class="bi bi-shield-slash me-1"></i> Not Deposited Yet
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Grace Period</label>
+                            <span>{{ reservation.grace_period_minutes }} minutes from scheduled pickup</span>
+                        </div>
+                        {% if reservation.pickup_deadline %}
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Pickup Deadline</label>
+                            <span class="font-mono">{{ reservation.pickup_deadline|date:"M d, Y h:i A" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if reservation.remarks %}
+                        <div class="col-12">
+                            <label class="text-secondary d-block">Internal Custodian Remarks</label>
+                            <div class="p-2 bg-light rounded text-secondary border border-light-subtle font-mono small">
+                                {{ reservation.remarks|linebreaksbr }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Action & Allocation Panel -->
+        <div class="col-12 col-lg-5">
+            <!-- Currently Allocated Asset Card (if approved or beyond) -->
+            {% if reservation.asset %}
+            <div class="card mb-3 shadow-xs border-primary-subtle">
+                <div class="card-header py-2.5 px-3 bg-primary-subtle border-bottom border-primary-subtle d-flex justify-content-between align-items-center">
+                    <h2 class="h6 fw-bold text-primary mb-0">Allocated Physical Asset</h2>
+                    <span class="badge bg-white text-primary border border-primary-subtle font-mono">{{ reservation.asset.asset_code }}</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="fw-bold text-dark fs-6 mb-1">{{ reservation.asset.item_name }}</div>
+                    <div class="text-secondary small mb-2">
+                        <span>Brand: <strong>{{ reservation.asset.brand.name|default:"Standard" }}</strong></span> &bull;
+                        <span>Model: <strong>{{ reservation.asset.model|default:"Standard" }}</strong></span> &bull;
+                        <span>Serial: <code class="text-dark">{{ reservation.asset.serial_number|default:"N/A" }}</code></span>
+                    </div>
+                    {% if reservation.equipment_type_ref %}
+                    <div class="small text-muted">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i> Matches requested type: <strong>{{ reservation.equipment_type_ref.name }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ACTION CARDS ACCORDING TO STATUS -->
+            {% if reservation.status == 'PENDING' %}
+            <!-- Approval Form Card -->
+            <div class="card mb-3 shadow-xs border-success-subtle">
+                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <h2 class="h6 fw-bold text-dark mb-0">Approve &amp; Allocate Asset</h2>
+                </div>
+                <div class="card-body p-3">
+                    <p class="small text-secondary mb-3">
+                        Select a physical asset matching requested type 
+                        <strong class="text-dark">{{ reservation.equipment_type_ref.name|default:reservation.category.name }}</strong>.
+                    </p>
+
+                    {% if approval_form.fields.asset.queryset.exists %}
+                    <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="approve">
+
+                        <div class="mb-3">
+                            <label for="id_asset" class="form-label fw-semibold small text-dark mb-1">
+                                Available Physical Asset <span class="text-danger">*</span>
+                            </label>
+                            <select name="asset" id="id_asset" class="form-select form-select-sm" required>
+                                <option value="">-- Choose matching physical unit --</option>
+                                {% for a in approval_form.fields.asset.queryset %}
+                                <option value="{{ a.pk }}">
+                                    {{ a.asset_code }} — {{ a.item_name }} {% if a.model %}({{ a.model }}){% endif %}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
+                                Filtered to available, conflict-free units matching category and equipment type.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_grace_period_minutes" class="form-label small text-secondary mb-1">
+                                Pickup Grace Period (minutes)
+                            </label>
+                            <input type="number" name="grace_period_minutes" id="id_grace_period_minutes" 
+                                   class="form-control form-control-sm" value="15" min="5" max="120" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_remarks" class="form-label small text-secondary mb-1">
+                                Approval Remarks (Optional)
+                            </label>
+                            <textarea name="remarks" id="id_remarks" class="form-control form-control-sm" rows="2" placeholder="e.g. Assigned Room 304 projector"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-primary-cba w-100 py-2">
+                            <i class="bi bi-check-circle me-1.5"></i> Confirm Approval &amp; Allocate
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning py-2.5 px-3 small rounded border d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-exclamation-triangle-fill text-warning flex-shrink-0"></i>
+                        <div>
+                            No physical units of type <strong>{{ reservation.equipment_type_ref.name|default:reservation.category.name }}</strong> are available for this interval.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Rejection Form Card -->
+            <div class="card shadow-xs border-danger-subtle">
+                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-x-circle text-danger"></i>
+                    <h2 class="h6 fw-bold text-dark mb-0">Reject Request</h2>
+                </div>
+                <div class="card-body p-3">
+                    <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="reject">
+
+                        <div class="mb-3">
+                            <label for="id_rejection_reason" class="form-label small text-secondary mb-1">
+                                Reason for Rejection <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="rejection_reason" id="id_rejection_reason" class="form-control form-control-sm" rows="2" placeholder="e.g. No available equipment for this time slot" required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-outline-danger w-100 py-1.5" onclick="return confirm('Are you sure you want to reject this reservation?');">
+                            <i class="bi bi-x-lg me-1"></i> Reject Reservation
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% elif reservation.status == 'APPROVED' %}
+            <!-- Release Form Card -->
+            <div class="card shadow-xs border-success-subtle">
+                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-box-arrow-up-right text-success"></i>
+                    <h2 class="h6 fw-bold text-dark mb-0">Release Equipment Handover</h2>
+                </div>
+                <div class="card-body p-3">
+                    <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="release">
+
+                        <div class="mb-3">
+                            <label for="id_condition_at_release" class="form-label small text-secondary mb-1">
+                                Condition at Handover <span class="text-danger">*</span>
+                            </label>
+                            <select name="condition_at_release" id="id_condition_at_release" class="form-select form-select-sm" required>
+                                <option value="GOOD" selected>Good Condition</option>
+                                <option value="FAIR">Fair Condition</option>
+                                <option value="EXCELLENT">Excellent / Like New</option>
+                            </select>
+                        </div>
+
+                        <div class="form-check mb-3 p-2.5 rounded border border-primary-subtle bg-light small">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" name="id_deposited" id="id_id_deposited" value="true" checked required>
+                            <label class="form-check-label fw-semibold text-dark" for="id_id_deposited">
+                                Student School ID Verified &amp; Deposited at CBA Office
+                            </label>
+                            <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
+                                Mandatory physical custody check before handing over equipment.
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_release_remarks" class="form-label small text-secondary mb-1">
+                                Release Notes (Optional)
+                            </label>
+                            <input type="text" name="remarks" id="id_release_remarks" class="form-control form-control-sm" placeholder="e.g. Included HDMI cable and power brick">
+                        </div>
+
+                        <button type="submit" class="btn btn-sm btn-success w-100 py-2">
+                            <i class="bi bi-check2-circle me-1"></i> Confirm Handover &amp; Release
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% elif reservation.status == 'RELEASED' or reservation.status == 'OVERDUE' %}
+            <!-- Return Recording Card -->
+            <div class="card shadow-xs">
+                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">
+                    <i class="bi bi-arrow-return-left text-primary"></i>
+                    <h2 class="h6 fw-bold text-dark mb-0">Record Equipment Return</h2>
+                </div>
+                <div class="card-body p-3">
+                    <ul class="nav nav-pills nav-fill mb-3 small" id="returnTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1.5" id="office-tab" data-bs-toggle="pill" data-bs-target="#office-pane" type="button" role="tab">
+                                <i class="bi bi-building me-1"></i> Office Return
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1.5" id="guard-tab" data-bs-toggle="pill" data-bs-target="#guard-pane" type="button" role="tab">
+                                <i class="bi bi-shield-check me-1"></i> Guard Handover
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="returnTabsContent">
+                        <!-- Office Return Pane -->
+                        <div class="tab-pane fade show active" id="office-pane" role="tabpanel">
+                            <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="return_office">
+
+                                <div class="mb-3">
+                                    <label for="id_condition_at_return" class="form-label small text-secondary mb-1">
+                                        Inspected Condition <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="condition_at_return" id="id_condition_at_return" class="form-select form-select-sm" required>
+                                        <option value="GOOD" selected>Good Condition (Normal Wear)</option>
+                                        <option value="FAIR">Fair Condition</option>
+                                        <option value="EXCELLENT">Excellent</option>
+                                        <option value="DAMAGED">Damaged / Needs Repair</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-check mb-3 small">
+                                    <input class="form-check-input" type="checkbox" name="id_collected_now" id="id_id_collected_now" value="true" checked>
+                                    <label class="form-check-label text-dark" for="id_id_collected_now">
+                                        Deposited School ID handed back to student
+                                    </label>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_return_remarks" class="form-label small text-secondary mb-1">
+                                        Return Remarks (Optional)
+                                    </label>
+                                    <textarea name="return_remarks" id="id_return_remarks" class="form-control form-control-sm" rows="2" placeholder="e.g. Returned complete and tested"></textarea>
+                                </div>
+
+                                <button type="submit" class="btn btn-sm btn-primary-cba w-100 py-2">
+                                    <i class="bi bi-check-circle me-1"></i> Complete Office Return
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Guard Handover Pane -->
+                        <div class="tab-pane fade" id="guard-pane" role="tabpanel">
+                            <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="return_guard">
+
+                                <div class="mb-3">
+                                    <label for="id_guard_returned_at" class="form-label small text-secondary mb-1">
+                                        Guard Handover Time <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="datetime-local" name="guard_returned_at" id="id_guard_returned_at" class="form-control form-control-sm" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_guard_handover_details" class="form-label small text-secondary mb-1">
+                                        Guard Name / Log Entry <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" name="guard_handover_details" id="id_guard_handover_details" class="form-control form-control-sm" placeholder="e.g. Guard Santos, Gate 2 logbook #45" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="id_guard_remarks" class="form-label small text-secondary mb-1">Remarks</label>
+                                    <input type="text" name="remarks" id="id_guard_remarks" class="form-control form-control-sm" placeholder="Optional handover details">
+                                </div>
+
+                                <button type="submit" class="btn btn-sm btn-secondary-cba w-100 py-2">
+                                    <i class="bi bi-shield-check me-1"></i> Record Guard Handover
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% elif reservation.status == 'RETURNED' %}
+            <div class="card shadow-xs bg-light">
+                <div class="card-body p-3 text-center">
+                    <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
+                    <h3 class="h6 fw-bold text-dark mb-1">Reservation Completed</h3>
+                    <p class="text-secondary small mb-0">Equipment was returned to property custody.</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
