@@ -51,6 +51,20 @@ def validate_disposal_eligibility(asset):
             "The repair must complete before disposal."
         )
 
+    # Check for unresolved student reservations (APPROVED, RELEASED, RETURNED_TO_GUARD)
+    from apps.student_reservations.models import StudentReservation
+    if asset.student_reservations.filter(
+        status__in=[
+            StudentReservation.Status.APPROVED,
+            StudentReservation.Status.RELEASED,
+            StudentReservation.Status.RETURNED_TO_GUARD,
+        ]
+    ).exists():
+        return False, (
+            f"Asset '{asset.asset_code}' has an active or approved student reservation. "
+            "All student reservations must be resolved or cancelled before disposal can be initiated."
+        )
+
     # Check if there's already an active disposal request
     if AssetDisposal.objects.filter(
         asset=asset,
@@ -88,6 +102,20 @@ def validate_completion_eligibility(asset):
         return False, (
             "This asset has approved future borrowing reservations. "
             "Cancel all pending reservations before disposal completion."
+        )
+
+    # Unresolved student reservations check (APPROVED, RELEASED, RETURNED_TO_GUARD)
+    from apps.student_reservations.models import StudentReservation
+    if asset.student_reservations.filter(
+        status__in=[
+            StudentReservation.Status.APPROVED,
+            StudentReservation.Status.RELEASED,
+            StudentReservation.Status.RETURNED_TO_GUARD,
+        ]
+    ).exists():
+        return False, (
+            "This asset has an active or approved student reservation. "
+            "Resolve or cancel all student reservations before disposal completion."
         )
 
     # Open transfers
@@ -368,7 +396,7 @@ def complete_disposal(
 
         locked.save()
 
-        # Transition asset to DISPOSED — preserve condition, code, property number
+        # Transition asset to DISPOSED - preserve condition, code, property number
         locked_asset.status = Asset.Status.DISPOSED
         locked_asset.save(update_fields=['status', 'updated_at'])
 

@@ -5,12 +5,12 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Q, ProtectedError
 from django.utils import timezone
 from datetime import timedelta
 
 from .models import AssetCategory, Brand, Asset, AssetVerification
-from .forms import AssetCategoryForm, BrandForm, AssetForm, AssetVerificationForm, AssetCodeLookupForm
+from .forms import AssetCategoryForm, BrandForm, AssetForm, AssetUpdateForm, AssetVerificationForm, AssetCodeLookupForm
 from . import qr_services
 from apps.organizations.models import Department, Location
 from apps.audit.utils import log_action
@@ -229,18 +229,72 @@ class AssetDetailView(LoginRequiredMixin, DetailView):
         ).all()
         context['qr_data_uri'] = qr_services.generate_asset_qr_data_uri(self.object, request=self.request)
 
-        # Phase 7: Equipment Borrowing & Reservation
+        # Phase 7: Equipment Borrowing & Reservation (Faculty)
         context['current_borrowing'] = self.object.borrowings.filter(
             status__in=['RELEASED', 'OVERDUE']
         ).select_related('borrower', 'borrower__department', 'released_by').first()
         context['borrowing_history'] = self.object.borrowings.select_related(
             'borrower', 'borrower__department', 'reviewed_by', 'released_by', 'returned_to'
         ).order_by('-requested_at')[:10]
+
+        # Student Reservations (Phase 2A / 3A)
+        user = self.request.user
+        can_view_student_pii = user.is_authenticated and (
+            getattr(user, 'is_admin', False) or getattr(user, 'role', '') == 'ADMIN'
+        )
+        context['can_view_student_pii'] = can_view_student_pii
+
+        from apps.student_reservations.models import StudentReservation
+        from apps.student_reservations.security import mask_contact_info
+        from apps.student_reservations.services import auto_expire_uncollected_reservations
+
+        # Lazily transition expired uncollected reservations to NO_SHOW
+        auto_expire_uncollected_reservations()
+
+        current_student_loan = self.object.student_reservations.filter(
+            status=StudentReservation.Status.RELEASED
+        ).first()
+
+        guard_return_pending_inspection = self.object.student_reservations.filter(
+            status=StudentReservation.Status.RETURNED_TO_GUARD
+        ).first()
+
+        upcoming_student_reservations = list(self.object.student_reservations.filter(
+            status=StudentReservation.Status.APPROVED,
+            requested_return__gte=timezone.now()
+        ).order_by('requested_pickup')[:5])
+
+        student_reservation_history = list(self.object.student_reservations.filter(
+            Q(status__in=[
+                StudentReservation.Status.RETURNED,
+                StudentReservation.Status.REJECTED,
+                StudentReservation.Status.CANCELLED,
+                StudentReservation.Status.NO_SHOW,
+            ]) |
+            Q(status=StudentReservation.Status.APPROVED, requested_return__lt=timezone.now())
+        ).order_by('-created_at')[:10])
+
+        for res in [current_student_loan, guard_return_pending_inspection] + upcoming_student_reservations + student_reservation_history:
+            if res:
+                m_email, m_phone = mask_contact_info(res.email, res.contact_number)
+                res.masked_email = m_email
+                res.masked_phone = m_phone
+                if not can_view_student_pii:
+                    res.email = m_email
+                    res.contact_number = m_phone
+
+        context['current_student_loan'] = current_student_loan
+        context['guard_return_pending_inspection'] = guard_return_pending_inspection
+        context['upcoming_student_reservations'] = upcoming_student_reservations
+        context['student_reservation_history'] = student_reservation_history
+
         context['can_borrow'] = (
             self.object.status == Asset.Status.AVAILABLE and
             context['current_assignment'] is None and
             context['open_transfer'] is None and
-            context['current_borrowing'] is None
+            context['current_borrowing'] is None and
+            current_student_loan is None and
+            guard_return_pending_inspection is None
         )
 
         # Phase 8: Maintenance & Defect History
@@ -318,11 +372,12 @@ class AssetCreateView(AdminRequiredMixin, CreateView):
 
 class AssetUpdateView(AdminRequiredMixin, UpdateView):
     """
-    Edits existing asset specifications, location, and condition.
+    Edits existing asset specifications, condition, and metadata.
+    Excludes workflow-managed fields (status, department, current_location).
     Preserves asset_code and records field-level changes in audit log.
     """
     model = Asset
-    form_class = AssetForm
+    form_class = AssetUpdateForm
     template_name = 'inventory/asset_form.html'
     slug_field = 'asset_code'
     slug_url_kwarg = 'asset_code'
@@ -334,6 +389,12 @@ class AssetUpdateView(AdminRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         old_instance = Asset.objects.get(pk=self.object.pk)
+
+        # Enforce server-side safety locks on workflow-managed fields
+        form.instance.status = old_instance.status
+        form.instance.department = old_instance.department
+        form.instance.current_location = old_instance.current_location
+
         changes = {}
         for field in form.changed_data:
             old_val = getattr(old_instance, field, None)
@@ -368,7 +429,8 @@ class AssetDeleteView(AdminRequiredMixin, DeleteView):
     """
     Permanent deletion of asset records with explicit confirmation page.
     Restricted strictly to administrators.
-    Prevented if the asset has historical or active assignment records.
+    Prevented if the asset has historical or active assignment records,
+    transfers, borrowings, maintenance, disposals, or student reservations.
     """
     model = Asset
     template_name = 'inventory/asset_confirm_delete.html'
@@ -408,6 +470,12 @@ class AssetDeleteView(AdminRequiredMixin, DeleteView):
                 f"Asset '{self.object.asset_code}' has disposal/retirement records and cannot be permanently deleted."
             )
             return redirect('inventory:asset_detail', asset_code=self.object.asset_code)
+        if self.object.student_reservations.exists():
+            messages.error(
+                request,
+                f"Asset '{self.object.asset_code}' has student reservation history and cannot be permanently deleted."
+            )
+            return redirect('inventory:asset_detail', asset_code=self.object.asset_code)
         return super().get(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -441,21 +509,34 @@ class AssetDeleteView(AdminRequiredMixin, DeleteView):
                 f"Asset '{self.object.asset_code}' has disposal/retirement records and cannot be permanently deleted."
             )
             return redirect('inventory:asset_detail', asset_code=self.object.asset_code)
+        if self.object.student_reservations.exists():
+            messages.error(
+                self.request,
+                f"Asset '{self.object.asset_code}' has student reservation history and cannot be permanently deleted."
+            )
+            return redirect('inventory:asset_detail', asset_code=self.object.asset_code)
 
         asset_code = self.object.asset_code
         item_name = self.object.item_name
-        
-        # Log audit record before deleting
-        log_action(
-            user=self.request.user,
-            action='ASSET_DELETED',
-            instance=self.object,
-            changes={'asset_code': asset_code, 'item_name': item_name},
-            request=self.request
-        )
-        
-        messages.success(self.request, f"Asset '{asset_code}' ({item_name}) was permanently deleted.")
-        return super().form_valid(form)
+
+        try:
+            # Log audit record before deleting
+            log_action(
+                user=self.request.user,
+                action='ASSET_DELETED',
+                instance=self.object,
+                changes={'asset_code': asset_code, 'item_name': item_name},
+                request=self.request
+            )
+
+            messages.success(self.request, f"Asset '{asset_code}' ({item_name}) was permanently deleted.")
+            return super().form_valid(form)
+        except ProtectedError:
+            messages.error(
+                self.request,
+                f"Asset '{asset_code}' cannot be deleted because it is referenced by existing institutional records."
+            )
+            return redirect('inventory:asset_detail', asset_code=asset_code)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

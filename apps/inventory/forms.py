@@ -124,6 +124,84 @@ class AssetForm(forms.ModelForm):
         return prop_num
 
 
+class AssetUpdateForm(forms.ModelForm):
+    """
+    Dedicated metadata-only form for modifying existing assets.
+    Excludes status, department, and current_location to prevent direct modification
+    of workflow-governed lifecycle and custody fields outside of transfers and lifecycle services.
+    """
+    class Meta:
+        model = Asset
+        fields = [
+            # Basic Information
+            'item_name', 'category', 'brand', 'model', 'description',
+            # Identification
+            'property_number', 'serial_number',
+            # Acquisition
+            'acquisition_date', 'acquisition_cost', 'supplier',
+            # Condition & Remarks
+            'condition', 'remarks',
+            # Media
+            'asset_image',
+        ]
+        widgets = {
+            'item_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. ThinkPad L14 Gen 3 Laptop, Epson L3210 Printer'
+            }),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'brand': forms.Select(attrs={'class': 'form-select'}),
+            'model': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 21C1S00K00'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Technical specifications, color, accessories...'}),
+            'property_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'e.g. NORSU-CBA-2026-00482 (Leave blank if none)'
+            }),
+            'serial_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Manufacturer serial number (Leave blank if none)'
+            }),
+            'acquisition_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'acquisition_cost': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0',
+                'placeholder': '0.00'
+            }),
+            'supplier': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Supplier or Vendor Company'}),
+            'condition': forms.Select(attrs={'class': 'form-select'}),
+            'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional operational remarks...'}),
+            'asset_image': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': 'image/*',
+                'capture': 'environment'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = AssetCategory.objects.filter(is_active=True)
+        self.fields['brand'].queryset = Brand.objects.filter(is_active=True)
+
+    def clean_acquisition_cost(self):
+        cost = self.cleaned_data.get('acquisition_cost')
+        if cost is not None and cost < 0:
+            raise forms.ValidationError("Acquisition cost cannot be negative.")
+        return cost
+
+    def clean_property_number(self):
+        prop_num = self.cleaned_data.get('property_number')
+        if prop_num:
+            prop_num = prop_num.strip()
+            qs = Asset.objects.filter(property_number__iexact=prop_num)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError(f"An asset with property number '{prop_num}' already exists.")
+        return prop_num
+
+
 class AssetVerificationForm(forms.Form):
     """Form for physical inventory verification entry."""
     observed_department = forms.ModelChoiceField(

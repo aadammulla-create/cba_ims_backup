@@ -781,7 +781,7 @@
         </div>
     </div>
 
-    <!-- Borrowing Records (Phase 7) -->
+    <!-- Borrowing Records (Phase 7 & Phase 2A/3A) -->
     <div class="col-lg-6 mb-3">
         <div class="card h-100 shadow-sm">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
@@ -792,6 +792,14 @@
                     {% else %}
                         <span class="badge bg-info text-dark">Currently Borrowed</span>
                     {% endif %}
+                {% elif current_student_loan %}
+                    {% if current_student_loan.is_overdue %}
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle me-1"></i>Overdue Student Loan</span>
+                    {% else %}
+                        <span class="badge bg-info text-dark">Active Student Loan</span>
+                    {% endif %}
+                {% elif guard_return_pending_inspection %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-shield-exclamation me-1"></i>Returned to Guard</span>
                 {% elif can_borrow %}
                     <span class="badge bg-success">Available to Borrow</span>
                 {% else %}
@@ -855,6 +863,83 @@
                         </a>
                         {% endif %}
                     </div>
+                {% elif current_student_loan %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-light p-3 me-3 text-info">
+                            <i class="bi bi-mortarboard fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold fs-6">
+                                {{ current_student_loan.student_name }}
+                                <span class="badge bg-secondary-subtle text-secondary ms-1">Student Borrower</span>
+                            </div>
+                            <small class="text-muted">
+                                <i class="bi bi-person-badge me-1"></i>ID: {{ current_student_loan.student_id }}
+                                {% if current_student_loan.course_year_section %}&bull; {{ current_student_loan.course_year_section }}{% endif %}
+                            </small>
+                            <div class="small text-muted mt-1">
+                                {% if current_student_loan.email %}<span class="me-2"><i class="bi bi-envelope me-1"></i>{{ current_student_loan.email }}</span>{% endif %}
+                                {% if current_student_loan.contact_number %}<span><i class="bi bi-telephone me-1"></i>{{ current_student_loan.contact_number }}</span>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <table class="table table-sm table-borderless mb-3">
+                        <tr>
+                            <th class="text-muted" style="width: 40%;">Released At:</th>
+                            <td>{{ current_student_loan.released_at|date:"M d, Y, g:i a"|default:"-" }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Scheduled Return:</th>
+                            <td>
+                                <strong>{{ current_student_loan.requested_return|date:"M d, Y, g:i a" }}</strong>
+                                {% if current_student_loan.is_overdue %}
+                                    <span class="badge bg-danger ms-1">OVERDUE</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Purpose:</th>
+                            <td><small>{{ current_student_loan.purpose }}</small></td>
+                        </tr>
+                        {% if current_student_loan.room_venue %}
+                        <tr>
+                            <th class="text-muted">Venue:</th>
+                            <td><small>{{ current_student_loan.room_venue }}</small></td>
+                        </tr>
+                        {% endif %}
+                    </table>
+
+                    <div class="pt-2 border-top d-flex justify-content-between align-items-center">
+                        <a href="{% url 'student_reservations:custodian_detail' current_student_loan.pk %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-info-circle me-1"></i> View Reservation Details
+                        </a>
+                        {% if request.user.is_admin %}
+                        <a href="{% url 'student_reservations:custodian_detail' current_student_loan.pk %}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-arrow-return-left me-1"></i> Custodian Actions
+                        </a>
+                        {% endif %}
+                    </div>
+                {% elif guard_return_pending_inspection %}
+                    <div class="alert alert-warning mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-shield-exclamation fs-4 me-2 text-warning"></i>
+                            <strong>Returned to Security Guard (Pending Inspection)</strong>
+                        </div>
+                        <p class="small mb-1">
+                            Returned by <strong>{{ guard_return_pending_inspection.student_name }}</strong> (ID: {{ guard_return_pending_inspection.student_id }}) at {{ guard_return_pending_inspection.guard_returned_at|date:"M d, Y, g:i a"|default:guard_return_pending_inspection.returned_at }}.
+                        </p>
+                        <p class="small text-muted mb-0">
+                            Asset is held at the security post and cannot be released or borrowed until inspected and finalized by the Property Custodian.
+                        </p>
+                    </div>
+                    {% if request.user.is_admin %}
+                    <div class="pt-2 border-top text-end">
+                        <a href="{% url 'student_reservations:custodian_detail' guard_return_pending_inspection.pk %}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-check2-circle me-1"></i> Inspect and Finalize Return
+                        </a>
+                    </div>
+                    {% endif %}
                 {% elif can_borrow %}
                     <div class="text-center py-4">
                         <i class="bi bi-calendar2-check text-success fs-2 mb-2 d-block"></i>
@@ -869,6 +954,29 @@
                         <i class="bi bi-lock fs-2 opacity-50 mb-2 d-block"></i>
                         <h6 class="fw-bold mb-1">Not Available to Borrow</h6>
                         <p class="small mb-0">Equipment is currently marked as <strong>{{ asset.get_status_display }}</strong> and cannot be checked out.</p>
+                    </div>
+                {% endif %}
+
+                {% if upcoming_student_reservations %}
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="small fw-bold text-muted mb-0"><i class="bi bi-calendar-event me-1"></i>Upcoming Approved Student Reservations</h6>
+                            <span class="badge bg-secondary-subtle text-secondary">{{ upcoming_student_reservations|length }}</span>
+                        </div>
+                        <div class="list-group list-group-flush small">
+                            {% for res in upcoming_student_reservations %}
+                                <div class="list-group-item px-0 py-2 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ res.student_name }}</strong>
+                                        <span class="text-muted">({{ res.requested_pickup|date:"M d, g:i a" }} to {{ res.requested_return|date:"g:i a" }})</span>
+                                        <div class="text-muted text-truncate" style="max-width: 280px;">{{ res.purpose }}</div>
+                                    </div>
+                                    {% if request.user.is_admin %}
+                                        <a href="{% url 'student_reservations:custodian_detail' res.pk %}" class="btn btn-outline-primary btn-sm py-0 px-2 ms-2">Manage</a>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
                 {% endif %}
             </div>
@@ -955,6 +1063,82 @@
                                     <a href="{% url 'borrowing:borrowing_detail' b.pk %}" class="btn btn-outline-secondary btn-sm">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Student Reservation History (Phase 2A / 3A) -->
+{% if student_reservation_history %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-mortarboard text-secondary me-2"></i>Student Reservation &amp; Loan History</h6>
+                <span class="badge bg-secondary">{{ student_reservation_history|length }} record(s)</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Student</th>
+                                <th>Schedule</th>
+                                <th>Purpose / Venue</th>
+                                <th>Status</th>
+                                <th class="text-end pe-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sr in student_reservation_history %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ sr.student_name }}</div>
+                                    <small class="text-muted">
+                                        ID: {{ sr.student_id }}
+                                        {% if sr.course_year_section %}&bull; {{ sr.course_year_section }}{% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="d-block">{{ sr.requested_pickup|date:"M d, Y, g:i a" }}</small>
+                                    <small class="text-muted">to {{ sr.requested_return|date:"M d, Y, g:i a" }}</small>
+                                </td>
+                                <td>
+                                    <small class="d-block">{{ sr.purpose|truncatechars:50 }}</small>
+                                    {% if sr.room_venue %}
+                                        <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ sr.room_venue }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if sr.status == 'RETURNED' %}
+                                        <span class="badge bg-success">Returned</span>
+                                    {% elif sr.status == 'REJECTED' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                    {% elif sr.status == 'CANCELLED' %}
+                                        <span class="badge bg-secondary">Cancelled</span>
+                                    {% elif sr.status == 'NO_SHOW' %}
+                                        <span class="badge bg-dark">No Show</span>
+                                    {% elif sr.status == 'RELEASED' %}
+                                        <span class="badge bg-info text-dark">Released</span>
+                                    {% elif sr.status == 'RETURNED_TO_GUARD' %}
+                                        <span class="badge bg-warning text-dark">At Guard Post</span>
+                                    {% else %}
+                                        <span class="badge bg-primary">{{ sr.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-3">
+                                    {% if request.user.is_admin %}
+                                    <a href="{% url 'student_reservations:custodian_detail' sr.pk %}" class="btn btn-outline-secondary btn-sm py-0 px-2" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -1095,7 +1279,7 @@
                                     {% if d.disposal_method %}
                                     <span class="badge bg-light text-dark border">{{ d.get_disposal_method_display }}</span>
                                     {% else %}
-                                    <span class="text-muted">—</span>
+                                    <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -1108,10 +1292,10 @@
                                     {% if d.disposal_date %}
                                         {{ d.disposal_date|date:"M d, Y" }}
                                     {% else %}
-                                        <span class="text-muted">—</span>
+                                        <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td class="small">{% if d.processed_by %}{{ d.processed_by.get_full_name|default:d.processed_by.username }}{% else %}&mdash;{% endif %}</td>
+                                <td class="small">{% if d.processed_by %}{{ d.processed_by.get_full_name|default:d.processed_by.username }}{% else %}-{% endif %}</td>
                                 <td class="text-end">
                                     <a href="{% url 'disposals:disposal_detail' d.pk %}" class="btn btn-outline-secondary btn-sm">
                                         <i class="bi bi-eye"></i>

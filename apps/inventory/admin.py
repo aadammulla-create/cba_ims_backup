@@ -46,6 +46,23 @@ class AssetAdmin(admin.ModelAdmin):
     list_filter = ('category', 'equipment_type', 'status', 'condition', 'department', 'brand')
     actions = ['review_suggested_equipment_types']
     readonly_fields = ('asset_code', 'uuid', 'created_at', 'updated_at')
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if obj is not None:
+            for field in ('status', 'department', 'current_location'):
+                if field not in readonly:
+                    readonly.append(field)
+        return readonly
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            orig = Asset.objects.get(pk=obj.pk)
+            obj.status = orig.status
+            obj.department = orig.department
+            obj.current_location = orig.current_location
+        super().save_model(request, obj, form, change)
+
     fieldsets = (
         ('System Identification', {
             'fields': ('asset_code', 'uuid', 'created_by')
