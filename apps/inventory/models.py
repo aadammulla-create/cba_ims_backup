@@ -61,6 +61,34 @@ class AssetCategory(models.Model):
         return self.name
 
 
+class EquipmentType(models.Model):
+    name = models.CharField(max_length=150)
+    category = models.ForeignKey(
+        AssetCategory,
+        on_delete=models.PROTECT,
+        related_name='equipment_types',
+        help_text='Parent asset category.'
+    )
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Equipment Type'
+        verbose_name_plural = 'Equipment Types'
+        ordering = ['category', 'name']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['category', 'name'],
+                name='unique_equipment_type_per_category'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.category.name} — {self.name}"
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=200, unique=True)
     is_active = models.BooleanField(default=True)
@@ -101,6 +129,14 @@ class Asset(models.Model):
     )
     item_name = models.CharField(max_length=300)
     category = models.ForeignKey(AssetCategory, on_delete=models.PROTECT, related_name='assets')
+    equipment_type = models.ForeignKey(
+        EquipmentType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assets',
+        help_text='Standardized equipment type within category (e.g. Projector, PA Speaker, Microphone).'
+    )
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='assets')
     model = models.CharField(max_length=200, blank=True)
     serial_number = models.CharField(max_length=200, blank=True, help_text='Leave blank if not applicable')
@@ -167,6 +203,14 @@ class Asset(models.Model):
 
     def clean(self):
         super().clean()
+        if self.equipment_type and self.category:
+            if self.equipment_type.category_id != self.category_id:
+                raise ValidationError({
+                    'equipment_type': (
+                        f"Equipment type '{self.equipment_type.name}' belongs to category "
+                        f"'{self.equipment_type.category.name}', which does not match asset category '{self.category.name}'."
+                    )
+                })
         if self.property_number:
             self.property_number = self.property_number.strip()
             qs = Asset.objects.filter(property_number__iexact=self.property_number)
