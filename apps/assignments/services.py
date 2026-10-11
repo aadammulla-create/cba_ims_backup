@@ -35,6 +35,12 @@ def assign_asset(
                 f"'{locked_asset.get_status_display()}'. Only AVAILABLE assets may be assigned."
             )
 
+        if locked_asset.condition == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError(
+                f"Asset '{locked_asset.asset_code}' cannot be assigned because its condition is UNSERVICEABLE. "
+                f"Unserviceable equipment must undergo maintenance or disposal."
+            )
+
         # Ensure no active assignment exists
         if AssetAssignment.objects.filter(asset=locked_asset, status=AssetAssignment.Status.ACTIVE).exists():
             raise ValidationError(

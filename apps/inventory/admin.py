@@ -50,7 +50,7 @@ class AssetAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         readonly = list(super().get_readonly_fields(request, obj))
         if obj is not None:
-            for field in ('status', 'department', 'current_location'):
+            for field in ('status', 'condition', 'department', 'current_location'):
                 if field not in readonly:
                     readonly.append(field)
         return readonly
@@ -59,6 +59,7 @@ class AssetAdmin(admin.ModelAdmin):
         if change:
             orig = Asset.objects.get(pk=obj.pk)
             obj.status = orig.status
+            obj.condition = orig.condition
             obj.department = orig.department
             obj.current_location = orig.current_location
         super().save_model(request, obj, form, change)

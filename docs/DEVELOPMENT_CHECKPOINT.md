@@ -29,21 +29,23 @@ The **CBA Asset and Inventory Management System (CBA IMS)** is an enterprise Dja
 
 ---
 
-## 3. Phase 3A: Main Asset Workflow Integrity
+## 3. Phase 3A: Main Asset Workflow & Condition Integrity
 
-**Status:** In-progress development checkpoint on branch `feat/main-workflow-integrity`.
+**Status:** Completed and locally verified on branch `feat/main-workflow-integrity`.
 
 ### Key Hardening Features Implemented:
+
+#### A. Workflow & Custody Integrity
 1. **Disposal Workflow Protection (`apps/disposals/services.py`):**
    - Both `validate_disposal_eligibility()` and `validate_completion_eligibility()` reject disposal requests if an asset is associated with an active or unresolved student reservation (`APPROVED`, `RELEASED`, or `RETURNED_TO_GUARD`).
    - Row-level locking via `Asset.objects.select_for_update()` protects physical disposal transactions.
 2. **Asset Update Form Restrictions (`apps/inventory/forms.py` & `views.py`):**
-   - Implemented dedicated `AssetUpdateForm` strictly excluding `status`, `department`, and `current_location` from editable fields.
-   - Server-side safety lock in `AssetUpdateView.form_valid()` enforces pre-existing database values for `status`, `department`, and `current_location` to neutralize forged POST payloads.
-   - Section 3 (Department & Location) and Section 5 (Condition & Status) in `asset_form.html` render read-only informational panels with transfer order links.
+   - Implemented dedicated `AssetUpdateForm` strictly excluding `status`, `condition`, `department`, and `current_location` from editable fields.
+   - Server-side safety locks in `AssetUpdateView.form_valid()` defensively enforce pre-existing database values for `status`, `condition`, `department`, and `current_location` to neutralize forged POST payloads.
+   - Section 3 (Department & Location) and Section 5 (Condition & Status) in `asset_form.html` render read-only informational panels with relocation and maintenance action links.
 3. **Django Admin Bypass Protection (`apps/inventory/admin.py`):**
-   - Implemented `get_readonly_fields()` in `AssetAdmin` dynamically making `status`, `department`, and `current_location` read-only for existing assets.
-   - Implemented defensive restoration in `save_model(change=True)` restoring database-backed values.
+   - Implemented `get_readonly_fields()` in `AssetAdmin` dynamically making `status`, `condition`, `department`, and `current_location` read-only for existing assets.
+   - Implemented defensive restoration in `save_model(change=True)` restoring database-backed values for all four protected fields.
    - Initial asset registration flow remains preserved for new asset creation.
 4. **Student Reservation Integration on Asset Detail (`apps/inventory/views.py` & `asset_detail.html`):**
    - Queries and surfaces `current_student_loan` (`RELEASED`), `guard_return_pending_inspection` (`RETURNED_TO_GUARD`), and `upcoming_student_reservations` (`APPROVED`).
@@ -53,50 +55,60 @@ The **CBA Asset and Inventory Management System (CBA IMS)** is an enterprise Dja
 5. **Graceful Asset Deletion Handling (`apps/inventory/views.py`):**
    - `AssetDeleteView` pre-emptively checks `asset.student_reservations.exists()` and redirects to detail with a user-friendly warning message, preventing unhandled `ProtectedError` (HTTP 500) crashes.
 6. **Cross-Module Date-Range Conflict Enforcement:**
-   - Verified that `apps.borrowing.services.request_borrowing()` and `approve_borrowing()` reject faculty borrowing requests that overlap with approved student reservations.
-   - Preserves legitimate non-overlapping faculty borrowings.
-7. **Automated Verification:**
-   - 15 / 15 Phase 3A workflow integrity tests passing (`apps/inventory/test_workflow_integrity.py`).
-   - 101 / 101 affected app tests passing (`disposals`, `borrowing`, `student_reservations`).
-   - 73 / 73 inventory tests passing (`apps.inventory`).
-   - 382 / 382 full project regression tests passing.
-   - 0 schema migration changes detected (`makemigrations --check --dry-run`).
-   - Exactly 25 / 25 local SQLite assets preserved in `db.sqlite3`.
+   - Verified that `apps.borrowing.services.request_borrowing()` and `approve_borrowing()` reject faculty borrowing requests that overlap with approved student reservations while preserving legitimate non-overlapping borrowings.
+
+#### B. Condition Integrity Hardening
+1. **Direct Edit Restrictions on `condition`:**
+   - Field completely removed from `AssetUpdateForm`.
+   - Immutable server-side lock applied in `AssetUpdateView`.
+   - Read-only in `AssetAdmin` for existing assets with defensive overwrite in `save_model`.
+2. **Assignment Blocking for Unserviceable Equipment (`apps/assignments/`):**
+   - `AssetAssignmentForm` queryset excludes assets where `condition == UNSERVICEABLE`.
+   - `assign_asset()` service enforces validation check raising `ValidationError` if an unserviceable asset is submitted.
+3. **Borrowing Blocking for Unserviceable Equipment (`apps/borrowing/services.py`):**
+   - `request_borrowing()` rejects unserviceable assets at request time.
+   - `release_asset()` enforces validation ensuring neither the physical asset nor `condition_at_release` is `UNSERVICEABLE`.
+4. **Student Reservation Blocking for Unserviceable Equipment (`apps/student_reservations/services.py`):**
+   - `get_reservable_assets()` excludes assets with `condition == UNSERVICEABLE`.
+   - `check_asset_availability()` returns `(False, "Asset is unserviceable")` for unserviceable items.
+   - `release_equipment()` rejects release if the asset or `condition_at_release` is `UNSERVICEABLE`.
+5. **UI & Navigation Ergonomics (`templates/inventory/asset_form.html`):**
+   - Replaced raw condition select field with an institutional status badge (New, Good, Fair, Poor, Unserviceable) and a shield-lock indicator.
+   - Added direct operational action links to official condition workflows: `Report Maintenance` and `Physical Verification`.
+   - Corrected relocation link to use `transfers:transfer_request_specific`.
+6. **Cross-Platform Test Path Portability (`apps/accounts/tests_phase11.py`):**
+   - Replaced hardcoded machine-specific template file paths with dynamic `os.path.join(settings.BASE_DIR, 'templates', ...)` ensuring cross-machine portability.
+
+#### C. Verification & Quality Gates
+- **Total Test Baseline:** 395 / 395 tests passing (382 full project baseline + 13 dedicated condition integrity tests in `apps/inventory/test_condition_integrity.py`).
+- **Targeted Test Execution:** 81 / 81 tests passing across `apps.inventory.test_condition_integrity`, `apps.inventory.test_workflow_integrity`, and `apps.accounts.tests_phase11` (138s, 100% OK).
+- **Git Diff & Whitespace Cleanliness:** `git diff --check` exits 0 with zero warnings.
+- **Django Migrations:** `makemigrations --check --dry-run` reports "No changes detected". All 45 schema migrations applied.
 
 ---
 
-## 4. EXACT PAUSE POINT
+## 4. EXACT PAUSE POINT: Defect-Reporting Policy Decision
 
-Phase 3A has **not** yet been finalized or committed as complete.
+Phase 3A implementation is fully completed, tested, and ready for commit approval.
 
-### ChatGPT's Latest Pending Instruction:
-**Phase 3A Final Correction: Asset Condition Integrity**
+### Remaining Architectural / Policy Decision for ChatGPT & Project Owner:
 
-The following remaining tasks are pending and must be addressed upon resuming:
-1. **Restrict Direct Edits of `Asset.condition`:**
-   - Direct changes to `condition` on existing assets must be locked in `AssetUpdateForm`, `AssetUpdateView`, and Django Admin (`AssetAdmin`).
-   - Operational conditions must only transition through official inspection and maintenance workflows.
-2. **Prevent Unserviceable Equipment from Being Newly Assigned or Released:**
-   - Add explicit checks in assignment creation and equipment borrowing release preventing assets in `UNSERVICEABLE` condition from checkout.
-3. **Audit Defect Reporting Risk Window:**
-   - Investigate whether filing a defect report leaves an equipment window where an asset remains marked `AVAILABLE` before maintenance assessment begins.
-4. **Preserve Operational Workflows:**
-   - Ensure employee assignments, borrowings, returns, student reservations, and maintenance cases continue to transition condition through their verified lifecycle methods.
-5. **Add Regression Tests:**
-   - Write dedicated unit tests covering condition edit restrictions and assignment/release blocking for unserviceable assets.
-6. **Architectural Review:**
-   - Submit test results and implementation diffs to ChatGPT for formal Phase 3A closure approval.
-
-*Note: These tasks have not yet been implemented in this checkpoint.*
+**Defect Reporting Equipment Availability Risk Window:**
+- **Code Audit Finding:** In `apps/maintenance/services.py`, when a defect or damage report is filed via `report_issue()`, the maintenance record is created with status `REPORTED`. Following diagnostic assessment via `assess_issue()`, the record status transitions to `ASSESSED`. However, the physical `Asset.status` remains unchanged (typically `AVAILABLE`) until `start_repair()` is explicitly invoked, transitioning the asset to `UNDER_MAINTENANCE` (or `MAINTENANCE`).
+- **Policy Question:**
+  - *Option A (Immediate Quarantine):* Should filing a defect report (or any defect report with High/Critical severity) immediately quarantine the asset by transitioning its operational status to `UNDER_MAINTENANCE` or blocking it in availability checks (`check_asset_availability`, `request_borrowing`, `assign_asset`) to prevent accidental deployment?
+  - *Option B (Status Quo / Deferred Quarantine):* Should the asset remain nominally available until a property custodian or technician physically assesses the equipment and initiates repairs via `start_repair()`?
+- **Recommendation:** Present this decision to ChatGPT during the Phase 3B dashboard/workflow architecture review before modifying maintenance service state transitions.
 
 ---
 
 ## 5. Future Development Roadmap
 
-- **Phase 3A Closure:** Implement condition integrity correction, verify full regression, and commit Phase 3A feature commit.
+- **Phase 3A Checkpoint Commit & Backup:** Stage reviewed files, create conventional commit, and push to private backup.
 - **Phase 3B: Unified Main Dashboard & Navigation:**
   - Modernize custodian dashboard metrics and visual hierarchy under DESIGN.md v2.0.
-  - Consolidate sidebar navigation links across inventory, supplies, borrowing, and reservations.
+  - Consolidate sidebar navigation links across inventory, supplies, borrowing, reservations, and maintenance.
+  - Implement defect-reporting policy decision into dashboard queues and availability metrics.
 - **Phase 3C: Public Landing Page & Staff Login Redesign:**
   - Dedicated institutional portal landing page.
   - Branded staff authentication interface aligned with university styling.
@@ -140,22 +152,16 @@ The following remaining tasks are pending and must be addressed upon resuming:
 - `feat/phase-2a-student-portal`: Complete Phase 2A implementation (Head: `64ca513`).
 - `feat/main-workflow-integrity`: Active branch branched from `feat/phase-2a-student-portal`. Contains Phase 3A integrity hardening.
 
-### Uncommitted Working Tree at Checkpoint:
-- Modified files:
-  - `apps/disposals/services.py`
-  - `apps/inventory/admin.py`
-  - `apps/inventory/forms.py`
-  - `apps/inventory/views.py`
-  - `templates/inventory/asset_detail.html`
-  - `templates/inventory/asset_form.html`
-- Untracked files:
-  - `apps/inventory/test_workflow_integrity.py`
-  - `docs/DEVELOPMENT_CHECKPOINT.md`
-
-### Instructions to Resume:
-1. Open local repository at `C:\Users\PERSONAL\Desktop\cba_ims`.
-2. Confirm active branch: `git checkout feat/main-workflow-integrity`.
-3. Read `docs/DEVELOPMENT_CHECKPOINT.md` Section 4 (Exact Pause Point).
-4. Await specific implementation guidance from ChatGPT for the Phase 3A condition integrity correction.
-5. Implement the condition edit restrictions, run `apps/inventory/test_workflow_integrity.py`, and run the full regression suite `python manage.py test`.
-6. Submit findings to ChatGPT for approval before creating the Phase 3A feature commit.
+### Files Prepared for Phase 3A Feature Commit:
+1. `apps/accounts/tests_phase11.py` (Cross-machine template path portability fix)
+2. `apps/assignments/forms.py` (Exclude UNSERVICEABLE assets from assignment form queryset)
+3. `apps/assignments/services.py` (Reject UNSERVICEABLE assets in `assign_asset`)
+4. `apps/borrowing/services.py` (Reject UNSERVICEABLE assets in `request_borrowing` and `release_asset`)
+5. `apps/inventory/admin.py` (Make `condition` read-only on change and restore on save)
+6. `apps/inventory/forms.py` (Remove `condition` from `AssetUpdateForm`)
+7. `apps/inventory/test_condition_integrity.py` (13 new unit tests for condition integrity safeguards)
+8. `apps/inventory/test_workflow_integrity.py` (Updated test assertions for locked condition)
+9. `apps/inventory/views.py` (Enforce server-side lock on `condition` in `AssetUpdateView`)
+10. `apps/student_reservations/services.py` (Exclude UNSERVICEABLE assets from reservable list, availability check, and release)
+11. `templates/inventory/asset_form.html` (Render condition as read-only badge with action links, fix relocation link)
+12. `docs/DEVELOPMENT_CHECKPOINT.md` (Updated checkpoint documentation)

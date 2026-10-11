@@ -372,8 +372,8 @@ class AssetCreateView(AdminRequiredMixin, CreateView):
 
 class AssetUpdateView(AdminRequiredMixin, UpdateView):
     """
-    Edits existing asset specifications, condition, and metadata.
-    Excludes workflow-managed fields (status, department, current_location).
+    Edits existing asset specifications and metadata.
+    Excludes workflow-managed fields (status, condition, department, current_location).
     Preserves asset_code and records field-level changes in audit log.
     """
     model = Asset
@@ -392,6 +392,7 @@ class AssetUpdateView(AdminRequiredMixin, UpdateView):
 
         # Enforce server-side safety locks on workflow-managed fields
         form.instance.status = old_instance.status
+        form.instance.condition = old_instance.condition
         form.instance.department = old_instance.department
         form.instance.current_location = old_instance.current_location
 

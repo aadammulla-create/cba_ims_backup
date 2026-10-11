@@ -176,28 +176,32 @@ class CustomErrorPageTests(TestCase):
     def test_404_template_exists(self):
         """The 404.html template file must exist."""
         import os
-        template_path = 'C:/Users/PERSONAL/Documents/RobloxDanceEmote/cba_ims/templates/404.html'
+        from django.conf import settings
+        template_path = os.path.join(settings.BASE_DIR, 'templates', '404.html')
         self.assertTrue(os.path.exists(template_path),
                         "templates/404.html must exist for custom 404 page")
 
     def test_403_template_exists(self):
         """The 403.html template file must exist."""
         import os
-        template_path = 'C:/Users/PERSONAL/Documents/RobloxDanceEmote/cba_ims/templates/403.html'
+        from django.conf import settings
+        template_path = os.path.join(settings.BASE_DIR, 'templates', '403.html')
         self.assertTrue(os.path.exists(template_path),
                         "templates/403.html must exist for custom 403 page")
 
     def test_500_template_exists(self):
         """The 500.html template file must exist."""
         import os
-        template_path = 'C:/Users/PERSONAL/Documents/RobloxDanceEmote/cba_ims/templates/500.html'
+        from django.conf import settings
+        template_path = os.path.join(settings.BASE_DIR, 'templates', '500.html')
         self.assertTrue(os.path.exists(template_path),
                         "templates/500.html must exist for custom 500 page")
 
     def test_400_template_exists(self):
         """The 400.html template file must exist."""
         import os
-        template_path = 'C:/Users/PERSONAL/Documents/RobloxDanceEmote/cba_ims/templates/400.html'
+        from django.conf import settings
+        template_path = os.path.join(settings.BASE_DIR, 'templates', '400.html')
         self.assertTrue(os.path.exists(template_path),
                         "templates/400.html must exist for custom 400 page")
 

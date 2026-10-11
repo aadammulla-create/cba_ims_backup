@@ -127,8 +127,8 @@ class AssetForm(forms.ModelForm):
 class AssetUpdateForm(forms.ModelForm):
     """
     Dedicated metadata-only form for modifying existing assets.
-    Excludes status, department, and current_location to prevent direct modification
-    of workflow-governed lifecycle and custody fields outside of transfers and lifecycle services.
+    Excludes status, condition, department, and current_location to prevent direct modification
+    of workflow-governed lifecycle, physical condition, and custody fields outside of transfers and lifecycle services.
     """
     class Meta:
         model = Asset
@@ -139,8 +139,8 @@ class AssetUpdateForm(forms.ModelForm):
             'property_number', 'serial_number',
             # Acquisition
             'acquisition_date', 'acquisition_cost', 'supplier',
-            # Condition & Remarks
-            'condition', 'remarks',
+            # Remarks
+            'remarks',
             # Media
             'asset_image',
         ]
@@ -169,7 +169,6 @@ class AssetUpdateForm(forms.ModelForm):
                 'placeholder': '0.00'
             }),
             'supplier': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Supplier or Vendor Company'}),
-            'condition': forms.Select(attrs={'class': 'form-select'}),
             'remarks': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional operational remarks...'}),
             'asset_image': forms.FileInput(attrs={
                 'class': 'form-control',

@@ -94,7 +94,7 @@ class Phase3AWorkflowIntegrityTests(TestCase):
             property_number='NORSU-CBA-2026-0099',
             department=self.dept_it,
             current_location=self.loc_it,
-            condition=Asset.Condition.UNSERVICEABLE,
+            condition=Asset.Condition.GOOD,
             status=Asset.Status.AVAILABLE,
             acquisition_cost=Decimal('45000.00'),
             created_by=self.admin
@@ -256,6 +256,7 @@ class Phase3AWorkflowIntegrityTests(TestCase):
         self.assertEqual(self.asset.status, original_status)
         self.assertEqual(self.asset.department.pk, original_dept_pk)
         self.assertEqual(self.asset.current_location.pk, original_loc_pk)
+        self.assertEqual(self.asset.condition, Asset.Condition.GOOD)
 
     # --------------------------------------------------------------------------
     # 6. Normal metadata edits remain possible
@@ -272,7 +273,6 @@ class Phase3AWorkflowIntegrityTests(TestCase):
             'property_number': self.asset.property_number,
             'serial_number': 'SN-DELL-NEW99',
             'acquisition_cost': '48000.00',
-            'condition': Asset.Condition.POOR,
             'remarks': 'Updated operational notes and description.',
         }
 
@@ -284,7 +284,7 @@ class Phase3AWorkflowIntegrityTests(TestCase):
         self.assertEqual(self.asset.model, '5420-Gen2')
         self.assertEqual(self.asset.serial_number, 'SN-DELL-NEW99')
         self.assertEqual(self.asset.acquisition_cost, Decimal('48000.00'))
-        self.assertEqual(self.asset.condition, Asset.Condition.POOR)
+        self.assertEqual(self.asset.condition, Asset.Condition.GOOD)
         self.assertEqual(self.asset.remarks, 'Updated operational notes and description.')
 
     # --------------------------------------------------------------------------
@@ -610,9 +610,9 @@ class Phase3AWorkflowIntegrityTests(TestCase):
         self.assertEqual(approved_borrowing.status, 'APPROVED')
 
     # --------------------------------------------------------------------------
-    # 15. Asset update form supports condition and descriptive metadata (Task 4)
+    # 15. Asset update form locks condition and updates descriptive metadata
     # --------------------------------------------------------------------------
-    def test_asset_update_form_supports_condition_and_descriptive_metadata(self):
+    def test_asset_update_form_locks_condition_and_updates_descriptive_metadata(self):
         self.client.login(username='admin_integrity', password='Password123!')
         edit_url = reverse('inventory:asset_edit', kwargs={'asset_code': self.asset.asset_code})
 
@@ -627,7 +627,7 @@ class Phase3AWorkflowIntegrityTests(TestCase):
             'acquisition_date': '2026-01-15',
             'acquisition_cost': '48000.00',
             'supplier': 'Dell Official Store',
-            'condition': Asset.Condition.GOOD,
+            'condition': Asset.Condition.POOR,
             'remarks': 'Operational condition verified during audit',
             # Forged lifecycle fields intended to bypass workflow
             'status': Asset.Status.DISPOSED,
@@ -641,16 +641,16 @@ class Phase3AWorkflowIntegrityTests(TestCase):
 
         self.asset.refresh_from_db()
 
-        # Legitimate descriptive metadata and condition must be updated
+        # Legitimate descriptive metadata must be updated
         self.assertEqual(self.asset.item_name, 'Dell Latitude 5420 Updated')
         self.assertEqual(self.asset.model, '5420 v2')
         self.assertEqual(self.asset.description, 'Updated specifications and notes')
         self.assertEqual(self.asset.serial_number, 'SN-DELL-998877')
         self.assertEqual(self.asset.acquisition_cost, Decimal('48000.00'))
-        self.assertEqual(self.asset.condition, Asset.Condition.GOOD)
         self.assertEqual(self.asset.remarks, 'Operational condition verified during audit')
 
-        # Protected workflow fields must remain strictly unchanged
+        # Protected workflow fields and condition must remain strictly unchanged
+        self.assertEqual(self.asset.condition, Asset.Condition.GOOD)
         self.assertEqual(self.asset.status, Asset.Status.AVAILABLE)
         self.assertEqual(self.asset.department, self.dept_it)
         self.assertEqual(self.asset.current_location, self.loc_it)

@@ -7,7 +7,7 @@ from .models import AssetAssignment
 
 class AssetAssignmentForm(forms.ModelForm):
     asset = forms.ModelChoiceField(
-        queryset=Asset.objects.filter(status=Asset.Status.AVAILABLE).select_related('category', 'brand'),
+        queryset=Asset.objects.filter(status=Asset.Status.AVAILABLE).exclude(condition=Asset.Condition.UNSERVICEABLE).select_related('category', 'brand'),
         widget=forms.Select(attrs={'class': 'form-select'}),
         help_text='Only assets currently marked as AVAILABLE may be selected.'
     )

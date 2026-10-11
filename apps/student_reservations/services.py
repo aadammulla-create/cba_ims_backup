@@ -90,6 +90,8 @@ def get_reservable_assets(category=None):
             Asset.Status.MAINTENANCE,
             Asset.Status.TRANSFERRED
         ]
+    ).exclude(
+        condition=Asset.Condition.UNSERVICEABLE
     )
     if category:
         qs = qs.filter(category=category)
@@ -125,6 +127,9 @@ def check_asset_availability(asset, requested_pickup, requested_return, exclude_
         return False, f"Equipment category '{asset.category.name}' is non-reservable."
     if not getattr(asset.category, 'is_active', True):
         return False, f"Equipment category '{asset.category.name}' is deactivated."
+
+    if asset.condition == Asset.Condition.UNSERVICEABLE:
+        return False, f"Asset '{asset.asset_code}' is unserviceable."
 
     if asset.status in [
         Asset.Status.MAINTENANCE,
@@ -707,8 +712,17 @@ def release_equipment(reservation, released_by, condition_at_release=None, remar
                 f"Asset '{locked_asset.asset_code}' is currently released on a faculty borrowing."
             )
 
+        if locked_asset.condition == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError(
+                f"Cannot release: Asset '{locked_asset.asset_code}' is unserviceable."
+            )
+
         now = timezone.now()
         cond = condition_at_release or locked_asset.condition
+        if cond == Asset.Condition.UNSERVICEABLE or condition_at_release == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError(
+                f"Cannot release asset '{locked_asset.asset_code}' in UNSERVICEABLE condition."
+            )
 
         locked_res.status = StudentReservation.Status.RELEASED
         locked_res.released_by = released_by

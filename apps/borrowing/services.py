@@ -93,6 +93,12 @@ def request_borrowing(
             f"'{asset.get_status_display()}'. Only AVAILABLE equipment may be requested."
         )
 
+    if asset.condition == Asset.Condition.UNSERVICEABLE:
+        raise ValidationError(
+            f"Asset '{asset.asset_code}' cannot be borrowed because its condition is UNSERVICEABLE. "
+            f"Unserviceable equipment must undergo maintenance or disposal."
+        )
+
     # 3. Long-term assignment and transfer protection
     if asset.assignments.filter(status='ACTIVE').exists():
         raise ValidationError(
@@ -380,7 +386,16 @@ def release_asset(borrowing, released_by, condition_at_release=None, remarks='',
                 f"Asset '{locked_asset.asset_code}' is currently physically released on a student reservation."
             )
 
+        if locked_asset.condition == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError(
+                f"Cannot release: Asset '{locked_asset.asset_code}' is unserviceable."
+            )
+
         cond = condition_at_release or locked_asset.condition
+        if cond == Asset.Condition.UNSERVICEABLE or condition_at_release == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError(
+                f"Cannot release asset '{locked_asset.asset_code}' in UNSERVICEABLE condition."
+            )
         locked_borrowing.status = AssetBorrowing.Status.RELEASED
         locked_borrowing.released_by = released_by
         locked_borrowing.released_at = timezone.now()
