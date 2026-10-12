@@ -21,6 +21,11 @@
                 <span class="badge bg-slate-100 text-slate-700 border border-slate-200 fw-medium px-2 py-0.5">
                     {{ request.user.get_role_display }}
                 </span>
+                {% if request.user.employee_profile and request.user.employee_profile.department %}
+                <span class="badge bg-slate-100 text-slate-700 border border-slate-200 fw-medium px-2 py-0.5 font-mono">
+                    {{ request.user.employee_profile.department.code|default:request.user.employee_profile.department.name }}
+                </span>
+                {% endif %}
                 <span class="text-muted">&bull;</span>
                 <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>{% now "l, F j, Y" %}</span>
             </div>
@@ -44,11 +49,18 @@
                     <span>My Loans</span>
                 </a>
             {% else %}
-                <!-- Administrative Secondary Actions -->
+                <!-- Staff Secondary Actions -->
+                {% if request.user.is_admin %}
                 <a href="{% url 'assignments:assign_create' %}" class="btn btn-secondary-cba">
                     <i class="bi bi-person-plus me-1.5 text-secondary"></i>
                     <span>Assign Asset</span>
                 </a>
+                {% elif request.user.role != 'FACULTY' %}
+                <a href="{% url 'inventory:asset_list' %}" class="btn btn-secondary-cba">
+                    <i class="bi bi-box-seam me-1.5 text-secondary"></i>
+                    <span>Asset Register</span>
+                </a>
+                {% endif %}
                 
                 <div class="dropdown">
                     <button class="btn btn-secondary-cba dropdown-toggle" type="button" id="quickActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -57,13 +69,27 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="quickActionsDropdown">
                         <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Inventory</li>
+                        {% if request.user.is_admin %}
                         <li><a class="dropdown-item" href="{% url 'inventory:asset_create' %}"><i class="bi bi-plus-circle me-2 text-primary"></i>Register New Asset</a></li>
+                        {% endif %}
                         <li><a class="dropdown-item" href="{% url 'inventory:physical_verification_list' %}"><i class="bi bi-check2-square me-2 text-success"></i>Physical Verification</a></li>
+                        {% if request.user.is_admin %}
                         <li><a class="dropdown-item" href="{% url 'inventory:qr_labels_bulk' %}"><i class="bi bi-qr-code me-2 text-dark"></i>Generate Bulk QR Labels</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Equipment Operations</li>
+                        {% if request.user.is_admin %}
+                        <li><a class="dropdown-item" href="{% url 'student_reservations:custodian_list' %}"><i class="bi bi-mortarboard me-2 text-primary"></i>Student Reservations</a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item" href="{% url 'borrowing:active_list' %}"><i class="bi bi-hand-index me-2 text-secondary"></i>Active Loans</a></li>
+                        <li><a class="dropdown-item" href="{% url 'transfers:pending_list' %}"><i class="bi bi-arrow-left-right me-2 text-info"></i>Pending Transfers</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Consumables</li>
+                        {% if request.user.is_admin %}
                         <li><a class="dropdown-item" href="{% url 'supplies:stock_in' %}"><i class="bi bi-box-arrow-in-down me-2 text-success"></i>Supply Stock-In</a></li>
                         <li><a class="dropdown-item" href="{% url 'supplies:stock_out' %}"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Supply Stock-Out</a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item" href="{% url 'supplies:low_stock_list' %}"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Low Stock Supplies</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="{% url 'reports:reports_dashboard' %}" class="text-secondary"><i class="bi bi-file-earmark-bar-graph me-2"></i>Executive Reports</a></li>
                     </ul>
@@ -72,116 +98,10 @@
         </div>
     </div>
 
-    <!-- 2. Operational Attention Required (Compact Operational Panel) -->
-    {% if critical_maintenance_count > 0 or overdue_borrowings_count > 0 or low_stock_supplies_count > 0 or pending_transfers_count > 0 or pending_borrowings_count > 0 or pending_disposals_count > 0 %}
-    <section class="card border shadow-sm mb-4" aria-label="Operational Attention Required">
-        <div class="card-header bg-white border-bottom py-2 px-3 d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fw-semibold px-2 py-0.5 fs-xs">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Attention Required
-                </span>
-                <span class="text-secondary fs-xs d-none d-sm-inline">Operational items requiring immediate review</span>
-            </div>
-            <span class="text-muted fs-xs font-mono">Live Action Queue</span>
-        </div>
-        <div class="list-group list-group-flush">
-            {% if critical_maintenance_count > 0 %}
-            <div class="list-group-item d-flex align-items-center justify-content-between py-2 px-3 bg-white">
-                <div class="d-flex align-items-center gap-2.5">
-                    <span class="status-indicator bg-danger"></span>
-                    <span class="text-dark fw-medium fs-sm">
-                        <strong>{{ critical_maintenance_count }}</strong> equipment item{{ critical_maintenance_count|pluralize }} logged with critical severity
-                    </span>
-                </div>
-                <a href="{% url 'maintenance:case_list' %}?severity=CRITICAL" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                    Review Cases
-                </a>
-            </div>
-            {% endif %}
-
-            {% if overdue_borrowings_count > 0 %}
-            <div class="list-group-item d-flex align-items-center justify-content-between py-2 px-3 bg-white">
-                <div class="d-flex align-items-center gap-2.5">
-                    <span class="status-indicator bg-warning"></span>
-                    <span class="text-dark fw-medium fs-sm">
-                        <strong>{{ overdue_borrowings_count }}</strong> equipment loan{{ overdue_borrowings_count|pluralize }} past scheduled return date
-                    </span>
-                </div>
-                <a href="{% url 'borrowing:active_list' %}?status=OVERDUE" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                    View Overdue
-                </a>
-            </div>
-            {% endif %}
-
-            {% if low_stock_supplies_count > 0 %}
-            <div class="list-group-item d-flex align-items-center justify-content-between py-2 px-3 bg-white">
-                <div class="d-flex align-items-center gap-2.5">
-                    <span class="status-indicator bg-warning"></span>
-                    <span class="text-dark fw-medium fs-sm">
-                        Supply Replenishment Alert: <strong>{{ low_stock_supplies_count }}</strong> consumable item{{ low_stock_supplies_count|pluralize }} at or below reorder threshold{% if out_of_stock_supplies_count > 0 %} ({{ out_of_stock_supplies_count }} depleted){% endif %}
-                    </span>
-                </div>
-                <a href="{% url 'supplies:low_stock_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                    Review Supplies
-                </a>
-            </div>
-            {% endif %}
-
-            {% with total_pending=pending_transfers_count|add:pending_borrowings_count|add:pending_disposals_count %}
-            {% if total_pending > 0 %}
-            <div class="list-group-item d-flex align-items-center justify-content-between py-2 px-3 bg-white">
-                <div class="d-flex align-items-center gap-2.5">
-                    <span class="status-indicator bg-primary"></span>
-                    <span class="text-dark fw-medium fs-sm">
-                        <strong>{{ total_pending }}</strong> pending approval{{ total_pending|pluralize }} awaiting administrative review
-                        <span class="text-muted fw-normal ms-1 fs-xs">
-                            ({% if pending_transfers_count > 0 %}{{ pending_transfers_count }} transfer{{ pending_transfers_count|pluralize }}{% endif %}{% if pending_borrowings_count > 0 %}{% if pending_transfers_count > 0 %}, {% endif %}{{ pending_borrowings_count }} loan{{ pending_borrowings_count|pluralize }}{% endif %}{% if pending_disposals_count > 0 %}{% if pending_transfers_count > 0 or pending_borrowings_count > 0 %}, {% endif %}{{ pending_disposals_count }} disposal{{ pending_disposals_count|pluralize }}{% endif %})
-                        </span>
-                    </span>
-                </div>
-                <div>
-                    {% if pending_transfers_count > 0 and pending_borrowings_count == 0 and pending_disposals_count == 0 %}
-                    <a href="{% url 'transfers:pending_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                        Review Transfers
-                    </a>
-                    {% elif pending_borrowings_count > 0 and pending_transfers_count == 0 and pending_disposals_count == 0 %}
-                    <a href="{% url 'borrowing:request_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                        Review Loans
-                    </a>
-                    {% elif pending_disposals_count > 0 and pending_transfers_count == 0 and pending_borrowings_count == 0 %}
-                    <a href="{% url 'disposals:pending_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold flex-shrink-0">
-                        Review Disposals
-                    </a>
-                    {% else %}
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-secondary-cba dropdown-toggle py-1 px-2.5 fs-xs fw-semibold" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Review Queue
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm fs-xs">
-                            {% if pending_transfers_count > 0 %}
-                            <li><a class="dropdown-item py-1.5" href="{% url 'transfers:pending_list' %}"><i class="bi bi-arrow-left-right me-2 text-primary"></i>Pending Transfers ({{ pending_transfers_count }})</a></li>
-                            {% endif %}
-                            {% if pending_borrowings_count > 0 %}
-                            <li><a class="dropdown-item py-1.5" href="{% url 'borrowing:request_list' %}"><i class="bi bi-clock-history me-2 text-warning"></i>Loan Requests ({{ pending_borrowings_count }})</a></li>
-                            {% endif %}
-                            {% if pending_disposals_count > 0 %}
-                            <li><a class="dropdown-item py-1.5" href="{% url 'disposals:pending_list' %}"><i class="bi bi-trash3 me-2 text-danger"></i>Disposal Reviews ({{ pending_disposals_count }})</a></li>
-                            {% endif %}
-                        </ul>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% endwith %}
-        </div>
-    </section>
-    {% endif %}
-
-    <!-- 3. Key Performance Indicators (Tiered Restrained Architecture) -->
-    <section class="mb-4" aria-label="Key Performance Indicators">
+    <!-- 2. Asset Overview (Restrained Modern KPI Architecture) -->
+    <section class="mb-4" aria-label="Asset Overview">
         <div class="row g-3">
-            <!-- 1. Total Assets -->
+            <!-- 1. Total Catalogued Assets -->
             <div class="col-6 col-md-4 col-xl-2">
                 <div class="kpi-card kpi-interactive">
                     <div>
@@ -193,13 +113,15 @@
                     </div>
                     <div class="kpi-desc">
                         <span>Total catalogued</span>
+                        {% if request.user.role != 'FACULTY' %}
                         <span class="kpi-link-label">View list &rarr;</span>
                         <a href="{% url 'inventory:asset_list' %}" class="stretched-link" aria-label="View all assets"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- 2. Available Assets -->
+            <!-- 2. Available Assets (Physical Stock) -->
             <div class="col-6 col-md-4 col-xl-2">
                 <div class="kpi-card kpi-interactive">
                     <div>
@@ -210,9 +132,11 @@
                         <div class="kpi-value text-success">{{ available_assets|default:"0" }}</div>
                     </div>
                     <div class="kpi-desc">
-                        <span>Deployable stock</span>
+                        <span>Physical stock*</span>
+                        {% if request.user.role != 'FACULTY' %}
                         <span class="kpi-link-label">View list &rarr;</span>
                         <a href="{% url 'inventory:asset_list' %}?status=AVAILABLE" class="stretched-link" aria-label="View deployable available assets"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -240,7 +164,30 @@
                 </div>
             </div>
 
-            <!-- 4. Under Maintenance -->
+            <!-- 4. On-Loan Assets (Faculty + Student) -->
+            <div class="col-6 col-md-4 col-xl-2">
+                <div class="kpi-card kpi-interactive">
+                    <div>
+                        <div class="kpi-header">
+                            <span class="kpi-label">On Loan</span>
+                            <i class="bi bi-hand-index kpi-icon text-secondary" aria-hidden="true"></i>
+                        </div>
+                        <div class="kpi-value">{{ total_on_loan_assets|default:borrowed_assets|default:"0" }}</div>
+                    </div>
+                    <div class="kpi-desc">
+                        <span>{% if student_active_loans_count > 0 %}{{ student_active_loans_count }} stu, {{ borrowed_assets }} staff{% else %}Temporary loans{% endif %}</span>
+                        {% if request.user.role != 'FACULTY' %}
+                        <span class="kpi-link-label">View loans &rarr;</span>
+                        <a href="{% url 'borrowing:active_list' %}" class="stretched-link" aria-label="View active loans"></a>
+                        {% else %}
+                        <span class="kpi-link-label">Loans &rarr;</span>
+                        <a href="{% url 'borrowing:my_borrowings' %}" class="stretched-link" aria-label="View my borrowed equipment"></a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Under Maintenance -->
             <div class="col-6 col-md-4 col-xl-2">
                 <div class="kpi-card kpi-interactive">
                     <div>
@@ -267,29 +214,6 @@
                 </div>
             </div>
 
-            <!-- 5. Active Borrowed -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Borrowed</span>
-                            <i class="bi bi-hand-index kpi-icon text-muted" aria-hidden="true"></i>
-                        </div>
-                        <div class="kpi-value">{{ borrowed_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>Temporary loans</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'borrowing:active_list' %}" class="stretched-link" aria-label="View active borrowed equipment"></a>
-                        {% else %}
-                        <span class="kpi-link-label">Loans &rarr;</span>
-                        <a href="{% url 'borrowing:my_borrowings' %}" class="stretched-link" aria-label="View my borrowed equipment"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
             <!-- 6. Damaged / Defect -->
             <div class="col-6 col-md-4 col-xl-2">
                 <div class="kpi-card kpi-interactive">
@@ -305,14 +229,477 @@
                         <div class="kpi-value {% if damaged_assets > 0 %}text-danger{% endif %}">{{ damaged_assets|default:"0" }}</div>
                     </div>
                     <div class="kpi-desc">
-                        <span>Needs inspection</span>
+                        <span>{% if unserviceable_assets > 0 %}{{ unserviceable_assets }} unserviceable{% else %}Needs inspection{% endif %}</span>
+                        {% if request.user.role != 'FACULTY' %}
                         <span class="kpi-link-label">View list &rarr;</span>
                         <a href="{% url 'inventory:asset_list' %}?condition=DAMAGED" class="stretched-link" aria-label="View damaged assets"></a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Physical Stock Notice (Helper Text Note) -->
+        <div class="d-flex align-items-center gap-1.5 text-muted fs-xs mt-2 px-1">
+            <i class="bi bi-info-circle text-secondary"></i>
+            <span>* <strong>Physical Stock Notice:</strong> Available assets indicate items physically in stock on premise and are not guaranteed for future reservations until confirmed by a property custodian.</span>
+        </div>
     </section>
+
+    <!-- 3. Requires Attention: Operational Queues -->
+    {% with total_attention=pending_reservations_count|add:guard_returns_count|add:overdue_loans_count|add:open_maintenance_count|add:pending_transfers_count|add:low_stock_supplies_count|add:pending_disposals_count|add:pending_borrowings_count %}
+    {% if total_attention == 0 %}
+    <!-- Professional Empty State -->
+    <section class="card border shadow-sm mb-4" aria-label="Operational Attention Required">
+        <div class="card-body p-4 text-center">
+            <div class="d-inline-flex align-items-center justify-content-center p-2.5 rounded-circle bg-success-subtle mb-2.5">
+                <i class="bi bi-shield-check fs-3 text-success" aria-hidden="true"></i>
+            </div>
+            <h2 class="h6 fw-bold text-dark mb-1">Operational Queues Clear</h2>
+            <p class="text-secondary small mb-0">
+                All operational queues are clear. No pending items require immediate attention.
+            </p>
+        </div>
+    </section>
+    {% else %}
+    <!-- Operational Live Action Queue Panel with Interactive Tabs -->
+    <section class="card border shadow-sm mb-4" aria-label="Operational Attention Required"
+             x-data="{ activeQueue: '{% if guard_returns_count > 0 %}guard_returns{% elif overdue_loans_count > 0 %}overdue{% elif pending_reservations_count > 0 %}reservations{% elif open_maintenance_count > 0 %}maintenance{% elif pending_transfers_count > 0 %}transfers{% elif low_stock_supplies_count > 0 %}supplies{% elif pending_disposals_count > 0 %}disposals{% elif pending_borrowings_count > 0 %}borrowings{% else %}all{% endif %}' }">
+        <!-- Panel Header -->
+        <div class="card-header bg-white border-bottom py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fw-semibold px-2 py-0.5 fs-xs">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Attention Required
+                </span>
+                <h2 class="h6 mb-0 fw-bold text-dark">Live Operational Queues</h2>
+                <span class="badge bg-slate-100 text-slate-700 border font-mono fs-xs">{{ total_attention }} Item{{ total_attention|pluralize }}</span>
+            </div>
+            <span class="text-muted fs-xs font-mono d-none d-sm-inline">Action Queue Priority</span>
+        </div>
+
+        <!-- Queue Summary Tabs Strip -->
+        <div class="queue-nav-bar">
+            {% if is_custodian and guard_returns_count > 0 %}
+            <button type="button" @click="activeQueue = 'guard_returns'" :class="{ 'active': activeQueue === 'guard_returns' }" class="queue-nav-btn">
+                <i class="bi bi-shield-exclamation text-warning"></i>
+                <span>Guard Returns</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border font-mono">{{ guard_returns_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if overdue_loans_count > 0 %}
+            <button type="button" @click="activeQueue = 'overdue'" :class="{ 'active': activeQueue === 'overdue' }" class="queue-nav-btn">
+                <i class="bi bi-clock-history text-danger"></i>
+                <span>Overdue Loans</span>
+                <span class="badge bg-danger-subtle text-danger border font-mono">{{ overdue_loans_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if is_custodian and pending_reservations_count > 0 %}
+            <button type="button" @click="activeQueue = 'reservations'" :class="{ 'active': activeQueue === 'reservations' }" class="queue-nav-btn">
+                <i class="bi bi-mortarboard text-primary"></i>
+                <span>Student Reservations</span>
+                <span class="badge bg-primary-subtle text-primary border font-mono">{{ pending_reservations_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if open_maintenance_count > 0 %}
+            <button type="button" @click="activeQueue = 'maintenance'" :class="{ 'active': activeQueue === 'maintenance' }" class="queue-nav-btn">
+                <i class="bi bi-tools text-secondary"></i>
+                <span>Maintenance</span>
+                <span class="badge {% if critical_maintenance_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono">{{ open_maintenance_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if pending_transfers_count > 0 %}
+            <button type="button" @click="activeQueue = 'transfers'" :class="{ 'active': activeQueue === 'transfers' }" class="queue-nav-btn">
+                <i class="bi bi-arrow-left-right text-info"></i>
+                <span>Transfers</span>
+                <span class="badge bg-primary-subtle text-primary border font-mono">{{ pending_transfers_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if low_stock_supplies_count > 0 %}
+            <button type="button" @click="activeQueue = 'supplies'" :class="{ 'active': activeQueue === 'supplies' }" class="queue-nav-btn">
+                <i class="bi bi-box-seam text-secondary"></i>
+                <span>Low Supplies</span>
+                <span class="badge {% if out_of_stock_supplies_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono">{{ low_stock_supplies_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if pending_borrowings_count > 0 %}
+            <button type="button" @click="activeQueue = 'borrowings'" :class="{ 'active': activeQueue === 'borrowings' }" class="queue-nav-btn">
+                <i class="bi bi-person-workspace text-secondary"></i>
+                <span>Faculty Requests</span>
+                <span class="badge bg-slate-200 text-slate-800 border font-mono">{{ pending_borrowings_count }}</span>
+            </button>
+            {% endif %}
+
+            {% if pending_disposals_count > 0 %}
+            <button type="button" @click="activeQueue = 'disposals'" :class="{ 'active': activeQueue === 'disposals' }" class="queue-nav-btn">
+                <i class="bi bi-trash3 text-danger"></i>
+                <span>Disposals</span>
+                <span class="badge bg-slate-200 text-slate-800 border font-mono">{{ pending_disposals_count }}</span>
+            </button>
+            {% endif %}
+
+            <button type="button" @click="activeQueue = 'all'" :class="{ 'active': activeQueue === 'all' }" class="queue-nav-btn ms-sm-auto">
+                <i class="bi bi-list-check"></i>
+                <span>All Queues ({{ total_attention }})</span>
+            </button>
+        </div>
+
+        <!-- Itemized Queue Panels -->
+        <div class="list-group list-group-flush">
+
+            <!-- 1. Guard Returns Subpanel -->
+            {% if is_custodian and guard_returns_count > 0 %}
+            <div x-show="activeQueue === 'guard_returns' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator bg-warning"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Guard Handover Queue — Awaiting Custodian Inspection</strong>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border font-mono fs-xs">{{ guard_returns_count }}</span>
+                    </div>
+                    <a href="{% url 'student_reservations:custodian_list' %}?status=RETURNED_TO_GUARD" class="panel-link-cba">View All &rarr;</a>
+                </div>
+                {% for g in guard_returns_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="cba-code">#{{ g.pk }}</span>
+                                <strong class="text-dark fs-sm">{{ g.student_name }}</strong>
+                                <span class="text-muted font-mono fs-xs">({{ g.student_id }})</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border fs-xs py-0 px-1.5">Returned to Guard</span>
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                {% if g.asset %}
+                                <span>Asset: <strong class="text-dark font-mono">{{ g.asset.asset_code }}</strong> ({{ g.asset.item_name }})</span>
+                                {% else %}
+                                <span>Equipment: {% if g.equipment_type_ref %}{{ g.equipment_type_ref.name }}{% else %}{{ g.category.name }}{% endif %}</span>
+                                {% endif %}
+                                <span class="mx-1">&bull;</span>
+                                <span>Logged: <span class="font-mono">{{ g.guard_returned_at|date:"M j, Y H:i" }}</span></span>
+                                {% if g.guard_recorded_by %}
+                                <span class="text-muted d-none d-md-inline"> by {{ g.guard_recorded_by.get_full_name|default:g.guard_recorded_by.username }}</span>
+                                {% endif %}
+                            </div>
+                            {% if g.guard_handover_details %}
+                            <div class="text-muted fs-xs mt-0.5 fst-italic">Note: {{ g.guard_handover_details|truncatechars:90 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        <a href="{{ g.detail_url|default:'#' }}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            <i class="bi bi-search me-1"></i> Inspect Return
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 2. Overdue Loans Subpanel -->
+            {% if overdue_loans_count > 0 %}
+            <div x-show="activeQueue === 'overdue' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator bg-danger"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Overdue Equipment Loans</strong>
+                        <span class="badge bg-danger-subtle text-danger border font-mono fs-xs">{{ overdue_loans_count }}</span>
+                    </div>
+                    <a href="{% url 'borrowing:active_list' %}?status=OVERDUE" class="panel-link-cba">View All &rarr;</a>
+                </div>
+                {% for item in overdue_loans_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-clock-history text-danger fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="badge {% if item.loan_type == 'STUDENT' %}bg-purple-subtle text-purple border{% else %}bg-blue-subtle text-primary border{% endif %} fs-xs py-0 px-1.5">
+                                    {{ item.item_type }}
+                                </span>
+                                {% if item.asset %}
+                                <span class="cba-code">{{ item.asset.asset_code }}</span>
+                                <strong class="text-dark fs-sm">{{ item.asset.item_name }}</strong>
+                                {% endif %}
+                                <span class="badge bg-danger-subtle text-danger border fs-xs py-0 px-1.5">OVERDUE</span>
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                <span>Borrower: <strong class="text-dark">{{ item.borrower_name }}</strong> <span class="font-mono text-muted">({{ item.borrower_id }})</span></span>
+                                <span class="mx-1">&bull;</span>
+                                <span class="text-danger fw-semibold">Due: <span class="font-mono">{{ item.requested_return|date:"M j, Y H:i" }}</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        <a href="{{ item.loan_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold text-danger border-danger-subtle">
+                            {% if is_custodian %}
+                            <i class="bi bi-clock-history me-1"></i> View Overdue
+                            {% else %}
+                            <i class="bi bi-eye me-1"></i> View Details
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 3. Pending Student Reservations Subpanel -->
+            {% if is_custodian and pending_reservations_count > 0 %}
+            <div x-show="activeQueue === 'reservations' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator bg-primary"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Student Reservation Requests Pending Review</strong>
+                        <span class="badge bg-primary-subtle text-primary border font-mono fs-xs">{{ pending_reservations_count }}</span>
+                    </div>
+                    <a href="{% url 'student_reservations:custodian_list' %}?status=PENDING" class="panel-link-cba">View All &rarr;</a>
+                </div>
+                {% for r in pending_reservations_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-mortarboard text-primary fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="cba-code">#{{ r.pk }}</span>
+                                <strong class="text-dark fs-sm">{{ r.student_name }}</strong>
+                                <span class="text-muted font-mono fs-xs">({{ r.student_id }})</span>
+                                <span class="badge bg-light text-secondary border fs-xs py-0 px-1.5">
+                                    {% if r.equipment_type_ref %}{{ r.equipment_type_ref.name }}{% else %}{{ r.category.name }}{% endif %}
+                                </span>
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                <span>Pickup: <strong class="text-dark font-mono">{{ r.requested_pickup|date:"M j, Y H:i" }}</strong></span>
+                                <span class="mx-1">&bull;</span>
+                                <span>Return: <span class="font-mono text-muted">{{ r.requested_return|date:"M j, Y H:i" }}</span></span>
+                                {% if r.room_venue %}
+                                <span class="mx-1">&bull;</span>
+                                <span class="text-muted">Venue: {{ r.room_venue }}</span>
+                                {% endif %}
+                            </div>
+                            {% if r.purpose %}
+                            <div class="text-muted fs-xs mt-0.5 text-truncate" style="max-width: 580px;">
+                                Purpose: {{ r.purpose }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        <a href="{{ r.detail_url|default:'#' }}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            <i class="bi bi-clipboard-check me-1"></i> Review
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 4. Open Maintenance Cases Subpanel -->
+            {% if open_maintenance_count > 0 %}
+            <div x-show="activeQueue === 'maintenance' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator {% if critical_maintenance_count > 0 %}bg-danger{% else %}bg-warning{% endif %}"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Maintenance &amp; Defect Repair Queue</strong>
+                        <span class="badge {% if critical_maintenance_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono fs-xs">
+                            {{ open_maintenance_count }} Open{% if critical_maintenance_count > 0 %} ({{ critical_maintenance_count }} Critical){% endif %}
+                        </span>
+                    </div>
+                    {% if request.user.role == 'FACULTY' %}
+                    <a href="{% url 'maintenance:my_reports' %}" class="panel-link-cba">View My Reports &rarr;</a>
+                    {% else %}
+                    <a href="{% url 'maintenance:case_list' %}" class="panel-link-cba">View All &rarr;</a>
+                    {% endif %}
+                </div>
+                {% for m in open_maintenance_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-tools {% if m.severity == 'CRITICAL' %}text-danger{% else %}text-secondary{% endif %} fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="cba-code">{{ m.tracking_number|default:m.pk }}</span>
+                                <strong class="text-dark fs-sm">{{ m.asset.item_name }}</strong>
+                                <span class="cba-code">{{ m.asset.asset_code }}</span>
+                                <span class="badge {% if m.severity == 'CRITICAL' %}bg-danger-subtle text-danger border-danger-subtle{% elif m.severity == 'HIGH' %}bg-amber-soft text-amber-dark border-warning-subtle{% else %}bg-slate-100 text-slate-700 border{% endif %} fs-xs py-0 px-1.5">
+                                    {{ m.get_severity_display }}
+                                </span>
+                                <span class="badge bg-slate-100 text-slate-700 border fs-xs py-0 px-1.5">
+                                    {{ m.get_status_display }}
+                                </span>
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                <span>Reported: <span class="font-mono">{{ m.reported_at|date:"M j, Y" }}</span></span>
+                                {% if m.reported_by %}
+                                <span class="mx-1">&bull;</span>
+                                <span>By: {{ m.reported_by.get_full_name|default:m.reported_by.username }}</span>
+                                {% endif %}
+                                {% if m.asset.department %}
+                                <span class="mx-1">&bull;</span>
+                                <span class="text-muted">{{ m.asset.department.name }}</span>
+                                {% endif %}
+                            </div>
+                            {% if m.issue_description %}
+                            <div class="text-muted fs-xs mt-0.5 text-truncate" style="max-width: 580px;">
+                                Defect: {{ m.issue_description }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        <a href="{{ m.detail_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            {% if is_custodian %}
+                            <i class="bi bi-tools me-1"></i> Assess
+                            {% else %}
+                            <i class="bi bi-eye me-1"></i> View Case
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 5. Pending Transfers Subpanel -->
+            {% if pending_transfers_count > 0 %}
+            <div x-show="activeQueue === 'transfers' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator bg-primary"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Asset Department Transfers Pending Review</strong>
+                        <span class="badge bg-primary-subtle text-primary border font-mono fs-xs">{{ pending_transfers_count }}</span>
+                    </div>
+                    <a href="{% url 'transfers:pending_list' %}" class="panel-link-cba">View All &rarr;</a>
+                </div>
+                {% for t in pending_transfers_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-arrow-left-right text-info fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="cba-code">{{ t.tracking_number|default:t.pk }}</span>
+                                <strong class="text-dark fs-sm">{{ t.asset.item_name }}</strong>
+                                <span class="cba-code">{{ t.asset.asset_code }}</span>
+                                <span class="badge bg-slate-100 text-slate-700 border fs-xs py-0 px-1.5">{{ t.get_status_display|default:"Pending" }}</span>
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                <span>Routing: <strong class="text-dark">{{ t.from_department.name }}</strong> &rarr; <strong class="text-dark">{{ t.to_department.name }}</strong></span>
+                                <span class="mx-1">&bull;</span>
+                                <span>Requested by: {{ t.requested_by.get_full_name|default:t.requested_by.username }}</span>
+                                <span class="mx-1">&bull;</span>
+                                <span class="font-mono text-muted">{{ t.transfer_date|date:"M j, Y" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        <a href="{{ t.detail_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            {% if is_custodian %}
+                            <i class="bi bi-arrow-left-right me-1"></i> Review
+                            {% else %}
+                            <i class="bi bi-eye me-1"></i> View Details
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 6. Low Stock Consumables Subpanel -->
+            {% if low_stock_supplies_count > 0 %}
+            <div x-show="activeQueue === 'supplies' || activeQueue === 'all'" class="border-bottom">
+                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-indicator bg-warning"></span>
+                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Consumable Supplies Replenishment Alert</strong>
+                        <span class="badge {% if out_of_stock_supplies_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono fs-xs">
+                            {{ low_stock_supplies_count }} Below Threshold{% if out_of_stock_supplies_count > 0 %} ({{ out_of_stock_supplies_count }} Depleted){% endif %}
+                        </span>
+                    </div>
+                    <a href="{% url 'supplies:low_stock_list' %}" class="panel-link-cba">View All &rarr;</a>
+                </div>
+                {% for s in low_stock_supplies_list %}
+                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
+                    <div class="d-flex align-items-start gap-2.5 min-w-0">
+                        <i class="bi bi-box-seam text-secondary fs-5 flex-shrink-0 mt-0.5"></i>
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
+                                <span class="cba-code">{{ s.supply_code }}</span>
+                                <strong class="text-dark fs-sm">{{ s.item_name }}</strong>
+                                {% if s.calculated_stock <= 0 %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-xs py-0 px-1.5">OUT OF STOCK</span>
+                                {% else %}
+                                <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fs-xs py-0 px-1.5">LOW STOCK</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-secondary fs-xs">
+                                <span>Remaining Stock: <strong class="{% if s.calculated_stock <= 0 %}text-danger{% else %}text-warning-emphasis{% endif %} font-mono">{{ s.calculated_stock }} {{ s.get_unit_display }}</strong></span>
+                                <span class="mx-1">&bull;</span>
+                                <span>Reorder Threshold: <span class="font-mono text-muted">{{ s.reorder_level }} {{ s.get_unit_display }}</span></span>
+                                {% if s.category %}
+                                <span class="mx-1">&bull;</span>
+                                <span class="text-muted">{{ s.category.name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
+                        {% if request.user.is_admin %}
+                        <a href="{% if s.supply_code %}{% url 'supplies:stock_in_specific' s.supply_code %}{% else %}{% url 'supplies:stock_in' %}{% endif %}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
+                        </a>
+                        {% else %}
+                        <a href="{% url 'supplies:supply_detail' s.pk %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                            <i class="bi bi-eye me-1"></i> View Supply
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- 7. Pending Faculty Borrowings / Disposals (if applicable) -->
+            {% if pending_borrowings_count > 0 %}
+            <div x-show="activeQueue === 'borrowings' || activeQueue === 'all'" class="border-bottom">
+                <div class="queue-item-row d-flex align-items-center justify-content-between py-2 px-3">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <span class="status-indicator bg-primary"></span>
+                        <span class="text-dark fw-medium fs-sm">
+                            <strong>{{ pending_borrowings_count }}</strong> faculty equipment loan request{{ pending_borrowings_count|pluralize }} awaiting administrative approval
+                        </span>
+                    </div>
+                    <a href="{% url 'borrowing:request_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                        {% if is_custodian %}Review Requests{% else %}View Requests{% endif %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 8. Pending Disposals (if applicable) -->
+            {% if pending_disposals_count > 0 %}
+            <div x-show="activeQueue === 'disposals' || activeQueue === 'all'" class="border-bottom">
+                <div class="queue-item-row d-flex align-items-center justify-content-between py-2 px-3">
+                    <div class="d-flex align-items-center gap-2.5">
+                        <span class="status-indicator bg-danger"></span>
+                        <span class="text-dark fw-medium fs-sm">
+                            <strong>{{ pending_disposals_count }}</strong> asset disposal review{{ pending_disposals_count|pluralize }} awaiting evaluation
+                        </span>
+                    </div>
+                    <a href="{% url 'disposals:pending_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                        {% if is_custodian %}Review Disposals{% else %}View Disposals{% endif %}
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </section>
+    {% endif %}
+    {% endwith %}
 
     <!-- 4. Visual Analytics Section (Admin / Non-Faculty) -->
     {% if request.user.role != 'FACULTY' %}
@@ -445,9 +832,11 @@
                             </div>
                         </div>
                         <div class="pt-2 border-top d-flex align-items-center justify-content-between gap-2">
+                            {% if request.user.is_admin %}
                             <a href="{% url 'supplies:stock_in' %}" class="btn btn-sm btn-primary-cba">
                                 <i class="bi bi-box-arrow-in-down me-1"></i> Receive Stock
                             </a>
+                            {% endif %}
                             <a href="{% url 'supplies:low_stock_list' %}" class="btn btn-sm btn-secondary-cba">
                                 Review Reorder List
                             </a>

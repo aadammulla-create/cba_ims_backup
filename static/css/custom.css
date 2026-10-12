@@ -1214,3 +1214,66 @@ h4, .h4 {
     border-bottom: 1px solid var(--cba-topbar-border) !important;
     box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02) !important;
 }
+
+/* ==========================================================================
+   Operational Action Queues (DESIGN.md v2.0)
+   ========================================================================== */
+.queue-nav-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
+    background-color: var(--cba-surface-subtle);
+    border-bottom: 1px solid var(--cba-border-subtle);
+}
+
+.queue-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid var(--cba-border-medium);
+    background-color: #ffffff;
+    color: var(--cba-text-secondary);
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-decoration: none;
+    line-height: 1.2;
+}
+
+.queue-nav-btn:hover {
+    background-color: var(--cba-surface-hover);
+    color: var(--cba-text-primary);
+    border-color: #94a3b8;
+}
+
+.queue-nav-btn.active {
+    background-color: var(--cba-primary);
+    color: #ffffff;
+    border-color: var(--cba-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.queue-nav-btn.active .badge {
+    background-color: rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.queue-item-row {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--cba-border-subtle);
+    background-color: #ffffff;
+    transition: background-color 0.12s ease;
+}
+
+.queue-item-row:hover {
+    background-color: var(--cba-surface-hover);
+}
+
+.queue-item-row:last-child {
+    border-bottom: none;
+}

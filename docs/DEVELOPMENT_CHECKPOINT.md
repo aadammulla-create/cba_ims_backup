@@ -87,28 +87,93 @@ The **CBA Asset and Inventory Management System (CBA IMS)** is an enterprise Dja
 
 ---
 
-## 4. EXACT PAUSE POINT: Defect-Reporting Policy Decision
+## 4. Phase 3B: Unified Staff Dashboard & Navigation
 
-Phase 3A implementation is fully completed, tested, and ready for commit approval.
+**Status:** Completed and locally verified on branch `feat/phase-3b-dashboard-navigation`.
 
-### Remaining Architectural / Policy Decision for ChatGPT & Project Owner:
+### Key Features Implemented:
 
-**Defect Reporting Equipment Availability Risk Window:**
-- **Code Audit Finding:** In `apps/maintenance/services.py`, when a defect or damage report is filed via `report_issue()`, the maintenance record is created with status `REPORTED`. Following diagnostic assessment via `assess_issue()`, the record status transitions to `ASSESSED`. However, the physical `Asset.status` remains unchanged (typically `AVAILABLE`) until `start_repair()` is explicitly invoked, transitioning the asset to `UNDER_MAINTENANCE` (or `MAINTENANCE`).
-- **Policy Question:**
-  - *Option A (Immediate Quarantine):* Should filing a defect report (or any defect report with High/Critical severity) immediately quarantine the asset by transitioning its operational status to `UNDER_MAINTENANCE` or blocking it in availability checks (`check_asset_availability`, `request_borrowing`, `assign_asset`) to prevent accidental deployment?
-  - *Option B (Status Quo / Deferred Quarantine):* Should the asset remain nominally available until a property custodian or technician physically assesses the equipment and initiates repairs via `start_repair()`?
-- **Recommendation:** Present this decision to ChatGPT during the Phase 3B dashboard/workflow architecture review before modifying maintenance service state transitions.
+#### A. Staff Dashboard Information Architecture (`apps/accounts/views.py` & `templates/accounts/dashboard.html`)
+1. **Asset Overview Operational Metrics:**
+   - Accurately calculated physical counts: `total_assets`, `available_assets` (excludes `UNSERVICEABLE`), `unserviceable_assets`, `assigned_assets`, `borrowed_assets`, `maintenance_assets`, `damaged_assets`, `student_active_loans_count`, and `total_on_loan_assets`.
+   - Distinctly clarifies that available assets are physically in stock and not guaranteed available for future student reservations.
+   - Strictly read-only queries in `DashboardView.get_context_data()` with zero side-effect mutations on GET.
+2. **Actionable "Requires Attention" Operational Queues:**
+   - **Pending Reservations:** Enrolled student reservation requests awaiting custodian review (`status=PENDING`).
+   - **Guard Returns Pending Inspection:** Student equipment returned to building security guards after hours awaiting custodian check-in (`status=RETURNED_TO_GUARD`).
+   - **Overdue Borrowings & Loans:** Combines faculty/staff borrowings (`OVERDUE` or expired `RELEASED`) and active student loans past their requested return schedule. Computes distinct asset counts to prevent double-counting.
+   - **Open Maintenance:** Equipment issues requiring triage (`REPORTED`, `ASSESSED`), with dedicated critical severity indicators.
+   - **Pending Transfers:** Inter-department equipment relocation requests requiring custodian approval.
+   - **Low Stock Consumables:** Inventory alerts for supplies at or below reorder threshold.
+3. **Interactive Queue Filtering & Quick Actions (Alpine.js):**
+   - High-contrast queue navigation bar with active tab counters (`All`, `Guard Returns`, `Overdue`, `Pending Reservations`, `Maintenance`, `Transfers`, `Low Stock`).
+   - Dedicated action buttons per item (`Inspect Return`, `View Overdue`, `Review`, `Assess`, `Stock In`).
+   - Standard institutional empty state rendered when all operational queues are clear (`total_attention == 0`).
+4. **Institutional Security & RBAC Scoping:**
+   - `ADMIN`, `DEAN`, `DEPT_CHAIR` scoped appropriately (Department chairs scoped to their departmental equipment).
+   - `FACULTY` restricted to personal borrowings, reports, and assignments.
+   - Student privacy masking (`mask_contact_info`) prevents exposure of raw phone numbers and email addresses to unauthorized roles.
+
+#### B. Unified 7-Section Sidebar Navigation (`templates/includes/sidebar_nav.html`)
+Reorganized into the approved seven functional workflow categories adhering strictly to `DESIGN.md v2.0`:
+1. **Overview:** Dashboard (`dashboard`)
+2. **Inventory:** Asset Register, Scan Asset, Categories & Types, Physical Verification, Locations, Bulk QR Labels
+3. **Equipment Operations:** Student Reservations, Faculty/Staff Borrowing, Asset Assignments, Transfers
+4. **Asset Care:** Maintenance, Disposal
+5. **Supplies:** Consumable Inventory, Transactions, Low Stock Alert
+6. **Reports & Activity:** Reports Dashboard, Audit History
+7. **Administration:** Employees, Departments, Users
+
+#### C. Confirmed Authorization Architecture & Permission Governance
+- **Four Institutional Roles:** Verified that `apps.accounts.models.User.Role` defines exactly four functional roles: `ADMIN`, `DEAN`, `DEPT_CHAIR`, and `FACULTY`.
+- **Employee Position vs User Role:** `Employee.position` is a separate organizational job title/designation and does not confer permissions independently of the user's assigned `role`.
+- **Dean Access Scope:** `DEAN` has institution-wide read-only visibility across inventory, physical locations, supplies, and reporting modules, but strictly lacks administrator/custodian write authority.
+- **Admin-Only Workflows:** Student reservation allocation/processing and system audit logs remain strictly restricted to `ADMIN` (System Administrator / Property Custodian).
+
+#### D. Verification & Quality Gates
+- **Focused Phase 3B Tests:** 23 / 23 tests passing across `apps.accounts.test_dashboard_phase3b` (14 unit tests: context, queries, RBAC, PII masking, combined queues) and `apps.accounts.test_dashboard_phase3b_frontend` (9 integration tests: DOM rendering, 7-section hierarchy, empty states, role buttons, HTTP status code matrix) in 106s.
+- **Accounts App Regression:** 83 / 83 tests passing in `apps.accounts`.
+- **System Checks & Migrations:** `manage.py check` passes with 0 issues. `makemigrations --check --dry-run` reports no schema changes.
+- **Git Diff & Whitespace Cleanliness:** `git diff --check` exits with 0 warnings.
+- **Visual QA Multi-Device Capture:** Verified across desktop (1440px), tablet (768px), mobile (390px), navigation flyout, and zero-attention empty state. Confirmed zero horizontal overflow, 44px touch targets, and accessible contrast.
 
 ---
 
-## 5. Future Development Roadmap
+## 5. Pending Phase 3B Corrections & Acceptance Review Tasks
 
-- **Phase 3A Checkpoint Commit & Backup:** Stage reviewed files, create conventional commit, and push to private backup.
-- **Phase 3B: Unified Main Dashboard & Navigation:**
-  - Modernize custodian dashboard metrics and visual hierarchy under DESIGN.md v2.0.
-  - Consolidate sidebar navigation links across inventory, supplies, borrowing, reservations, and maintenance.
-  - Implement defect-reporting policy decision into dashboard queues and availability metrics.
+The following Phase 3B correction tasks have been implemented and locally tested, but are pending formal cross-computer and ChatGPT user acceptance review at the OJT office:
+
+1. **Restrict Student Reservations Custodian Links:** Custodian sidebar link (`student_reservations:custodian_list`) restricted to `request.user.is_admin` in `sidebar_nav.html`. Non-custodians (`DEAN`, `DEPT_CHAIR`, `FACULTY`) excluded. *Status: Implemented locally; verified via automated tests; pending human visual acceptance.*
+2. **Prevent Dean & Dept Chair HTTP 403 Action Links:** Actionable student reservation and guard-return queues hidden from non-custodians in `dashboard.html` and zeroed out in `views.py`. *Status: Implemented locally; verified via automated tests; pending human visual acceptance.*
+3. **Role-Aware Dashboard Queue Actions:** Replaced workflow action triggers (`Assess`, `Review`, `Stock In`) with read-only inspection buttons (`View Case`, `View Details`, `View Supply`, `View Requests`, `View Disposals`) for non-custodian viewers. *Status: Implemented locally; verified via automated tests; pending human visual acceptance.*
+4. **Correct Outdated Dean Audit-Log Documentation:** Updated `docs/security.md` Section 2 access matrix and Section 10 explanatory text to correctly document that Audit Log access is strictly Admin-only. *Status: Implemented locally; pending acceptance signoff.*
+5. **Run Focused Tests for Corrections:** Verified 23/23 tests in `apps.accounts.test_dashboard_phase3b` and `apps.accounts.test_dashboard_phase3b_frontend` including the full 4-role HTTP status code matrix. *Status: Verified 100% passing locally.*
+6. **Complete Phase 3B Visual & Final Acceptance Checks:** Final signoff of responsive UI, typography, and empty state ergonomics across desktop, tablet, and mobile viewports. *Status: Pending tomorrow at OJT office.*
+
+---
+
+## 6. Test Suite Runtime Optimization Recommendation
+
+### Investigation Summary:
+The full Django test suite (395 tests) takes approximately 23 minutes on local development machines. Analysis identified four primary bottlenecks:
+1. **PBKDF2 Password Hashing (~5-6 minutes):** `config/settings.py` lacks a test password hasher override. Every test user creation and login hashes passwords with 720,000 PBKDF2-SHA256 iterations (~200ms per call, ~1,300 calls across the suite).
+2. **Single-Worker Execution:** Tests run with `--parallel=1`.
+3. **django-axes Middleware:** Access attempt tracking writes to SQLite during test client logins.
+4. **`setUp` vs `setUpTestData`:** Recreating fixture objects per test method instead of class-level fixtures.
+
+### Recommended Action (For User Approval):
+In `config/settings.py`, conditionally configure Django's standard fast MD5 hasher when running tests:
+```python
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+```
+This is the official Django testing recommendation. It reduces total test suite run time by ~50-60% without weakening assertions or modifying production configurations.
+
+---
+
+## 7. Future Development Roadmap
+
+- **Phase 3B Checkpoint Commit & Backup:** Stage reviewed files, create conventional commit, and push `feat/phase-3b-dashboard-navigation` to private backup.
 - **Phase 3C: Public Landing Page & Staff Login Redesign:**
   - Dedicated institutional portal landing page.
   - Branded staff authentication interface aligned with university styling.
@@ -122,7 +187,7 @@ Phase 3A implementation is fully completed, tested, and ready for commit approva
 
 ---
 
-## 6. Project Governance and Responsibilities
+## 8. Project Governance and Responsibilities
 
 - **ChatGPT (Lead Systems Architect & Product Designer):**
   - Defines institutional architecture, system constraints, business logic, UI/UX direction, and reference design contracts.
@@ -136,7 +201,7 @@ Phase 3A implementation is fully completed, tested, and ready for commit approva
 
 ---
 
-## 7. Hosting and Deployment Safety Rules
+## 9. Hosting and Deployment Safety Rules
 
 1. **Vercel Project:** `cba-ims` (Production linked to repository `echo10000/cba_ims`).
 2. **Hosted PostgreSQL:** Neon Serverless PostgreSQL.
@@ -146,22 +211,56 @@ Phase 3A implementation is fully completed, tested, and ready for commit approva
 
 ---
 
-## 8. Git Branching and Resume Instructions
+## 10. Git Branching and Files Prepared for Phase 3B Commit
 
 ### Active Branches:
 - `feat/phase-2a-student-portal`: Complete Phase 2A implementation (Head: `64ca513`).
-- `feat/main-workflow-integrity`: Active branch branched from `feat/phase-2a-student-portal`. Contains Phase 3A integrity hardening.
+- `feat/main-workflow-integrity`: Phase 3A integrity hardening (Head: `7094d14`).
+- `feat/phase-3b-dashboard-navigation`: Active branch containing Phase 3B dashboard and navigation overhaul.
 
-### Files Prepared for Phase 3A Feature Commit:
-1. `apps/accounts/tests_phase11.py` (Cross-machine template path portability fix)
-2. `apps/assignments/forms.py` (Exclude UNSERVICEABLE assets from assignment form queryset)
-3. `apps/assignments/services.py` (Reject UNSERVICEABLE assets in `assign_asset`)
-4. `apps/borrowing/services.py` (Reject UNSERVICEABLE assets in `request_borrowing` and `release_asset`)
-5. `apps/inventory/admin.py` (Make `condition` read-only on change and restore on save)
-6. `apps/inventory/forms.py` (Remove `condition` from `AssetUpdateForm`)
-7. `apps/inventory/test_condition_integrity.py` (13 new unit tests for condition integrity safeguards)
-8. `apps/inventory/test_workflow_integrity.py` (Updated test assertions for locked condition)
-9. `apps/inventory/views.py` (Enforce server-side lock on `condition` in `AssetUpdateView`)
-10. `apps/student_reservations/services.py` (Exclude UNSERVICEABLE assets from reservable list, availability check, and release)
-11. `templates/inventory/asset_form.html` (Render condition as read-only badge with action links, fix relocation link)
-12. `docs/DEVELOPMENT_CHECKPOINT.md` (Updated checkpoint documentation)
+### Files Prepared for Phase 3B Feature Commit:
+1. `apps/accounts/views.py` (Dashboard metrics, operational queues, RBAC scoping, PII protection, custodian authorization)
+2. `templates/includes/sidebar_nav.html` (7-section unified navigation hierarchy, custodian-gated student reservations)
+3. `templates/accounts/dashboard.html` (Actionable queue cards, role-aware action buttons, responsive metrics, empty state)
+4. `static/css/custom.css` (Queue navigation, item row styling, badge tokens under DESIGN.md v2.0)
+5. `apps/accounts/test_dashboard_phase3b.py` (14 unit tests for context data, operational queues, scoping, and privacy)
+6. `apps/accounts/test_dashboard_phase3b_frontend.py` (9 integration tests for UI rendering, role visibility, action buttons, and HTTP status code matrix)
+7. `docs/security.md` (Corrected audit log access matrix and explanatory text to Admin-only)
+8. `docs/DEVELOPMENT_CHECKPOINT.md` (Updated checkpoint documentation with Phase 3B & test runtime report)
+9. `docs/visual-qa/dashboard-desktop-1440.png` (Visual QA: 1440px desktop viewport)
+10. `docs/visual-qa/dashboard-tablet-768.png` (Visual QA: 768px tablet viewport)
+11. `docs/visual-qa/dashboard-mobile-390.png` (Visual QA: 390px mobile viewport)
+12. `docs/visual-qa/dashboard-navigation-expanded.png` (Visual QA: 7-section sidebar flyout)
+13. `docs/visual-qa/dashboard-empty-state-desktop.png` (Visual QA: Zero-attention state)
+14. `scripts/generate_visual_qa.py` (Automated visual regression capture script)
+
+---
+
+## 11. Cross-Computer Resume Instructions (Office Handoff)
+
+To resume development on the office computer tomorrow:
+
+1. **Verify repository remote:**
+   ```bash
+   git remote -v
+   # origin must point to https://github.com/echo10000/cba_ims_backup.git
+   ```
+
+2. **Fetch and checkout the Phase 3B branch:**
+   ```bash
+   git fetch origin feat/phase-3b-dashboard-navigation
+   git checkout feat/phase-3b-dashboard-navigation
+   git pull origin feat/phase-3b-dashboard-navigation
+   ```
+
+3. **Verify the baseline and test suite:**
+   ```bash
+   python manage.py check
+   python manage.py test apps.accounts.test_dashboard_phase3b apps.accounts.test_dashboard_phase3b_frontend
+   ```
+
+4. **Safety Reminders:**
+   - Base Phase 3A commit: `7094d14`.
+   - Never push to `echo10000/cba_ims` (production repository).
+   - Only push to the private backup repository: `echo10000/cba_ims_backup`.
+   - Neon PostgreSQL, Vercel production, and `main` branch remain completely untouched.

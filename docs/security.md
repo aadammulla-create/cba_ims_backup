@@ -65,7 +65,7 @@ Django's default PBKDF2 with SHA-256 hashing is used. All passwords are stored a
 | Maintenance | ✅ Full | 🔍 Read-only | 🔍 Own dept | ✅ Report own |
 | Disposals | ✅ Full | 🔍 Read-only | 🔍 Own dept | ❌ |
 | Reports (all) | ✅ Full | ✅ All depts | ✅ Own dept | ❌ |
-| Audit log | ✅ Full | ✅ Full | ❌ | ❌ |
+| Audit log | ✅ Full | ❌ | ❌ | ❌ |
 | QR scan | ✅ All | ✅ All | ✅ Own dept | 🔒 Own assets |
 
 ### Implementation
@@ -225,9 +225,9 @@ def delete(self, *args, **kwargs):
 - `timestamp` — UTC datetime
 
 **Audit log access:**
-- Admin: full log
-- Dean: full log
-- Dept Chair: scoped to own department
+- Admin: full log (restricted exclusively to System Administrators)
+- Dean: no access (restricted to System Administrators)
+- Dept Chair: no access
 - Faculty: no access
 
 ---
