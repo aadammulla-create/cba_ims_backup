@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="College of Business Administration Asset and Inventory Management System — Student Equipment Reservations and Staff Operations Portal.">
+    <meta name="theme-color" content="#0f172a">
+    <title>CBA IMS — Asset &amp; Inventory Management System</title>
+
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --cba-bg-canvas: #f8fafc;
+            --cba-bg-surface: #ffffff;
+            --cba-bg-subtle: #f1f5f9;
+            --cba-nav-dark: #0f172a;
+            --cba-text-primary: #0f172a;
+            --cba-text-secondary: #475569;
+            --cba-text-muted: #64748b;
+            --cba-brand-blue: #1d4ed8;
+            --cba-brand-blue-hover: #1e40af;
+            --cba-accent-bg: #eff6ff;
+            --cba-accent-border: #bfdbfe;
+            --cba-border: #e2e8f0;
+            --cba-border-strong: #cbd5e1;
+            --cba-success-text: #15803d;
+            --cba-success-bg: #f0fdf4;
+            --cba-success-border: #bbf7d0;
+            --cba-warning-text: #b45309;
+            --cba-warning-bg: #fffbeb;
+            --cba-warning-border: #fde68a;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--cba-bg-canvas);
+            color: var(--cba-text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .skip-link {
+            position: absolute;
+            top: -48px;
+            left: 16px;
+            background: var(--cba-brand-blue);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            z-index: 2000;
+            text-decoration: none;
+        }
+        .skip-link:focus {
+            top: 12px;
+            color: #ffffff;
+        }
+
+        /* Institutional Header */
+        .portal-header {
+            background-color: var(--cba-bg-surface);
+            border-bottom: 1px solid var(--cba-border);
+            position: sticky;
+            top: 0;
+            z-index: 1020;
+        }
+
+        .portal-container {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background-color: var(--cba-nav-dark);
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--cba-text-primary);
+            letter-spacing: -0.015em;
+            line-height: 1.2;
+        }
+
+        .brand-subtitle {
+            font-size: 0.75rem;
+            color: var(--cba-text-muted);
+            font-weight: 500;
+            line-height: 1.3;
+        }
+
+        .header-nav-link {
+            color: var(--cba-text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-decoration: none;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .header-nav-link:hover,
+        .header-nav-link:focus-visible {
+            color: var(--cba-text-primary);
+            background-color: var(--cba-bg-subtle);
+        }
+
+        /* Action Buttons (DESIGN.md v2.0 compliant, >=44px touch targets) */
+        .btn-cba-primary {
+            background-color: var(--cba-brand-blue);
+            border: 1px solid var(--cba-brand-blue);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.625rem 1.25rem;
+            min-height: 44px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .btn-cba-primary:hover,
+        .btn-cba-primary:focus-visible {
+            background-color: var(--cba-brand-blue-hover);
+            border-color: var(--cba-brand-blue-hover);
+            color: #ffffff;
+        }
+
+        .btn-cba-secondary {
+            background-color: var(--cba-bg-surface);
+            border: 1px solid var(--cba-border-strong);
+            color: var(--cba-text-primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.625rem 1.25rem;
+            min-height: 44px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .btn-cba-secondary:hover,
+        .btn-cba-secondary:focus-visible {
+            background-color: var(--cba-bg-subtle);
+            border-color: #94a3b8;
+            color: var(--cba-text-primary);
+        }
+
+        .btn-cba-dark {
+            background-color: var(--cba-nav-dark);
+            border: 1px solid var(--cba-nav-dark);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.625rem 1.25rem;
+            min-height: 44px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: background-color 0.15s ease, border-color 0.15s ease;
+        }
+        .btn-cba-dark:hover,
+        .btn-cba-dark:focus-visible {
+            background-color: #1e293b;
+            border-color: #1e293b;
+            color: #ffffff;
+        }
+
+        .btn-cba-header {
+            min-height: 40px;
+            padding: 0.45rem 0.95rem;
+            font-size: 0.85rem;
+        }
+
+        /* Surface Cards */
+        .surface-card {
+            background-color: var(--cba-bg-surface);
+            border: 1px solid var(--cba-border);
+            border-radius: 10px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .inset-panel {
+            background-color: var(--cba-bg-canvas);
+            border: 1px solid var(--cba-border);
+            border-radius: 8px;
+        }
+
+        /* Typography & Eyebrows */
+        .eyebrow-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            background-color: var(--cba-accent-bg);
+            color: var(--cba-brand-blue);
+            border: 1px solid var(--cba-accent-border);
+        }
+
+        .hero-title {
+            font-size: 2.25rem;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
+            color: var(--cba-text-primary);
+        }
+
+        .hero-lead {
+            font-size: 0.975rem;
+            line-height: 1.6;
+            color: var(--cba-text-secondary);
+            max-width: 62ch;
+        }
+
+        .section-heading {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: -0.015em;
+            color: var(--cba-text-primary);
+        }
+
+        .card-heading {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--cba-text-primary);
+        }
+
+        /* Status & Scope Badges */
+        .scope-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .scope-badge-public {
+            background-color: var(--cba-success-bg);
+            color: var(--cba-success-text);
+            border: 1px solid var(--cba-success-border);
+        }
+        .scope-badge-staff {
+            background-color: var(--cba-accent-bg);
+            color: var(--cba-brand-blue);
+            border: 1px solid var(--cba-accent-border);
+        }
+
+        /* Service Action Rows */
+        .service-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.875rem 1rem;
+            border: 1px solid var(--cba-border);
+            border-radius: 8px;
+            background-color: var(--cba-bg-canvas);
+            text-decoration: none;
+            color: var(--cba-text-primary);
+            transition: border-color 0.15s ease, background-color 0.15s ease;
+        }
+        .service-row:hover,
+        .service-row:focus-visible {
+            background-color: var(--cba-accent-bg);
+            border-color: var(--cba-accent-border);
+            color: var(--cba-text-primary);
+        }
+
+        .service-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background-color: var(--cba-bg-surface);
+            border: 1px solid var(--cba-border);
+            color: var(--cba-brand-blue);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        /* Step Number Badge */
+        .step-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--cba-brand-blue);
+            background-color: var(--cba-accent-bg);
+            border: 1px solid var(--cba-accent-border);
+            padding: 0.2rem 0.5rem;
+            border-radius: 5px;
+            display: inline-block;
+        }
+
+        /* Institutional Footer */
+        .portal-footer {
+            background-color: var(--cba-bg-surface);
+            border-top: 1px solid var(--cba-border);
+            margin-top: auto;
+        }
+
+        .footer-link {
+            color: var(--cba-text-secondary);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-decoration: none;
+        }
+        .footer-link:hover,
+        .footer-link:focus-visible {
+            color: var(--cba-brand-blue);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 767.98px) {
+            .portal-container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+            .hero-title {
+                font-size: 1.75rem;
+            }
+            .hero-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .hero-actions > a {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- Institutional Top Header -->
+    <header class="portal-header">
+        <div class="portal-container py-3">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <a href="{% url 'home' %}" class="d-flex align-items-center gap-2 text-decoration-none">
+                    <span class="brand-mark" aria-hidden="true">
+                        <i class="bi bi-box-seam"></i>
+                    </span>
+                    <div>
+                        <div class="brand-title">CBA IMS</div>
+                        <div class="brand-subtitle">College of Business Administration &middot; Asset &amp; Inventory Management</div>
+                    </div>
+                </a>
+
+                <nav aria-label="Public portal navigation" class="d-flex flex-wrap align-items-center gap-1 gap-md-2">
+                    <a href="{% url 'student_reservations:catalog' %}" class="header-nav-link">
+                        <i class="bi bi-collection" aria-hidden="true"></i>
+                        <span>Browse Equipment</span>
+                    </a>
+                    <a href="{% url 'student_reservations:public_request' %}" class="header-nav-link d-none d-sm-inline-flex">
+                        <i class="bi bi-calendar2-plus" aria-hidden="true"></i>
+                        <span>Reserve</span>
+                    </a>
+                    <a href="{% url 'student_reservations:public_lookup_search' %}" class="header-nav-link">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span>Track Reservation</span>
+                    </a>
+
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="btn-cba-dark btn-cba-header ms-sm-1">
+                            <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                            <span>Go to Dashboard</span>
+                        </a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="btn-cba-secondary btn-cba-header ms-sm-1">
+                            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                            <span>Staff Sign In</span>
+                        </a>
+                    {% endif %}
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Portal Content -->
+    <main id="main-content" class="py-4 py-lg-5">
+        <div class="portal-container">
+
+            <!-- Hero Section -->
+            <section class="surface-card p-4 p-lg-5 mb-4" aria-labelledby="hero-heading">
+                <div class="row g-4 align-items-center">
+                    <div class="col-lg-7">
+                        <div class="eyebrow-pill mb-3">
+                            <i class="bi bi-building-check" aria-hidden="true"></i>
+                            <span>College of Business Administration &middot; Official Portal</span>
+                        </div>
+                        <h1 id="hero-heading" class="hero-title mb-3">
+                            Classroom Equipment Reservations &amp; Institutional Asset Custody
+                        </h1>
+                        <p class="hero-lead mb-4">
+                            The CBA Asset &amp; Inventory Management System coordinates short-term instructional equipment reservations for students and provides an authenticated workspace for faculty, department chairs, college leadership, and property custodians.
+                        </p>
+
+                        <!-- Prominent Primary Actions -->
+                        <div class="d-flex flex-wrap gap-2 hero-actions" role="group" aria-label="Primary portal actions">
+                            <a href="{% url 'student_reservations:catalog' %}" class="btn-cba-primary">
+                                <i class="bi bi-collection" aria-hidden="true"></i>
+                                <span>Browse Equipment</span>
+                            </a>
+                            <a href="{% url 'student_reservations:public_lookup_search' %}" class="btn-cba-secondary">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                                <span>Track Reservation</span>
+                            </a>
+                            {% if user.is_authenticated %}
+                                <a href="{% url 'dashboard' %}" class="btn-cba-dark">
+                                    <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                                    <span>Go to Dashboard</span>
+                                </a>
+                            {% else %}
+                                <a href="{% url 'accounts:login' %}" class="btn-cba-dark">
+                                    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                                    <span>Staff Sign In</span>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Counter Custody & Operating Policy Summary -->
+                    <div class="col-lg-5">
+                        <div class="inset-panel p-3 p-sm-4">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                <span class="fw-semibold small text-uppercase" style="letter-spacing: 0.04em; color: var(--cba-text-secondary);">
+                                    <i class="bi bi-clipboard2-check me-1 text-primary" aria-hidden="true"></i>
+                                    Custodian Counter Guidelines
+                                </span>
+                                <span class="badge bg-white text-secondary border fw-medium">CBA Property Office</span>
+                            </div>
+
+                            <ul class="list-unstyled mb-3 d-flex flex-column gap-3 small">
+                                <li class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-person-vcard text-primary mt-1" aria-hidden="true"></i>
+                                    <div>
+                                        <strong class="d-block text-dark">Physical School ID Custody</strong>
+                                        <span class="text-secondary">Borrowers deposit a valid physical School ID at the CBA Custodian Counter upon equipment release.</span>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-clock-history text-primary mt-1" aria-hidden="true"></i>
+                                    <div>
+                                        <strong class="d-block text-dark">15-Minute Claim Window</strong>
+                                        <span class="text-secondary">Approved reservations are held for 15 minutes past the scheduled start time before automatic expiration.</span>
+                                    </div>
+                                </li>
+                                <li class="d-flex align-items-start gap-2">
+                                    <i class="bi bi-key text-primary mt-1" aria-hidden="true"></i>
+                                    <div>
+                                        <strong class="d-block text-dark">Reservation Lookup Token</strong>
+                                        <span class="text-secondary">Every request generates a unique lookup token for online status verification and counter check-in.</span>
+                                    </div>
+                                </li>
+                            </ul>
+
+                            <div class="pt-2 border-top d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <span class="text-muted" style="font-size: 0.8rem;">Need equipment for a class session?</span>
+                                <a href="{% url 'student_reservations:public_request' %}" class="fw-semibold text-decoration-none small" style="color: var(--cba-brand-blue);">
+                                    Submit Reservation Request <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Service Boundaries: Public Student Services vs. Authenticated Staff Operations -->
+            <section class="mb-4" aria-labelledby="service-divisions-heading">
+                <div class="d-flex flex-wrap align-items-baseline justify-content-between mb-3">
+                    <div>
+                        <h2 id="service-divisions-heading" class="section-heading mb-1">Portal Access &amp; Service Divisions</h2>
+                        <p class="text-secondary small mb-0">Clear separation between public student reservation tools and authenticated staff inventory operations.</p>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Public Student Services Column -->
+                    <div class="col-lg-6">
+                        <div class="surface-card p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                    <span class="scope-badge scope-badge-public">
+                                        <i class="bi bi-globe2" aria-hidden="true"></i>
+                                        <span>Public Student Services &middot; No Login Required</span>
+                                    </span>
+                                </div>
+
+                                <h3 class="card-heading mb-2">Student Classroom Equipment Portal</h3>
+                                <p class="text-secondary small mb-3">
+                                    CBA students can view reservable instructional equipment, submit borrowing requests for classes or thesis defenses, and track approval status without a staff account.
+                                </p>
+
+                                <div class="d-flex flex-column gap-2 mb-3">
+                                    <a href="{% url 'student_reservations:catalog' %}" class="service-row">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="service-icon" aria-hidden="true">
+                                                <i class="bi bi-collection"></i>
+                                            </span>
+                                            <div>
+                                                <div class="fw-semibold small">Browse Equipment Catalog</div>
+                                                <div class="text-secondary" style="font-size: 0.8125rem;">View projectors, HDMI adapters, extension cords, and classroom AV items.</div>
+                                            </div>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted align-self-center" aria-hidden="true"></i>
+                                    </a>
+
+                                    <a href="{% url 'student_reservations:public_request' %}" class="service-row">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="service-icon" aria-hidden="true">
+                                                <i class="bi bi-calendar2-plus"></i>
+                                            </span>
+                                            <div>
+                                                <div class="fw-semibold small">Submit Equipment Reservation</div>
+                                                <div class="text-secondary" style="font-size: 0.8125rem;">Request equipment for an upcoming class schedule and receive a reference code.</div>
+                                            </div>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted align-self-center" aria-hidden="true"></i>
+                                    </a>
+
+                                    <a href="{% url 'student_reservations:public_lookup_search' %}" class="service-row">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="service-icon" aria-hidden="true">
+                                                <i class="bi bi-search"></i>
+                                            </span>
+                                            <div>
+                                                <div class="fw-semibold small">Track or Cancel Reservation</div>
+                                                <div class="text-secondary" style="font-size: 0.8125rem;">Check custodian approval, pickup instructions, or cancel a pending request.</div>
+                                            </div>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted align-self-center" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="pt-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-2 small text-muted">
+                                <span><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Bring your physical School ID for counter pickup.</span>
+                                <a href="{% url 'student_reservations:catalog' %}" class="fw-semibold text-decoration-none" style="color: var(--cba-brand-blue);">Open Catalog &rarr;</a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Authenticated Staff Operations Column -->
+                    <div class="col-lg-6">
+                        <div class="surface-card p-4 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                    <span class="scope-badge scope-badge-staff">
+                                        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+                                        <span>Authenticated Staff Operations &middot; Role-Scoped</span>
+                                    </span>
+                                </div>
+
+                                <h3 class="card-heading mb-2">Faculty, Department &amp; Custodian Workspace</h3>
+                                <p class="text-secondary small mb-3">
+                                    Authorized CBA personnel sign in to manage institutional assets, faculty custody records, maintenance queues, supply inventory, and compliance reporting.
+                                </p>
+
+                                <div class="inset-panel p-3 mb-3">
+                                    <div class="row g-3 small">
+                                        <div class="col-sm-6">
+                                            <div class="fw-semibold text-dark mb-1">
+                                                <i class="bi bi-person-gear text-primary me-1" aria-hidden="true"></i>
+                                                Custodian Administrators
+                                            </div>
+                                            <div class="text-secondary" style="font-size: 0.8125rem;">
+                                                Full asset registry, counter check-in/out, transfers, disposals, supplies, and audit logs.
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="fw-semibold text-dark mb-1">
+                                                <i class="bi bi-diagram-3 text-primary me-1" aria-hidden="true"></i>
+                                                Dean &amp; Department Chairs
+                                            </div>
+                                            <div class="text-secondary" style="font-size: 0.8125rem;">
+                                                College-wide or department-scoped asset oversight, accountability tracking, and reports.
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="fw-semibold text-dark mb-1">
+                                                <i class="bi bi-person-badge text-primary me-1" aria-hidden="true"></i>
+                                                Faculty Members
+                                            </div>
+                                            <div class="text-secondary" style="font-size: 0.8125rem;">
+                                                Personal assigned assets, staff equipment borrowing, and equipment defect reporting.
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="fw-semibold text-dark mb-1">
+                                                <i class="bi bi-qr-code text-primary me-1" aria-hidden="true"></i>
+                                                QR Asset Lookup
+                                            </div>
+                                            <div class="text-secondary" style="font-size: 0.8125rem;">
+                                                Authenticated scan gateway for physical property tags and verification audits.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pt-3 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                {% if user.is_authenticated %}
+                                    <div class="small text-secondary">
+                                        <i class="bi bi-check-circle-fill text-success me-1" aria-hidden="true"></i>
+                                        Signed in as <strong>{{ user.username }}</strong>
+                                    </div>
+                                    <a href="{% url 'dashboard' %}" class="btn-cba-dark">
+                                        <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                                        <span>Go to Dashboard</span>
+                                    </a>
+                                {% else %}
+                                    <div class="small text-secondary">
+                                        Requires an active CBA faculty or staff account.
+                                    </div>
+                                    <a href="{% url 'accounts:login' %}" class="btn-cba-dark">
+                                        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                                        <span>Staff Sign In</span>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Concise Student Reservation Process Overview -->
+            <section class="surface-card p-4" aria-labelledby="process-overview-heading">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
+                    <div>
+                        <h2 id="process-overview-heading" class="section-heading mb-1">Student Reservation Process Overview</h2>
+                        <p class="text-secondary small mb-0">How instructional equipment is requested, claimed at the custodian counter, and returned.</p>
+                    </div>
+                    <a href="{% url 'student_reservations:public_request' %}" class="btn-cba-secondary btn-cba-header">
+                        <i class="bi bi-calendar2-plus" aria-hidden="true"></i>
+                        <span>Start a Request</span>
+                    </a>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="inset-panel p-3 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="step-number">STEP 01</span>
+                                <i class="bi bi-collection text-secondary" aria-hidden="true"></i>
+                            </div>
+                            <h3 class="card-heading mb-1">Select Equipment</h3>
+                            <p class="text-secondary small mb-0">
+                                Browse available classroom equipment categories and confirm the date, time slot, and room number for your academic activity.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="inset-panel p-3 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="step-number">STEP 02</span>
+                                <i class="bi bi-file-earmark-text text-secondary" aria-hidden="true"></i>
+                            </div>
+                            <h3 class="card-heading mb-1">Submit &amp; Save Token</h3>
+                            <p class="text-secondary small mb-0">
+                                Complete the reservation form with your Student ID and course details, then save your reservation lookup token.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="inset-panel p-3 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="step-number">STEP 03</span>
+                                <i class="bi bi-person-vcard text-secondary" aria-hidden="true"></i>
+                            </div>
+                            <h3 class="card-heading mb-1">Counter Claim &amp; ID</h3>
+                            <p class="text-secondary small mb-0">
+                                Check approval via <strong>Track Reservation</strong>, then present your lookup token and deposit your physical School ID within 15 minutes of start time.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="inset-panel p-3 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="step-number">STEP 04</span>
+                                <i class="bi bi-arrow-return-left text-secondary" aria-hidden="true"></i>
+                            </div>
+                            <h3 class="card-heading mb-1">Return &amp; Clearance</h3>
+                            <p class="text-secondary small mb-0">
+                                Return all borrowed items to the CBA Custodian Counter on schedule for condition verification and immediate return of your School ID.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Understated Institutional Footer -->
+    <footer class="portal-footer py-3">
+        <div class="portal-container">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-2">
+                <div class="text-muted small">
+                    <strong class="text-secondary fw-semibold">CBA IMS</strong> &middot; College of Business Administration Asset &amp; Inventory Management System
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <a href="{% url 'student_reservations:catalog' %}" class="footer-link">Browse Equipment</a>
+                    <a href="{% url 'student_reservations:public_request' %}" class="footer-link">Reserve Equipment</a>
+                    <a href="{% url 'student_reservations:public_lookup_search' %}" class="footer-link">Track Reservation</a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'dashboard' %}" class="footer-link">Go to Dashboard</a>
+                    {% else %}
+                        <a href="{% url 'accounts:login' %}" class="footer-link">Staff Sign In</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

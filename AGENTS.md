@@ -14,3 +14,10 @@ To update antislop later: `npx antislop-ai --update`, or run `npx antislop-ai` a
 Positive visual design guidance for distinctive, intentional UI craftsmanship (adapted from Anthropic frontend-design for Antigravity & Gemini):
 - Positive Design Direction: `frontend-design`: `.agents/skills/frontend-design/SKILL.md`
 Complementary workflow: Use `frontend-design` for positive hierarchy, typography, spatial rhythm, and component composition; use `antislop` as defensive filters against AI clichés and slop.
+
+## database-safety
+Mandatory safeguard for all standalone Django visual QA, browser capture, and test scripts:
+- Standalone Django visual QA and test scripts must **never** call `DiscoverRunner.run_suite()` against the ordinary configured database (`db.sqlite3` or hosted PostgreSQL).
+- Before creating any fixtures or executing any `TestCase` / `TransactionTestCase` / `StaticLiveServerTestCase` suite, standalone scripts must initialize an isolated test database (`runner.setup_databases()` or `runner.run_tests()`) and explicitly verify that `django.db.connection.settings_dict['NAME']` points to an isolated test/in-memory database (`memorydb` or `test_`) and not `db.sqlite3`.
+- If test database isolation cannot be confirmed, the script must immediately raise an error and stop without running or flushing.
+

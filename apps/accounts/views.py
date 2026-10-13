@@ -17,6 +17,16 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return self.request.user.is_admin
 
 
+class PublicLandingView(TemplateView):
+    """Public institutional homepage for CBA IMS.
+
+    Accessible without authentication. Provides entry points to public student
+    equipment services and authenticated staff operations without querying or
+    exposing internal inventory records, student PII, or staff audit logs.
+    """
+    template_name = 'accounts/landing.html'
+
+
 class DashboardView(LoginRequiredMixin, TemplateView):
     """Main dashboard view showing system overview."""
     template_name = 'accounts/dashboard.html'

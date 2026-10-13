@@ -9,6 +9,7 @@ from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from django.views.defaults import page_not_found, server_error, permission_denied, bad_request
 from apps.inventory import views as inventory_views
+from apps.accounts import views as accounts_views
 from apps.accounts.health import health_check
 
 handler400 = bad_request
@@ -20,8 +21,8 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),
 
-    # Root URL redirects to dashboard
-    path('', RedirectView.as_view(url='/dashboard/', permanent=False), name='home'),
+    # Public institutional landing page
+    path('', accounts_views.PublicLandingView.as_view(), name='home'),
 
     # Phase 6: Canonical QR Sticker Asset Lookup Gateway
     path('q/assets/<str:asset_code>/', inventory_views.QRAssetLookupView.as_view(), name='qr_asset_lookup'),

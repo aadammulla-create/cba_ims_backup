@@ -7,7 +7,7 @@ The **CBA Asset and Inventory Management System (CBA IMS)** is an enterprise Dja
 - **Framework:** Django 5.x / Python 3.11+
 - **Architecture:** Monolithic Django with modular apps, standard Django templates, Crispy Forms, HTMX 1.9.12, and Alpine.js 3.14.8
 - **Design System:** CBA Modern Workspace Design System (DESIGN.md v2.0)
-- **Primary Database Engine (Local):** SQLite (`db.sqlite3`, 25 institutional inventory assets preserved)
+- **Primary Database Engine (Local):** SQLite (`db.sqlite3`, 25 institutional inventory assets recovered from `db.sqlite3.backup_safety_review_20261008` after Phase 3C visual QA flush incident; see Section 6)
 - **Primary Database Engine (Hosted):** Neon Serverless PostgreSQL
 - **Hosting Environment:** Vercel (`cba-ims`)
 
@@ -157,10 +157,45 @@ All Phase 3B acceptance items have been implemented, verified, and approved:
 
 ---
 
-## 6. Test Suite Runtime Optimization Recommendation
+## 6. Phase 3C: Public Landing Page, Staff Login Redesign & Database Incident Record
+
+**Status:** Functionally implemented and regression-verified (`435/435` full suite passed, `23/23` focused tests passed) on branch `feat/phase-3c-public-landing` (branched from `f82b048`).
+
+### A. Phase 3C Scope Delivered
+1. **Public Institutional Homepage (`/` -> `PublicLandingView`):**
+   - Replaced the root `/` `RedirectView` in `config/urls.py` with `accounts_views.PublicLandingView` (`templates/accounts/landing.html`, `name='home'`).
+   - Built a responsive `DESIGN.md` v2.0 homepage (`#F8FAFC` canvas, `#FFFFFF` cards, `#1D4ED8` primary CTA) featuring CBA IMS branding, system purpose hero, Custodian Counter Guidelines (physical School ID deposit, 15-minute claim window, reservation lookup token), side-by-side separation of Public Student Services vs. Authenticated Staff Operations, and a 4-step Student Reservation Process Overview.
+   - Connected directly to existing student routes (`student_reservations:catalog`, `student_reservations:public_request`, `student_reservations:public_lookup_search`) without exposing private inventory records, student PII, or staff audit logs.
+2. **Staff Login Redesign & Redirect Hardening (`templates/accounts/login.html` & `config/settings.py`):**
+   - Redesigned `templates/accounts/login.html` to match the institutional homepage aesthetic while preserving `LoginForm`, `LoginView`, CSRF protection, 44px touch targets, error alert states, hidden `next` input, and public homepage return links.
+   - Updated `LOGIN_REDIRECT_URL = '/dashboard/'` in `config/settings.py`. Verified open-redirect rejection (`url_has_allowed_host_and_scheme`) and authenticated redirect behavior.
+3. **Phase 3C Test & Regression Verification:**
+   - **Full Project Regression Suite:** `435 / 435` tests passed (`421` Phase 3B baseline + `14` new Phase 3C tests in `apps/accounts/test_phase3c_landing_and_login.py`), runtime `606.313s`, exit code `0`.
+   - **Focused Phase 3C & Account Tests:** `23 / 23` passed (`14.010s`, exit code `0`).
+   - **System & Migration Checks:** `manage.py check` (`0` issues) and `makemigrations --check --dry-run` (`No changes detected`).
+
+### B. Local SQLite Database Flush Incident & Recovery Record (2026-10-13)
+The local office SQLite database (`c:\Users\PERSONAL\Desktop\cba_ims\db.sqlite3`) did **not** remain untouched during Phase 3C visual verification. The incident and recovery details are recorded below:
+
+1. **Incident & Root Cause:**
+   - On `2026-10-13 09:45:28`, the standalone scratch visual verification script (`scratch/verify_phase3c_visuals.py`, subclassing `StaticLiveServerTestCase`) executed its initial `__main__` block, which called `DiscoverRunner.run_suite()` directly **without** first calling `DiscoverRunner.setup_databases()`.
+   - Because `setup_databases()` was omitted, `DATABASES['default']` remained pointed at the regular `c:\Users\PERSONAL\Desktop\cba_ims\db.sqlite3` file instead of an isolated in-memory test database.
+   - During test cleanup, `TransactionTestCase._post_teardown()` executed `manage.py flush` (`reset_sequences=False`) against `db.sqlite3`, truncating application data rows while leaving the schema, `django_migrations` (`45` rows), `django_content_type` (`54` rows), `auth_permission` (`216` rows), and `sqlite_sequence` intact.
+2. **Restoration Source & Recovery Procedure:**
+   - At `2026-10-13 10:51:03`, `db.sqlite3` was recovered using `scratch/restore_local_db_from_safety_backup.py`, which opened the local safety backup `c:\Users\PERSONAL\Desktop\cba_ims\db.sqlite3.backup_safety_review_20261008` (`921,600` bytes, modified `2026-10-08 15:25:45`) in read-only mode (`mode=ro`) and reinserted backed-up rows into the 20 flushed tables while preserving all `45` applied migrations in `db.sqlite3`.
+3. **Recovered Records & Verified Sequence Evidence:**
+   - Restored records: `25` institutional assets (`inventory_asset`), `6` asset categories, `16` brands, `3` asset verifications, `5` departments, `7` locations, `6` employees, `10` users, `6` asset assignments, `5` borrowings, `3` transfers, `6` maintenance cases, `5` disposals, `5` supply categories, `6` supplies, `9` supply transactions, `3` student reservations, `60` audit logs (`audit_auditlog`), `91` `axes_accesslog` rows, and `73` `django_session` rows (`PRAGMA foreign_key_check` returned `0` errors).
+   - Surviving pre-restoration `sqlite_sequence` high-water marks in `db.sqlite3` matched `db.sqlite3.backup_safety_review_20261008` across all operational tables (`inventory_asset=31`, `audit_auditlog=60`, `assignments=6`, `borrowing=5`, `transfers=3`, `maintenance=7`, `disposals=5`, `supplies=6`, `student_reservations=8`, `inventory_equipmenttype=0`), confirming no new operational or audited records had been inserted after the `2026-10-08` backup.
+4. **Data Loss & Forensic Limitations:**
+   - **Lost entries:** Four newer `axes_accesslog` authentication log entries (`seq` `91` -> `95`) recorded between `2026-10-08` and `2026-10-09` were not present in the `2026-10-08` backup and were lost in the flush.
+   - **Verification limitation:** Because no pre-session byte-for-byte copy or cryptographic hash of `db.sqlite3` was taken immediately before the `09:45:28` flush, exact pre-incident byte/row equality (such as any unaudited in-place column edits or session changes between `2026-10-08 15:25:45` and `2026-10-09 14:10:44`) cannot be independently proven.
+
+---
+
+## 7. Test Suite Runtime Optimization Recommendation
 
 ### Investigation Summary:
-The full Django test suite (421 tests) takes ~9.5 minutes on the office computer (~23 minutes on slower laptops). Analysis identified four primary bottlenecks:
+The full Django test suite (435 tests) takes ~10 minutes on the office computer (~23 minutes on slower laptops). Analysis identified four primary bottlenecks:
 1. **PBKDF2 Password Hashing:** `config/settings.py` lacks a test password hasher override. Every test user creation and login hashes passwords with 720,000 PBKDF2-SHA256 iterations.
 2. **Single-Worker Execution:** Tests run with `--parallel=1`.
 3. **django-axes Middleware:** Access attempt tracking writes to SQLite during test client logins.
@@ -176,12 +211,11 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 7. Next Planned Development Phase & Roadmap
+## 8. Next Planned Development Phase & Roadmap
 
-- **Next Planned Phase — Phase 3C: Public Landing Page & Staff Login Redesign:**
-  - Dedicated institutional portal landing page.
-  - Branded staff authentication interface aligned with university and `DESIGN.md v2.0` styling.
-- **Phase 3D: Unified Interface System:**
+- **Current Phase — Phase 3C: Public Landing Page & Staff Login Redesign:**
+  - Implemented and regression-verified (`435/435` passed) on `feat/phase-3c-public-landing`; awaiting final review/commit authorization.
+- **Next Planned Phase — Phase 3D: Unified Interface System:**
   - Align inventory, assignment, borrowing, maintenance, and transfer list/detail interfaces with consistent table, badge, and search ergonomics.
 - **Phase 3E: Acceptance Verification & Production Release:**
   - Comprehensive end-to-end user acceptance testing on isolated staging database.
@@ -191,7 +225,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 8. Project Governance and Responsibilities
+## 9. Project Governance and Responsibilities
 
 - **ChatGPT (Lead Systems Architect & Product Designer):**
   - Defines institutional architecture, system constraints, business logic, UI/UX direction, and reference design contracts.
@@ -205,7 +239,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 9. Hosting and Deployment Safety Rules
+## 10. Hosting and Deployment Safety Rules
 
 1. **Vercel Project:** `cba-ims` (Production linked to repository `echo10000/cba_ims`).
 2. **Hosted PostgreSQL:** Neon Serverless PostgreSQL.
@@ -215,12 +249,13 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 10. Git Branching and Files Finalized in Phase 3B
+## 11. Git Branching and Files Finalized in Phase 3B
 
 ### Active Branches:
 - `feat/phase-2a-student-portal`: Complete Phase 2A implementation (Head: `64ca513`).
 - `feat/main-workflow-integrity`: Phase 3A integrity hardening (Head: `7094d14`).
-- `feat/phase-3b-dashboard-navigation`: Finalized Phase 3B unified staff dashboard and role-aware navigation branch (backed up to `backup/feat/phase-3b-dashboard-navigation`).
+- `feat/phase-3b-dashboard-navigation`: Finalized Phase 3B unified staff dashboard and role-aware navigation branch (backed up to `backup/feat/phase-3b-dashboard-navigation`, Head: `f82b048`).
+- `feat/phase-3c-public-landing`: Phase 3C public landing page and staff login redesign branch (branched from `f82b048`).
 
 ### Files Delivered Across Phase 3B:
 1. `apps/accounts/views.py` (Dashboard metrics, operational queues, fail-closed `DEPT_CHAIR` scoping, `FACULTY` personal scoping, PII protection, custodian authorization)
@@ -237,7 +272,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 11. Cross-Computer Resume Instructions (Office Handoff)
+## 12. Cross-Computer Resume Instructions (Office Handoff)
 
 To resume development on the office computer tomorrow:
 

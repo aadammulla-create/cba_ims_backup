@@ -235,7 +235,7 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # Authentication URLs
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 LOGIN_EXEMPT_URLS = [
     r'^admin/',
