@@ -96,6 +96,8 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
 
         self.assertContains(response, 'Browse Equipment')
         self.assertContains(response, 'Track Reservation')
+        self.assertContains(response, 'Track Reservation Status')
+        self.assertNotContains(response, 'Track or Cancel Reservation')
         self.assertContains(response, 'Staff Sign In')
         self.assertContains(response, f'href="{catalog_url}"')
         self.assertContains(response, f'href="{request_url}"')

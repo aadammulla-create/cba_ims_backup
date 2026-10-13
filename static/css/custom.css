@@ -1277,3 +1277,29 @@ h4, .h4 {
 .queue-item-row:last-child {
     border-bottom: none;
 }
+
+/* ==========================================================================
+   Mobile Touch Target Enforcement (DESIGN.md v2.0 Minimum 44x44px)
+   ========================================================================== */
+@media (max-width: 767.98px) {
+    .btn-primary-cba,
+    .btn-secondary-cba,
+    .btn-danger-cba,
+    .btn-outline-cba,
+    .mobile-card-list .btn,
+    .cba-page-header .cba-header-actions > .btn,
+    .cba-page-header .cba-header-actions > a {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+    .form-control,
+    .form-select,
+    .input-group > .form-control,
+    .input-group > .btn {
+        min-height: 44px !important;
+    }
+    .cba-pagination .page-item .page-link {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+}

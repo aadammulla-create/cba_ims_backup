@@ -1,189 +1,179 @@
 {% extends 'base.html' %}
 
-{% block title %}Assets Inventory - CBA IMS{% endblock %}
-{% block page_title %}Physical Assets & Equipment{% endblock %}
+{% block title %}{{ page_title }} - CBA IMS{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-<div x-data="{ open: {% if request.GET.category or request.GET.brand or request.GET.department or request.GET.location or request.GET.condition or request.GET.status %}true{% else %}false{% endif %} }" class="card mb-4 shadow-sm">
-    <div class="card-body">
-        
-        <!-- Search and Filter Form (Progressive Enhancement: standard GET fallback, enhanced with HTMX) -->
-        <form id="assetFilterForm"
-              method="get"
-              action="{% url 'inventory:asset_list' %}"
-              hx-get="{% url 'inventory:asset_list' %}"
-              hx-target="#asset-results-container"
-              hx-push-url="true"
-              hx-indicator="#asset-loading-indicator">
-
-            <!-- Top Toolbar: Search, Filter Toggle & Add Button -->
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                <div class="d-flex flex-wrap align-items-center gap-2 flex-grow-1" style="max-width: 600px;">
-                    <!-- Search Input Group with live debounced HTMX trigger -->
-                    <div class="d-flex flex-grow-1 gap-2">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                            <input type="text"
-                                   name="q"
-                                   id="assetSearchInput"
-                                   class="form-control"
-                                   placeholder="Search by code, property #, item, serial, brand, model..."
-                                   value="{{ request.GET.q }}"
-                                   hx-get="{% url 'inventory:asset_list' %}"
-                                   hx-trigger="keyup changed delay:350ms, search"
-                                   hx-target="#asset-results-container"
-                                   hx-push-url="true"
-                                   hx-indicator="#asset-loading-indicator"
-                                   hx-include="#assetFilterForm">
-                            <!-- Small restrained institutional loading indicator -->
-                            <span class="input-group-text bg-white border-start-0 htmx-indicator" id="asset-loading-indicator" title="Updating...">
-                                <span class="spinner-border spinner-border-sm text-secondary" style="width: 0.85rem; height: 0.85rem; border-width: 0.15em;" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </span>
-                            </span>
-                        </div>
-                        <button type="submit" class="btn btn-outline-secondary">Search</button>
-                    </div>
-
-                    <!-- Filter Toggle Button (Alpine-driven) -->
-                    <button class="btn btn-outline-primary filter-toggle-btn"
-                            type="button"
-                            @click="open = !open"
-                            :aria-expanded="open"
-                            aria-controls="filterPanel"
-                            aria-label="Toggle filter options">
-                        <i class="bi me-1" :class="open ? 'bi-funnel-fill' : 'bi-funnel'"></i> Filters
-                        {% if request.GET.category or request.GET.brand or request.GET.department or request.GET.location or request.GET.condition or request.GET.status %}
-                            <span class="badge bg-primary rounded-pill ms-1">&bull;</span>
-                        {% endif %}
-                    </button>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="d-flex gap-2">
-                    {% if request.GET.q or request.GET.category or request.GET.brand or request.GET.department or request.GET.location or request.GET.condition or request.GET.status %}
-                        <a href="{% url 'inventory:asset_list' %}" class="btn btn-outline-danger" title="Clear all filters">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </a>
-                    {% endif %}
-                    {% if request.user.is_admin %}
-                    <a href="{% url 'inventory:asset_create' %}" class="btn btn-primary text-nowrap">
-                        <i class="bi bi-plus-lg me-1"></i> Add Asset
-                    </a>
-                    {% endif %}
-                </div>
+<div class="container-fluid px-0">
+    <!-- Institutional Page Header -->
+    <div class="cba-page-header">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.06em;">Inventory Registry</span>
+                {% if user.role == 'DEPT_CHAIR' and user.employee_profile and user.employee_profile.department %}
+                <span class="cba-code">{{ user.employee_profile.department.code|default:user.employee_profile.department.name }}</span>
+                {% endif %}
             </div>
-
-            <!-- Collapsible Multi-Filter Panel -->
-            <div id="filterPanel"
-                 x-show="open"
-                 x-cloak
-                 class="mb-3">
-                <div class="p-3 bg-light rounded-3 border">
-                    <div class="row g-2 align-items-end">
-
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Category</label>
-                            <select name="category" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Categories</option>
-                                {% for cat in categories %}<option value="{{ cat.pk }}" {% if request.GET.category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>{% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Brand</label>
-                            <select name="brand" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Brands</option>
-                                {% for b in brands %}<option value="{{ b.pk }}" {% if request.GET.brand == b.pk|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
-                            </select>
-                        </div>
-
-                        {% if request.user.role != 'DEPT_CHAIR' %}
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Department</label>
-                            <select name="department" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Departments</option>
-                                {% for dept in departments %}<option value="{{ dept.pk }}" {% if request.GET.department == dept.pk|stringformat:"s" %}selected{% endif %}>{{ dept.name }}</option>{% endfor %}
-                            </select>
-                        </div>
-                        {% endif %}
-
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Location</label>
-                            <select name="location" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Locations</option>
-                                {% for loc in locations %}<option value="{{ loc.pk }}" {% if request.GET.location == loc.pk|stringformat:"s" %}selected{% endif %}>{{ loc.name }}</option>{% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Condition</label>
-                            <select name="condition" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Conditions</option>
-                                {% for cond_code, cond_label in conditions %}<option value="{{ cond_code }}" {% if request.GET.condition == cond_code %}selected{% endif %}>{{ cond_label }}</option>{% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-sm-6 col-md-4 col-lg-2">
-                            <label class="form-label small fw-bold mb-1">Status</label>
-                            <select name="status" class="form-select form-select-sm"
-                                    hx-get="{% url 'inventory:asset_list' %}"
-                                    hx-trigger="change"
-                                    hx-target="#asset-results-container"
-                                    hx-push-url="true"
-                                    hx-indicator="#asset-loading-indicator"
-                                    hx-include="#assetFilterForm">
-                                <option value="">All Statuses</option>
-                                {% for stat_code, stat_label in statuses %}<option value="{{ stat_code }}" {% if request.GET.status == stat_code %}selected{% endif %}>{{ stat_label }}</option>{% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="col-12 d-flex justify-content-end gap-2 mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm px-3">
-                                <i class="bi bi-funnel-fill me-1"></i> Apply Filters
-                            </button>
-                            <a href="{% url 'inventory:asset_list' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </form>
-
-        <!-- Dynamic Results Container (swapped via HTMX, rendered initially via partial) -->
-        <div id="asset-results-container">
-            {% include 'inventory/partials/_asset_results.html' %}
+            <h1 class="cba-header-title">Physical Assets &amp; Equipment</h1>
+            <p class="cba-header-subtitle">Manage institutional property numbers, accountability custody, operational status, and physical locations.</p>
         </div>
+        <div class="cba-header-actions">
+            <a href="{% url 'inventory:asset_scan' %}" class="btn btn-secondary-cba">
+                <i class="bi bi-qr-code-scan text-primary"></i>
+                <span>Scan Asset</span>
+            </a>
+            {% if user.is_admin %}
+            <a href="{% url 'inventory:qr_labels_bulk' %}" class="btn btn-secondary-cba">
+                <i class="bi bi-printer text-secondary"></i>
+                <span>Bulk QR Labels</span>
+            </a>
+            <a href="{% url 'inventory:asset_create' %}" class="btn btn-primary-cba">
+                <i class="bi bi-plus-lg"></i>
+                <span>Add Asset</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
 
+    <!-- Search & Filter Control Panel -->
+    <div class="cba-panel mb-4">
+        <div class="cba-panel-body p-3">
+            <form method="get" id="assetFilterForm"
+                  hx-get="{% url 'inventory:asset_list' %}"
+                  hx-target="#asset-results-container"
+                  hx-push-url="true"
+                  hx-indicator="#asset-loading-indicator"
+                  hx-trigger="submit, change from:.filter-select, keyup changed delay:350ms from:#search-input">
+                <!-- Primary Search & Mobile Filter Toggle -->
+                <div class="row g-2 align-items-center">
+                    <div class="col-12 col-md-6 col-lg-5">
+                        <label for="search-input" class="visually-hidden">Search assets</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-search"></i>
+                            </span>
+                            <input type="text" id="search-input" name="q" value="{{ current_q }}"
+                                   class="form-control border-start-0 ps-0"
+                                   placeholder="Search code, item name, property #, serial, brand...">
+                            {% if current_q %}
+                            <a href="{% url 'inventory:asset_list' %}" class="btn btn-outline-secondary border-start-0" title="Clear search" aria-label="Clear search">
+                                <i class="bi bi-x-lg"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="col-12 col-md-6 col-lg-7 d-flex justify-content-between justify-content-md-end align-items-center gap-2">
+                        <!-- Active Filter Summary Pills (Desktop) -->
+                        <div class="d-none d-lg-flex align-items-center flex-wrap gap-1">
+                            {% if current_status or current_condition or current_category or current_department or current_location %}
+                            <span class="text-muted small me-1"><i class="bi bi-funnel-fill text-primary me-1"></i>Filtered</span>
+                            <a href="{% url 'inventory:asset_list' %}" class="btn btn-sm btn-link text-decoration-none text-danger p-0 ms-1 small fw-medium">
+                                Reset all
+                            </a>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 ms-auto">
+                            <button class="btn btn-secondary-cba d-md-none" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#filterPanel"
+                                    aria-expanded="false" aria-controls="filterPanel">
+                                <i class="bi bi-sliders2"></i>
+                                <span>Filters</span>
+                                {% if current_status or current_condition or current_category or current_department or current_location %}
+                                <span class="cba-status cba-status-assigned ms-1">Active</span>
+                                {% endif %}
+                            </button>
+                            <button type="submit" class="btn btn-primary-cba d-md-none">
+                                <i class="bi bi-check2"></i>
+                                <span>Apply</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible Filter Selects (Always visible on md+, collapsible on mobile) -->
+                <div class="collapse d-md-block mt-3 pt-3 border-top" id="filterPanel">
+                    <div class="row g-2 align-items-end">
+                        {% if user.role != 'DEPT_CHAIR' %}
+                        <div class="col-12 col-sm-6 col-md-3 col-xl-2">
+                            <label for="filter-department" class="form-label small text-muted fw-semibold mb-1">Department</label>
+                            <select id="filter-department" name="department" class="form-select form-select-sm filter-select">
+                                <option value="">All Departments</option>
+                                {% for d in departments %}
+                                    <option value="{{ d.pk }}" {% if current_department == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.code }} - {{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <div class="col-12 col-sm-6 col-md-3 col-xl-2">
+                            <label for="filter-category" class="form-label small text-muted fw-semibold mb-1">Category</label>
+                            <select id="filter-category" name="category" class="form-select form-select-sm filter-select">
+                                <option value="">All Categories</option>
+                                {% for c in categories %}
+                                    <option value="{{ c.pk }}" {% if current_category == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-sm-4 col-md-2 col-xl-2">
+                            <label for="filter-status" class="form-label small text-muted fw-semibold mb-1">Status</label>
+                            <select id="filter-status" name="status" class="form-select form-select-sm filter-select">
+                                <option value="">All Statuses</option>
+                                {% for val, label in statuses %}
+                                    <option value="{{ val }}" {% if current_status == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-6 col-sm-4 col-md-2 col-xl-2">
+                            <label for="filter-condition" class="form-label small text-muted fw-semibold mb-1">Condition</label>
+                            <select id="filter-condition" name="condition" class="form-select form-select-sm filter-select">
+                                <option value="">All Conditions</option>
+                                {% for val, label in conditions %}
+                                    <option value="{{ val }}" {% if current_condition == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-sm-4 col-md-2 col-xl-2">
+                            <label for="filter-location" class="form-label small text-muted fw-semibold mb-1">Location</label>
+                            <select id="filter-location" name="location" class="form-select form-select-sm filter-select">
+                                <option value="">All Locations</option>
+                                {% for l in locations %}
+                                    <option value="{{ l.pk }}" {% if current_location == l.pk|stringformat:"s" %}selected{% endif %}>{{ l.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-xl-2 d-flex gap-2 mt-2 mt-xl-0">
+                            <button type="submit" class="btn btn-secondary-cba btn-sm flex-grow-1 justify-content-center">
+                                <i class="bi bi-funnel"></i>
+                                <span>Filter</span>
+                            </button>
+                            <a href="{% url 'inventory:asset_list' %}" class="btn btn-secondary-cba btn-sm justify-content-center" title="Clear Filters">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                                <span class="d-xl-none">Clear Filters</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- HTMX Loading Indicator -->
+    <div id="asset-loading-indicator" class="htmx-indicator text-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <span class="text-muted small fw-medium">Updating inventory records...</span>
+    </div>
+
+    <!-- Results Container (Target for HTMX partial swaps) -->
+    <div id="asset-results-container">
+        {% include 'inventory/partials/_asset_results.html' %}
     </div>
 </div>
 {% endblock %}

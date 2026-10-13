@@ -3,138 +3,268 @@
 {% block title %}{{ asset.asset_code }} - {{ asset.item_name }} - CBA IMS{% endblock %}
 {% block page_title %}Asset Details{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Scoped DESIGN.md v2.0 refinements for Asset Detail panels, tables, and semantic badges */
+    .asset-detail-shell .card {
+        border: 1px solid var(--cba-border-subtle, #e2e8f0) !important;
+        border-radius: var(--cba-radius-lg, 0.75rem);
+        box-shadow: var(--cba-shadow-sm, 0 1px 2px 0 rgba(15, 23, 42, 0.04)) !important;
+        background-color: var(--cba-surface-card, #ffffff);
+    }
+    .asset-detail-shell .card-header.bg-white {
+        background-color: var(--cba-surface-card, #ffffff) !important;
+        border-bottom: 1px solid var(--cba-border-subtle, #e2e8f0) !important;
+        padding: 0.875rem 1.25rem !important;
+    }
+    .asset-detail-shell .card-header h6 {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--cba-text-primary, #0f172a);
+        letter-spacing: -0.01em;
+    }
+    .asset-detail-shell .table thead.table-light th {
+        background-color: var(--cba-surface-bg, #f8fafc) !important;
+        color: var(--cba-text-secondary, #475569) !important;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.7rem 1rem;
+        border-bottom: 1px solid var(--cba-border-subtle, #e2e8f0);
+    }
+    .asset-detail-shell .table tbody td {
+        font-size: 0.875rem;
+        border-bottom-color: var(--cba-surface-subtle, #f1f5f9);
+    }
+    /* Semantic badge contrast & subtle tint normalization (DESIGN.md v2.0) */
+    .asset-detail-shell .badge {
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        border-radius: 9999px;
+        padding: 0.25rem 0.625rem;
+    }
+    .asset-detail-shell .badge.bg-success,
+    .asset-detail-shell .badge.bg-success-subtle {
+        background-color: var(--cba-status-available-bg, #ecfdf5) !important;
+        border: 1px solid var(--cba-status-available-border, #a7f3d0) !important;
+        --bs-badge-color: var(--cba-status-available-text, #065f46);
+        color: var(--cba-status-available-text, #065f46) !important;
+    }
+    .asset-detail-shell .badge.bg-primary,
+    .asset-detail-shell .badge.bg-primary-subtle,
+    .asset-detail-shell .badge.bg-info,
+    .asset-detail-shell .badge.bg-info-subtle {
+        background-color: var(--cba-status-assigned-bg, #eff6ff) !important;
+        border: 1px solid var(--cba-status-assigned-border, #bfdbfe) !important;
+        --bs-badge-color: var(--cba-status-assigned-text, #1e40af);
+        color: var(--cba-status-assigned-text, #1e40af) !important;
+    }
+    .asset-detail-shell .badge.bg-warning,
+    .asset-detail-shell .badge.bg-warning-subtle {
+        background-color: var(--cba-status-warning-bg, #fffbeb) !important;
+        border: 1px solid var(--cba-status-warning-border, #fde68a) !important;
+        --bs-badge-color: var(--cba-status-warning-text, #92400e);
+        color: var(--cba-status-warning-text, #92400e) !important;
+    }
+    .asset-detail-shell .badge.bg-danger,
+    .asset-detail-shell .badge.bg-danger-subtle {
+        background-color: var(--cba-status-danger-bg, #fef2f2) !important;
+        border: 1px solid var(--cba-status-danger-border, #fecaca) !important;
+        --bs-badge-color: var(--cba-status-danger-text, #991b1b);
+        color: var(--cba-status-danger-text, #991b1b) !important;
+    }
+    .asset-detail-shell .badge.bg-secondary,
+    .asset-detail-shell .badge.bg-secondary-subtle,
+    .asset-detail-shell .badge.bg-light,
+    .asset-detail-shell .badge.bg-dark {
+        background-color: var(--cba-status-borrowed-bg, #f1f5f9) !important;
+        border: 1px solid var(--cba-status-borrowed-border, #cbd5e1) !important;
+        --bs-badge-color: var(--cba-status-borrowed-text, #334155);
+        color: var(--cba-status-borrowed-text, #334155) !important;
+    }
+    @media (max-width: 767.98px) {
+        .asset-detail-shell .btn,
+        .asset-detail-shell .form-control,
+        .asset-detail-shell .form-select {
+            min-height: 44px !important;
+            min-width: 44px !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="asset-detail-shell container-fluid px-0">
 <!-- Breadcrumb Navigation -->
 <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'inventory:asset_list' %}" class="text-decoration-none">Assets</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ asset.asset_code }}</li>
+    <ol class="breadcrumb small mb-0">
+        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a></li>
+        {% if request.user.role == 'FACULTY' %}
+        <li class="breadcrumb-item"><a href="{% url 'assignments:my_accountability' %}" class="text-decoration-none text-secondary">My Accountability</a></li>
+        {% else %}
+        <li class="breadcrumb-item"><a href="{% url 'inventory:asset_list' %}" class="text-decoration-none text-secondary">Assets</a></li>
+        {% endif %}
+        <li class="breadcrumb-item active font-monospace fw-semibold text-dark" aria-current="page">{{ asset.asset_code }}</li>
     </ol>
 </nav>
 
 <!-- Asset Header Banner -->
-<div class="card mb-4 shadow-sm">
-    <div class="card-body p-4">
+<div class="cba-panel mb-4">
+    <div class="cba-panel-body p-4">
         <div class="row align-items-center g-3">
             <!-- Asset Photo / Placeholder -->
-            <div class="col-12 col-md-3 col-lg-2 text-center">
+            <div class="col-12 col-sm-4 col-md-3 col-lg-2 text-center">
                 {% if asset.asset_image %}
-                    <img src="{{ asset.asset_image.url }}" alt="{{ asset.item_name }}" class="img-fluid rounded border shadow-sm" style="max-height: 140px; width: 100%; object-fit: cover;">
+                    <img src="{{ asset.asset_image.url }}" alt="{{ asset.item_name }}" class="img-fluid rounded-3 border" style="max-height: 130px; width: 100%; object-fit: cover;">
                 {% else %}
-                    <div class="rounded bg-light border d-flex flex-column align-items-center justify-content-center py-4 text-muted" style="min-height: 120px;">
-                        <i class="bi bi-camera fs-1 opacity-50 mb-1"></i>
-                        <small class="text-muted">No photo uploaded</small>
+                    <div class="rounded-3 bg-light border d-flex flex-column align-items-center justify-content-center py-3 text-muted" style="min-height: 112px;">
+                        <i class="bi bi-box-seam fs-2 opacity-50 mb-1"></i>
+                        <small class="text-muted" style="font-size: 0.75rem;">No photo uploaded</small>
                     </div>
                 {% endif %}
             </div>
 
-            <!-- Asset Title & Primary Badges -->
-            <div class="col-12 col-md-6 col-lg-7">
-                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                    <span class="font-monospace fs-5 fw-bold text-primary">{{ asset.asset_code }}</span>
-                    
-                    <!-- Status Badge -->
-                    {% if asset.status == 'AVAILABLE' %}
-                        <span class="badge bg-success px-2 py-1">Available</span>
-                    {% elif asset.status == 'ASSIGNED' %}
-                        <span class="badge bg-warning text-dark px-2 py-1">Assigned</span>
-                    {% elif asset.status == 'BORROWED' %}
-                        <span class="badge bg-info text-dark px-2 py-1">Borrowed</span>
-                    {% elif asset.status == 'MAINTENANCE' %}
-                        <span class="badge text-white px-2 py-1" style="background-color: #fd7e14;">Under Maintenance</span>
-                    {% elif asset.status == 'DAMAGED' %}
-                        <span class="badge bg-danger px-2 py-1">Damaged</span>
-                    {% elif asset.status == 'LOST' %}
-                        <span class="badge bg-dark px-2 py-1">Lost</span>
-                    {% elif asset.status == 'TRANSFERRED' %}
-                        <span class="badge text-white px-2 py-1" style="background-color: #6f42c1;">Transferred</span>
-                    {% elif asset.status == 'DISPOSED' %}
-                        <span class="badge bg-dark text-white px-2 py-1"><i class="bi bi-archive-fill me-1"></i>Disposed</span>
-                    {% else %}
-                        <span class="badge bg-secondary px-2 py-1">{{ asset.status }}</span>
-                    {% endif %}
+            <!-- Asset Title, Primary Badges & Metadata -->
+            <div class="col-12 col-sm-8 col-md-9 col-lg-10">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-start gap-3">
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="cba-code fs-6 fw-bold">{{ asset.asset_code }}</span>
 
-                    <!-- Condition Badge -->
-                    {% if asset.condition == 'NEW' %}
-                        <span class="badge bg-primary px-2 py-1">Condition: New</span>
-                    {% elif asset.condition == 'GOOD' %}
-                        <span class="badge bg-success px-2 py-1">Condition: Good</span>
-                    {% elif asset.condition == 'FAIR' %}
-                        <span class="badge bg-info text-dark px-2 py-1">Condition: Fair</span>
-                    {% elif asset.condition == 'POOR' %}
-                        <span class="badge bg-warning text-dark px-2 py-1">Condition: Poor</span>
-                    {% else %}
-                        <span class="badge bg-danger px-2 py-1">Condition: Unserviceable</span>
-                    {% endif %}
-                </div>
+                            <!-- Status Badge -->
+                            {% if asset.status == 'AVAILABLE' %}
+                                <span class="cba-status cba-status-available">Available</span>
+                            {% elif asset.status == 'ASSIGNED' %}
+                                <span class="cba-status cba-status-assigned">Assigned</span>
+                            {% elif asset.status == 'BORROWED' %}
+                                <span class="cba-status cba-status-borrowed">Borrowed</span>
+                            {% elif asset.status == 'UNDER_MAINTENANCE' or asset.status == 'MAINTENANCE' %}
+                                <span class="cba-status cba-status-maintenance">Under Maintenance</span>
+                            {% elif asset.status == 'DAMAGED' %}
+                                <span class="cba-status cba-status-critical">Damaged</span>
+                            {% elif asset.status == 'LOST' %}
+                                <span class="cba-status cba-status-critical">Lost</span>
+                            {% elif asset.status == 'PENDING_TRANSFER' or asset.status == 'TRANSFERRED' %}
+                                <span class="cba-status cba-status-transferred">{{ asset.get_status_display }}</span>
+                            {% elif asset.status == 'DISPOSED' or asset.status == 'CONDEMNED' %}
+                                <span class="cba-status cba-status-archived"><i class="bi bi-archive-fill me-1"></i>{{ asset.get_status_display }}</span>
+                            {% else %}
+                                <span class="cba-status cba-status-muted">{{ asset.get_status_display }}</span>
+                            {% endif %}
 
-                <h3 class="fw-bold mb-1">{{ asset.item_name }}</h3>
-                <p class="text-muted mb-0 small">
-                    <i class="bi bi-building me-1"></i> {{ asset.department.name }}
-                    {% if asset.current_location %} &bull; <i class="bi bi-geo-alt me-1"></i> {{ asset.current_location.name }}{% endif %}
-                </p>
-            </div>
+                            <!-- Condition Badge -->
+                            {% if asset.condition == 'NEW' %}
+                                <span class="cba-status cba-condition-new">Condition: New</span>
+                            {% elif asset.condition == 'GOOD' %}
+                                <span class="cba-status cba-condition-good">Condition: Good</span>
+                            {% elif asset.condition == 'FAIR' %}
+                                <span class="cba-status cba-condition-fair">Condition: Fair</span>
+                            {% elif asset.condition == 'POOR' %}
+                                <span class="cba-status cba-condition-poor">Condition: Poor</span>
+                            {% else %}
+                                <span class="cba-status cba-condition-unserviceable">Condition: Unserviceable</span>
+                            {% endif %}
+                        </div>
 
-            <div class="col-12 col-md-5 col-lg-5 text-md-end">
-                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                    <a href="{% url 'inventory:asset_list' %}" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-arrow-left me-1"></i> Back
-                    </a>
-                    {% if request.user.role != 'FACULTY' %}
-                    <a href="{% url 'inventory:asset_qr_label' asset.asset_code %}" class="btn btn-outline-primary btn-sm" target="_blank" title="Print QR Sticker Label">
-                        <i class="bi bi-qr-code me-1"></i> QR Label
-                    </a>
-                    {% endif %}
-                    {% if asset.status == 'DISPOSED' %}
-                        {% if disposal_record and request.user.role != 'FACULTY' %}
-                        <a href="{% url 'disposals:disposal_detail' disposal_record.pk %}" class="btn btn-dark btn-sm">
-                            <i class="bi bi-archive me-1"></i> Disposal Record
-                        </a>
-                        {% endif %}
-                    {% else %}
-                        {% if can_borrow %}
-                        <a href="{% url 'borrowing:request_create_specific' asset.asset_code %}" class="btn btn-outline-info btn-sm" title="Request Equipment Loan">
-                            <i class="bi bi-hand-index me-1"></i> Borrow
-                        </a>
-                        {% endif %}
-                        {% if current_borrowing and request.user.is_admin %}
-                        <a href="{% url 'borrowing:borrowing_return' current_borrowing.pk %}" class="btn btn-warning btn-sm" title="Process Equipment Return">
-                            <i class="bi bi-arrow-return-left me-1"></i> Return Loan
-                        </a>
-                        {% endif %}
-                        {% if request.user.is_admin %}
-                        <a href="{% url 'inventory:asset_verify' asset.asset_code %}" class="btn btn-outline-success btn-sm" title="Conduct Physical Verification Audit">
-                            <i class="bi bi-clipboard-check me-1"></i> Verify
-                        </a>
-                        {% if can_transfer %}
-                        <a href="{% url 'transfers:transfer_request_specific' asset.asset_code %}" class="btn btn-outline-success btn-sm" title="Transfer Asset Location">
-                            <i class="bi bi-arrow-left-right me-1"></i> Transfer
-                        </a>
-                        {% endif %}
-                        {% if current_maintenance %}
-                        <a href="{% url 'maintenance:maintenance_detail' current_maintenance.pk %}" class="btn btn-warning btn-sm" title="View Active Maintenance Case">
-                            <i class="bi bi-tools me-1"></i> Maintenance
+                        <h1 class="cba-header-title mb-1">{{ asset.item_name }}</h1>
+                        <div class="d-flex flex-wrap align-items-center gap-2 text-secondary small">
+                            <span><i class="bi bi-building me-1 text-muted"></i>{{ asset.department.name }}</span>
+                            {% if asset.current_location %}
+                                <span class="text-muted">&bull;</span>
+                                <span><i class="bi bi-geo-alt me-1 text-muted"></i>{{ asset.current_location.name }}</span>
+                            {% endif %}
+                            {% if asset.category %}
+                                <span class="text-muted">&bull;</span>
+                                <span><i class="bi bi-tag me-1 text-muted"></i>{{ asset.category.name }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Primary Navigation & Admin Edit Actions -->
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        {% if request.user.role == 'FACULTY' %}
+                        <a href="{% url 'assignments:my_accountability' %}" class="btn btn-secondary-cba btn-sm">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Back</span>
                         </a>
                         {% else %}
-                        <a href="{% url 'maintenance:report_create_specific' asset.asset_code %}" class="btn btn-outline-danger btn-sm" title="Report Defect or Damage">
-                            <i class="bi bi-exclamation-octagon me-1"></i> Report Defect
+                        <a href="{% url 'inventory:asset_list' %}" class="btn btn-secondary-cba btn-sm">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Back</span>
+                        </a>
+                        <a href="{% url 'inventory:asset_qr_label' asset.asset_code %}" class="btn btn-secondary-cba btn-sm" target="_blank" title="Print QR Sticker Label">
+                            <i class="bi bi-qr-code text-primary"></i>
+                            <span>QR Label</span>
                         </a>
                         {% endif %}
-                        {% if can_dispose %}
-                        <a href="{% url 'disposals:request_create_specific' asset.asset_code %}" class="btn btn-outline-danger btn-sm" title="Initiate Asset Disposal">
-                            <i class="bi bi-trash3 me-1"></i> Dispose
+                        {% if asset.status != 'DISPOSED' and request.user.is_admin %}
+                        <a href="{% url 'inventory:asset_edit' asset.asset_code %}" class="btn btn-primary-cba btn-sm">
+                            <i class="bi bi-pencil"></i>
+                            <span>Edit</span>
                         </a>
                         {% endif %}
-                        <a href="{% url 'inventory:asset_edit' asset.asset_code %}" class="btn btn-primary btn-sm">
-                            <i class="bi bi-pencil me-1"></i> Edit
-                        </a>
-                        <a href="{% url 'inventory:asset_delete' asset.asset_code %}" class="btn btn-outline-danger btn-sm" title="Delete Asset">
-                            <i class="bi bi-trash"></i>
-                        </a>
-                        {% endif %}
-                    {% endif %}
+                    </div>
                 </div>
+
+                <!-- Operational Lifecycle Action Bar (Rendered only when actions are permitted for the current role) -->
+                {% if asset.status == 'DISPOSED' and disposal_record and request.user.role != 'FACULTY' or asset.status != 'DISPOSED' and can_borrow or asset.status != 'DISPOSED' and request.user.is_admin %}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3 mt-3 border-top">
+                    <span class="text-uppercase fw-bold text-muted" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                        <i class="bi bi-lightning-charge me-1"></i>Operational Actions
+                    </span>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if asset.status == 'DISPOSED' %}
+                            {% if disposal_record and request.user.role != 'FACULTY' %}
+                            <a href="{% url 'disposals:disposal_detail' disposal_record.pk %}" class="btn btn-secondary-cba btn-sm">
+                                <i class="bi bi-archive me-1"></i> Disposal Record
+                            </a>
+                            {% endif %}
+                        {% else %}
+                            {% if can_borrow %}
+                            <a href="{% url 'borrowing:request_create_specific' asset.asset_code %}" class="btn btn-primary-cba btn-sm" title="Request Equipment Loan">
+                                <i class="bi bi-hand-index me-1"></i> Borrow
+                            </a>
+                            {% endif %}
+                            {% if current_borrowing and request.user.is_admin %}
+                            <a href="{% url 'borrowing:borrowing_return' current_borrowing.pk %}" class="btn btn-primary-cba btn-sm" title="Process Equipment Return">
+                                <i class="bi bi-arrow-return-left me-1"></i> Return Loan
+                            </a>
+                            {% endif %}
+                            {% if request.user.is_admin %}
+                            <a href="{% url 'inventory:asset_verify' asset.asset_code %}" class="btn btn-secondary-cba btn-sm" title="Conduct Physical Verification Audit">
+                                <i class="bi bi-clipboard-check text-success me-1"></i> Verify
+                            </a>
+                            {% if can_transfer %}
+                            <a href="{% url 'transfers:transfer_request_specific' asset.asset_code %}" class="btn btn-secondary-cba btn-sm" title="Transfer Asset Location">
+                                <i class="bi bi-arrow-left-right text-primary me-1"></i> Transfer
+                            </a>
+                            {% endif %}
+                            {% if current_maintenance %}
+                            <a href="{% url 'maintenance:maintenance_detail' current_maintenance.pk %}" class="btn btn-secondary-cba btn-sm" title="View Active Maintenance Case">
+                                <i class="bi bi-tools text-warning me-1"></i> Maintenance
+                            </a>
+                            {% else %}
+                            <a href="{% url 'maintenance:report_create_specific' asset.asset_code %}" class="btn btn-secondary-cba btn-sm" title="Report Defect or Damage">
+                                <i class="bi bi-exclamation-octagon text-danger me-1"></i> Report Defect
+                            </a>
+                            {% endif %}
+                            {% if can_dispose %}
+                            <a href="{% url 'disposals:request_create_specific' asset.asset_code %}" class="btn btn-secondary-cba btn-sm text-danger" title="Initiate Asset Disposal">
+                                <i class="bi bi-trash3 me-1"></i> Dispose
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'inventory:asset_delete' asset.asset_code %}" class="btn btn-secondary-cba btn-sm text-danger" title="Delete Asset">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -1311,4 +1441,5 @@
     </div>
 </div>
 {% endif %}
+</div>
 {% endblock %}

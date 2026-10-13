@@ -159,7 +159,7 @@ All Phase 3B acceptance items have been implemented, verified, and approved:
 
 ## 6. Phase 3C: Public Landing Page, Staff Login Redesign & Database Incident Record
 
-**Status:** Functionally implemented and regression-verified (`435/435` full suite passed, `23/23` focused tests passed) on branch `feat/phase-3c-public-landing` (branched from `f82b048`).
+**Status:** Completed, regression-verified (`435/435` full suite passed, `23/23` focused tests passed), and privately backed up on branch `feat/phase-3c-public-landing` (Commit `2c243de`).
 
 ### A. Phase 3C Scope Delivered
 1. **Public Institutional Homepage (`/` -> `PublicLandingView`):**
@@ -211,12 +211,35 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 8. Next Planned Development Phase & Roadmap
+## 8. Phase 3D, Part 1: Operations UI Refinement (Inventory & Borrowing)
 
-- **Current Phase — Phase 3C: Public Landing Page & Staff Login Redesign:**
-  - Implemented and regression-verified (`435/435` passed) on `feat/phase-3c-public-landing`; awaiting final review/commit authorization.
-- **Next Planned Phase — Phase 3D: Unified Interface System:**
-  - Align inventory, assignment, borrowing, maintenance, and transfer list/detail interfaces with consistent table, badge, and search ergonomics.
+**Status:** Completed, verified, and approved for private backup on branch `feat/phase-3d-operations-ui` (based on Phase 3C commit `2c243de`). Phase 3D Part 2 is pending.
+
+### Scope Delivered:
+1. **Inventory Asset List & Detail Refinements:**
+   - Standardized `asset_list.html` and `partials/_asset_results.html` with unified table headers, status badges, empty states, and HTMX pagination.
+   - Refined `asset_detail.html` with high-contrast badge styling, clear operational metadata, role-aware navigation (Faculty routes to My Accountability instead of restricted Assets list), and guarded operational action bars.
+2. **Borrowing Lists, Personal Borrowings & Detail Refinements:**
+   - Standardized `borrowing_list.html`, `borrowing_active_list.html`, `borrowing_history_list.html`, `my_borrowings.html`, and `borrowing_detail.html` with consistent filters, search controls, responsive mobile card lists, and verified navigation routes.
+   - Corrected public homepage wording to describe reservation tracking only.
+3. **Mobile Touch Targets & Accessibility (DESIGN.md v2.0):**
+   - Added global and template mobile touch-target enforcement ensuring all buttons, links, and inputs meet the `>= 44×44px` requirement on viewports `< 768px`.
+   - Verified `0px` horizontal overflow and 0 undersized controls across all 7 operational screens in headless Chrome (`390px`).
+4. **Role-Based Action Visibility:**
+   - Verified preservation of 4-role visibility matrix across `ADMIN` (full operations), `DEAN` (read-only oversight), `DEPT_CHAIR` (department-scoped read-only), and `FACULTY` (personal accountability and borrowing self-service).
+5. **Quality Gates & Integrity:**
+   - 119/119 initial focused tests passed; 21/21 final targeted view, HTMX, and RBAC tests passed.
+   - `manage.py check` reports 0 issues; `git diff --check` clean.
+   - Institutional database `db.sqlite3` (`946,176` bytes, 25 assets) preserved untouched.
+
+---
+
+## 9. Next Planned Development Phase & Roadmap
+
+- **Current Phase — Phase 3D, Part 1: Operations UI Refinement (Inventory & Borrowing):**
+  - Completed, verified, and approved for private backup on `feat/phase-3d-operations-ui`.
+- **Next Phase — Phase 3D, Part 2: Assignments, Maintenance & Transfers UI Refinement:**
+  - Align employee accountability/assignments, maintenance triage/cases, and transfer workflows with consistent `DESIGN.md v2.0` ergonomics.
 - **Phase 3E: Acceptance Verification & Production Release:**
   - Comprehensive end-to-end user acceptance testing on isolated staging database.
   - Apply missing Neon PostgreSQL migrations in verified dependency order.
@@ -225,7 +248,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 9. Project Governance and Responsibilities
+## 10. Project Governance and Responsibilities
 
 - **ChatGPT (Lead Systems Architect & Product Designer):**
   - Defines institutional architecture, system constraints, business logic, UI/UX direction, and reference design contracts.
@@ -239,7 +262,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 10. Hosting and Deployment Safety Rules
+## 11. Hosting and Deployment Safety Rules
 
 1. **Vercel Project:** `cba-ims` (Production linked to repository `echo10000/cba_ims`).
 2. **Hosted PostgreSQL:** Neon Serverless PostgreSQL.
@@ -249,13 +272,14 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 11. Git Branching and Files Finalized in Phase 3B
+## 12. Git Branching and Files Finalized Across Phases
 
 ### Active Branches:
 - `feat/phase-2a-student-portal`: Complete Phase 2A implementation (Head: `64ca513`).
 - `feat/main-workflow-integrity`: Phase 3A integrity hardening (Head: `7094d14`).
 - `feat/phase-3b-dashboard-navigation`: Finalized Phase 3B unified staff dashboard and role-aware navigation branch (backed up to `backup/feat/phase-3b-dashboard-navigation`, Head: `f82b048`).
-- `feat/phase-3c-public-landing`: Phase 3C public landing page and staff login redesign branch (branched from `f82b048`).
+- `feat/phase-3c-public-landing`: Finalized Phase 3C public landing page and staff login redesign branch (backed up to `backup/feat/phase-3c-public-landing`, Head: `2c243de`).
+- `feat/phase-3d-operations-ui`: Phase 3D Part 1 inventory and borrowing UI refinement branch (based on `2c243de`).
 
 ### Files Delivered Across Phase 3B:
 1. `apps/accounts/views.py` (Dashboard metrics, operational queues, fail-closed `DEPT_CHAIR` scoping, `FACULTY` personal scoping, PII protection, custodian authorization)
