@@ -266,18 +266,78 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 10. Next Planned Development Phase & Roadmap
+---
 
-- **Current Phase — Phase 3D, Part 2: Remaining Operations UI Refinement:**
-  - Completed, verified, and backed up on `feat/phase-3d-operations-ui`.
-- **Next Phase — Phase 3E: Acceptance Verification & Production Release:**
-  - Full system regression run across complete test suite.
-  - Final verification of role permissions, critical workflows, and security barriers.
-  - Verification of database safety and documentation readiness for deployment.
+## 10. Phase 3E: Final System Acceptance & Pre-Release Verification
+
+**Status:** Completed (Non-destructive pre-release acceptance verified; production release pending project-owner authorization).
+
+### Scope Verified:
+1. **Full System Regression Suite:**
+   - 435 / 435 automated tests passed (`559.089s`, exit code `0`) using Django's isolated test database runner.
+   - Zero test failures, zero errors across all core domain apps.
+2. **Independent Backend Permission & Unauthorized POST Verification:**
+   - Evaluated 10 operational mutation endpoints (`transfers`, `disposals`, `supplies`, `maintenance`, `borrowing`) across all 4 system roles and anonymous visitors.
+   - Non-admin roles (`DEAN`, `DEPT_CHAIR`, `FACULTY`) fail closed with HTTP `403 Forbidden`. Anonymous requests fail closed with HTTP `403` or `302` login redirects.
+   - `ADMIN` authorized for operational mutations. `DEPT_CHAIR` accounts without a linked department fail closed to empty sets.
+3. **Student Equipment Reservation Full Lifecycle Validation:**
+   - Validated end-to-end 6-stage lifecycle in an isolated test environment:
+     1. Public submission (`PENDING`, 43-character URL-safe token, unallocated asset).
+     2. Custodian approval & allocation (`APPROVED`, asset allocated, pickup deadline set).
+     3. Counter release & ID card deposit (`RELEASED`, physical ID verified in custody, asset status `BORROWED`).
+     4. After-hours security guard surrender (`RETURNED_TO_GUARD`, valid timestamp recorded, asset remains `BORROWED`, ID remains in custody).
+     5. Custodian return inspection & clearance (`RETURNED`, condition `GOOD`, asset restored to `AVAILABLE` in reservable pool, ID collected).
+     6. Public tracking lookup (`/student-reservations/lookup/<token>/` renders `Returned & Completed`, masks phone `0918****567`, masks email `ma***s@cba.edu`).
+4. **PostgreSQL Schema & Query Compatibility Audit:**
+   - Generated 280 PostgreSQL DDL statements across 27 models using Django PostgreSQL `DatabaseSchemaEditor(collect_sql=True)`. Zero compilation errors.
+   - Codebase audit confirmed 0 raw SQL queries (`.raw()`, `cursor.execute()`) across `apps/` and 0 `RunSQL` operations across all 45 migrations.
+   - All 48 `select_for_update()` row-locking calls are strictly enclosed inside `with transaction.atomic():` or `@transaction.atomic` blocks.
+5. **Migration & 12-Factor Production Audit:**
+   - All 45 schema migrations applied `[X]`. `makemigrations --check --dry-run` reports "No changes detected".
+   - `config/settings.py` verified for strict environment separation.
+   - Simulated production deployment check (`manage.py check --deploy` with `DEBUG=False` and production environment variables) passed with all primary security warnings cleared.
+
+### Known Limitations & Forensic Records:
+1. **Section 6B Database Incident Record:** Local SQLite database [`db.sqlite3`](file:///c:/Users/PERSONAL/Desktop/cba_ims/db.sqlite3) suffered an accidental flush during Phase 3C visual testing and was restored from [`db.sqlite3.backup_safety_review_20261008`](file:///c:/Users/PERSONAL/Desktop/cba_ims/db.sqlite3.backup_safety_review_20261008). 25 assets and all operational tables recovered; 4 newer `axes_accesslog` entries were lost; exact pre-incident byte-for-byte equality cannot be established.
+2. **Hosted Neon PostgreSQL Not Migrated:** In adherence to safety restrictions, live connection and migration to Neon were withheld. Neon schema currently reflects Phase 1/2 migrations and requires execution of remaining migrations in a planned maintenance window.
+
+### Remaining Production Release Blockers:
+1. **Neon PostgreSQL Migration:** Pending execution of `python manage.py migrate` against Neon database.
+2. **Git Promotion to `main` on `origin`:** Branch `feat/phase-3d-operations-ui` is privately backed up on `backup` remote and must be reviewed, merged into `main`, and pushed to `origin`.
+3. **Static Asset Compilation:** Production requires running `python manage.py collectstatic --noinput` for WhiteNoise manifest generation during Vercel build.
 
 ---
 
-## 10. Project Governance and Responsibilities
+## 11. Production Release Checklist & Deployment Plan
+
+When production deployment is authorized by the project owner:
+
+```
+[ ] Step 1: Pre-Release Snapshots
+    - Execute pg_dump on hosted Neon PostgreSQL database.
+    - Create a dated backup of local db.sqlite3.
+[ ] Step 2: Code Promotion
+    - Create PR from feat/phase-3d-operations-ui to main on origin.
+    - Confirm all 435 tests pass in CI.
+    - Merge PR into main.
+[ ] Step 3: Production Database Migration
+    - Run: python manage.py migrate --database=default (against Neon).
+    - Verify all 45 migrations show [X].
+[ ] Step 4: Asset Build & Deploy
+    - Trigger Vercel production deployment.
+    - Verify WhiteNoise collectstatic compilation succeeds.
+[ ] Step 5: Post-Release Smoke Verification
+    - Verify public landing page ('/') loads.
+    - Verify student reservation catalog and tracking lookup ('/student-reservations/lookup/').
+    - Verify staff login ('/accounts/login/') with Axes rate limiting.
+    - Verify ADMIN dashboard and operational queue rendering.
+[ ] Step 6: Rollback Plan Ready
+    - If errors occur, revert git commit on main and restore Neon pg_dump snapshot.
+```
+
+---
+
+## 12. Project Governance and Responsibilities
 
 - **ChatGPT (Lead Systems Architect & Product Designer):**
   - Defines institutional architecture, system constraints, business logic, UI/UX direction, and reference design contracts.
@@ -291,7 +351,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 11. Hosting and Deployment Safety Rules
+## 13. Hosting and Deployment Safety Rules
 
 1. **Vercel Project:** `cba-ims` (Production linked to repository `echo10000/cba_ims`).
 2. **Hosted PostgreSQL:** Neon Serverless PostgreSQL.
@@ -301,55 +361,28 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 12. Git Branching and Files Finalized Across Phases
+## 14. Git Branching and Checkpoint History
 
 ### Active Branches:
 - `feat/phase-2a-student-portal`: Complete Phase 2A implementation (Head: `64ca513`).
 - `feat/main-workflow-integrity`: Phase 3A integrity hardening (Head: `7094d14`).
-- `feat/phase-3b-dashboard-navigation`: Finalized Phase 3B unified staff dashboard and role-aware navigation branch (backed up to `backup/feat/phase-3b-dashboard-navigation`, Head: `f82b048`).
-- `feat/phase-3c-public-landing`: Finalized Phase 3C public landing page and staff login redesign branch (backed up to `backup/feat/phase-3c-public-landing`, Head: `2c243de`).
-- `feat/phase-3d-operations-ui`: Phase 3D Part 1 inventory and borrowing UI refinement branch (based on `2c243de`).
-
-### Files Delivered Across Phase 3B:
-1. `apps/accounts/views.py` (Dashboard metrics, operational queues, fail-closed `DEPT_CHAIR` scoping, `FACULTY` personal scoping, PII protection, custodian authorization)
-2. `templates/includes/sidebar_nav.html` (7-section unified navigation hierarchy, custodian-gated student reservations)
-3. `templates/accounts/dashboard.html` (Actionable queue cards, permission-aware action buttons, `FACULTY` personal borrowing routing, `?status=DAMAGED` KPI filter, `"Supply Replenishment Alert"` heading, narrowly scoped `DESIGN.md` v2.0 badge contrast styles)
-4. `static/css/custom.css` (Queue navigation, item row styling, badge tokens under `DESIGN.md v2.0`)
-5. `apps/accounts/test_dashboard_phase3b.py` (15 backend unit tests for context data, operational queues, fail-closed scoping, and `FACULTY` privacy)
-6. `apps/accounts/test_dashboard_phase3b_frontend.py` (11 frontend integration tests for UI rendering, role visibility, action buttons, `?status=DAMAGED` filter, and HTTP status code matrix)
-7. `docs/security.md` (Corrected audit log access matrix and explanatory text to Admin-only)
-8. `docs/DEVELOPMENT_CHECKPOINT.md` (Updated checkpoint documentation recording Phase 3B completion and Phase 3C readiness)
-9. `docs/visual-qa/dashboard-desktop-1440.png`, `docs/visual-qa/dashboard-tablet-768.png`, `docs/visual-qa/dashboard-mobile-390.png`, `docs/visual-qa/dashboard-navigation-expanded.png`, `docs/visual-qa/dashboard-empty-state-desktop.png` (Initial Phase 3B visual QA baselines)
-10. `docs/visual-qa/phase3b-final-admin-desktop.png`, `docs/visual-qa/phase3b-final-admin-mobile.png`, `docs/visual-qa/phase3b-final-faculty-mobile.png` (Final Chrome-verified Phase 3B acceptance screenshots with synthetic test data)
-11. `scripts/generate_visual_qa.py` (Automated visual regression capture script)
+- `feat/phase-3b-dashboard-navigation`: Finalized Phase 3B dashboard branch (backed up to `backup/feat/phase-3b-dashboard-navigation`, Head: `f82b048`).
+- `feat/phase-3c-public-landing`: Finalized Phase 3C landing page and login branch (backed up to `backup/feat/phase-3c-public-landing`, Head: `2c243de`).
+- `feat/phase-3d-operations-ui`: Operations UI refinement and Phase 3E pre-release verification branch (Head commit: `b4b37cf`).
 
 ---
 
-## 12. Cross-Computer Resume Instructions (Office Handoff)
+## 15. Cross-Computer Resume Instructions (Session Handoff)
 
-To resume development on the office computer tomorrow:
+To resume development in a future session:
 
-1. **Verify repository remote:**
-   ```bash
-   git remote -v
-   # origin must point to https://github.com/echo10000/cba_ims_backup.git
-   ```
-
-2. **Fetch and checkout the Phase 3B branch:**
-   ```bash
-   git fetch origin feat/phase-3b-dashboard-navigation
-   git checkout feat/phase-3b-dashboard-navigation
-   git pull origin feat/phase-3b-dashboard-navigation
-   ```
-
-3. **Verify the baseline and test suite:**
-   ```bash
-   python manage.py check
-   python manage.py test apps.accounts.test_dashboard_phase3b apps.accounts.test_dashboard_phase3b_frontend
-   ```
-
-4. **Safety Reminders:**
-   - Base Phase 3A commit: `7094d14`.
-   - Never push to `echo10000/cba_ims` (production repository).
-   - Only push to the private backup repository: `echo10000/cba_ims_backup`.
-   - Neon PostgreSQL, Vercel production, and `main` branch remain completely untouched.
+1. **Active Branch:** `feat/phase-3d-operations-ui` in repository `c:\Users\PERSONAL\Desktop\cba_ims`.
+2. **Current Checkpoint Commit:** `b4b37cf` (plus local documentation update).
+3. **Institutional Database Baseline:** `db.sqlite3` (`946,176` bytes, 25 assets, 3 reservations).
+4. **Where to Resume:**
+   - Development is currently paused with **Phase 3E pre-release verification complete**.
+   - Next authorized step is **Production Release Execution** (PR promotion, Neon PostgreSQL migration, and Vercel deployment) or further non-destructive staging checks as directed by the project owner.
+5. **Safety Reminders:**
+   - Do not run `flush` or modify `db.sqlite3`.
+   - Do not push unreviewed commits to `origin`.
+   - Do not connect to Neon PostgreSQL without pre-migration snapshot.
