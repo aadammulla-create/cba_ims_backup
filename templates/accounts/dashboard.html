@@ -5,6 +5,63 @@
 {% block title %}Dashboard - CBA IMS{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Narrowly scoped DESIGN.md v2.0 surface & badge contrast tokens for Dashboard */
+    .bg-slate-50 {
+        background-color: var(--cba-surface-bg, #f8fafc) !important;
+    }
+    .bg-slate-100 {
+        background-color: var(--cba-surface-subtle, #f1f5f9) !important;
+    }
+    .bg-slate-200 {
+        background-color: var(--cba-border-subtle, #e2e8f0) !important;
+    }
+    .border-slate-200 {
+        border-color: var(--cba-border-subtle, #e2e8f0) !important;
+    }
+    .text-slate-300 {
+        color: var(--cba-border-medium, #cbd5e1) !important;
+    }
+    .text-slate-400 {
+        color: #94a3b8 !important;
+    }
+    .text-slate-700,
+    .badge.text-slate-700 {
+        --bs-badge-color: var(--cba-status-borrowed-text, #334155);
+        color: var(--cba-status-borrowed-text, #334155) !important;
+    }
+    .text-slate-800,
+    .badge.text-slate-800 {
+        --bs-badge-color: var(--cba-text-primary, #0f172a);
+        color: var(--cba-text-primary, #0f172a) !important;
+    }
+    .bg-amber-soft {
+        background-color: var(--cba-status-warning-bg, #fffbeb) !important;
+    }
+    .text-amber-dark,
+    .badge.text-amber-dark {
+        --bs-badge-color: var(--cba-status-warning-text, #92400e);
+        color: var(--cba-status-warning-text, #92400e) !important;
+    }
+    .bg-blue-subtle {
+        background-color: var(--cba-status-assigned-bg, #eff6ff) !important;
+    }
+    .bg-purple-subtle {
+        background-color: var(--cba-status-transferred-bg, #eef2ff) !important;
+    }
+    .text-purple,
+    .badge.text-purple {
+        --bs-badge-color: var(--cba-status-transferred-text, #4338ca);
+        color: var(--cba-status-transferred-text, #4338ca) !important;
+    }
+    .queue-nav-btn.active .badge {
+        --bs-badge-color: #ffffff;
+        color: #ffffff !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-0">
 
@@ -232,7 +289,7 @@
                         <span>{% if unserviceable_assets > 0 %}{{ unserviceable_assets }} unserviceable{% else %}Needs inspection{% endif %}</span>
                         {% if request.user.role != 'FACULTY' %}
                         <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'inventory:asset_list' %}?condition=DAMAGED" class="stretched-link" aria-label="View damaged assets"></a>
+                        <a href="{% url 'inventory:asset_list' %}?status=DAMAGED" class="stretched-link" aria-label="View damaged assets"></a>
                         {% endif %}
                     </div>
                 </div>
@@ -410,7 +467,11 @@
                         <strong class="text-dark fs-xs text-uppercase tracking-wider">Overdue Equipment Loans</strong>
                         <span class="badge bg-danger-subtle text-danger border font-mono fs-xs">{{ overdue_loans_count }}</span>
                     </div>
+                    {% if request.user.role == 'FACULTY' %}
+                    <a href="{% url 'borrowing:my_borrowings' %}" class="panel-link-cba">View My Loans &rarr;</a>
+                    {% else %}
                     <a href="{% url 'borrowing:active_list' %}?status=OVERDUE" class="panel-link-cba">View All &rarr;</a>
+                    {% endif %}
                 </div>
                 {% for item in overdue_loans_list %}
                 <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
@@ -672,9 +733,15 @@
                             <strong>{{ pending_borrowings_count }}</strong> faculty equipment loan request{{ pending_borrowings_count|pluralize }} awaiting administrative approval
                         </span>
                     </div>
+                    {% if request.user.role == 'FACULTY' %}
+                    <a href="{% url 'borrowing:my_borrowings' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
+                        View My Loans
+                    </a>
+                    {% else %}
                     <a href="{% url 'borrowing:request_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
                         {% if is_custodian %}Review Requests{% else %}View Requests{% endif %}
                     </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -784,11 +851,12 @@
     </section>
     {% endif %}
 
-    <!-- 5. Operational Feeds: Consumables & Recent System Activity -->
+    {% if request.user.role != 'FACULTY' %}
+    <!-- 5. Operational Feeds -->
     <section aria-label="Operational Feeds" class="mb-4">
         <div class="row g-3">
             <!-- Consumables / Low Stock Supplies -->
-            <div class="col-lg-5">
+            <div class="{% if is_custodian %}col-lg-5{% else %}col-12{% endif %}">
                 <div class="card h-100 shadow-sm border">
                     <div class="panel-header-cba">
                         <span class="panel-title-cba">
@@ -803,7 +871,7 @@
                                 <div class="d-flex align-items-start gap-2">
                                     <i class="bi bi-exclamation-triangle-fill text-warning-emphasis fs-6 mt-0.5"></i>
                                     <div>
-                                        <div class="fw-bold text-dark fs-xs">Replenishment Alert</div>
+                                        <div class="fw-bold text-dark fs-xs">Supply Replenishment Alert</div>
                                         <div class="text-secondary fs-xs mt-0.5">
                                             <strong>{{ low_stock_supplies_count }}</strong> consumable item{{ low_stock_supplies_count|pluralize }} at or below reorder threshold
                                             {% if out_of_stock_supplies_count > 0 %}
@@ -852,6 +920,7 @@
                 </div>
             </div>
             
+            {% if is_custodian %}
             <!-- Recent System Activity (Audit Ledger Layout) -->
             <div class="col-lg-7">
                 <div class="card h-100 shadow-sm border">
@@ -899,8 +968,10 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </section>
+    {% endif %}
 
     <!-- 6. Demoted Administrative Master Directory Reference (Footer Bar) -->
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 py-2 px-3 bg-white border rounded text-secondary fs-xs mt-4">
@@ -919,9 +990,11 @@
             <a href="{% url 'organizations:employee_list' %}" class="text-decoration-none text-secondary">
                 <span>Personnel:</span> <strong class="text-dark font-mono">{{ total_employees|default:"0" }}</strong>
             </a>
+            {% if request.user.role != 'FACULTY' %}
             <a href="{% url 'inventory:category_list' %}" class="text-decoration-none text-secondary">
                 <span>Categories:</span> <strong class="text-dark font-mono">{{ total_categories|default:"0" }}</strong>
             </a>
+            {% endif %}
             {% if disposed_assets_count > 0 and request.user.is_admin %}
             <a href="{% url 'disposals:history_list' %}" class="text-decoration-none text-muted">
                 <span>Archive:</span> <strong class="text-dark font-mono">{{ disposed_assets_count }}</strong>

@@ -28,10 +28,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         user = self.request.user
         role = getattr(user, 'role', '')
         is_custodian = getattr(user, 'is_admin', False) or role == User.Role.ADMIN
+        is_chair = role == User.Role.DEPT_CHAIR
+        is_faculty = role == User.Role.FACULTY
 
         chair_dept = None
-        if role == User.Role.DEPT_CHAIR:
+        if is_chair:
             chair_dept = getattr(getattr(user, 'employee_profile', None), 'department', None)
+        chair_missing_dept = is_chair and chair_dept is None
 
         now = timezone.now()
 
@@ -94,6 +97,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         try:
             from apps.inventory.models import Asset, AssetCategory, Brand
             from apps.organizations.models import Department, Location, Employee
+            from apps.assignments.models import AssetAssignment
             from apps.audit.models import AuditLog
             from apps.transfers.models import AssetTransfer
             from apps.borrowing.models import AssetBorrowing
@@ -120,31 +124,75 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             # ---------------------------------------------------------
             # A. ASSET OVERVIEW
             # ---------------------------------------------------------
-            asset_qs = Asset.objects.all()
-            if chair_dept:
-                asset_qs = asset_qs.filter(department=chair_dept)
+            if chair_missing_dept:
+                asset_qs = Asset.objects.none()
+                total_assets = 0
+                available_assets = 0
+                unserviceable_assets = 0
+                assigned_assets = 0
+                borrowed_assets = 0
+                maintenance_assets = 0
+                damaged_assets = 0
+                student_active_loans_count = 0
+                total_on_loan = 0
+            elif is_faculty:
+                faculty_assigned_qs = AssetAssignment.objects.filter(
+                    employee__user=user,
+                    status=AssetAssignment.Status.ACTIVE
+                )
+                faculty_borrowed_qs = AssetBorrowing.objects.filter(
+                    borrower__user=user,
+                    status__in=[AssetBorrowing.Status.RELEASED, AssetBorrowing.Status.OVERDUE]
+                )
+                faculty_maint_qs = AssetMaintenance.objects.filter(
+                    reported_by=user,
+                    status__in=[
+                        AssetMaintenance.Status.REPORTED,
+                        AssetMaintenance.Status.ASSESSED,
+                        AssetMaintenance.Status.IN_REPAIR,
+                    ]
+                )
+                asset_qs = Asset.objects.filter(
+                    Q(assignments__employee__user=user, assignments__status=AssetAssignment.Status.ACTIVE) |
+                    Q(borrowings__borrower__user=user, borrowings__status__in=[
+                        AssetBorrowing.Status.RELEASED,
+                        AssetBorrowing.Status.OVERDUE,
+                    ])
+                ).distinct()
 
-            total_assets = asset_qs.count()
-            available_assets = asset_qs.filter(
-                status=Asset.Status.AVAILABLE
-            ).exclude(condition=Asset.Condition.UNSERVICEABLE).count()
-            unserviceable_assets = asset_qs.filter(condition=Asset.Condition.UNSERVICEABLE).count()
-            assigned_assets = asset_qs.filter(status=Asset.Status.ASSIGNED).count()
-            borrowed_assets = asset_qs.filter(status=Asset.Status.BORROWED).count()
-            maintenance_assets = asset_qs.filter(status=Asset.Status.MAINTENANCE).count()
-            damaged_assets = asset_qs.filter(status=Asset.Status.DAMAGED).count()
+                assigned_assets = faculty_assigned_qs.count()
+                borrowed_assets = faculty_borrowed_qs.count()
+                maintenance_assets = faculty_maint_qs.count()
+                total_assets = asset_qs.count()
+                available_assets = 0
+                unserviceable_assets = asset_qs.filter(condition=Asset.Condition.UNSERVICEABLE).count()
+                damaged_assets = asset_qs.filter(status=Asset.Status.DAMAGED).count()
+                student_active_loans_count = 0
+                total_on_loan = borrowed_assets
+            else:
+                asset_qs = Asset.objects.all()
+                if chair_dept:
+                    asset_qs = asset_qs.filter(department=chair_dept)
 
-            # Active Student Loans currently released
-            student_active_qs = StudentReservation.objects.filter(
-                status=StudentReservation.Status.RELEASED
-            )
-            if chair_dept:
-                student_active_qs = student_active_qs.filter(asset__department=chair_dept)
-            elif role == User.Role.FACULTY:
-                student_active_qs = StudentReservation.objects.none()
+                total_assets = asset_qs.count()
+                available_assets = asset_qs.filter(
+                    status=Asset.Status.AVAILABLE
+                ).exclude(condition=Asset.Condition.UNSERVICEABLE).count()
+                unserviceable_assets = asset_qs.filter(condition=Asset.Condition.UNSERVICEABLE).count()
+                assigned_assets = asset_qs.filter(status=Asset.Status.ASSIGNED).count()
+                borrowed_assets = asset_qs.filter(status=Asset.Status.BORROWED).count()
+                maintenance_assets = asset_qs.filter(status=Asset.Status.MAINTENANCE).count()
+                damaged_assets = asset_qs.filter(status=Asset.Status.DAMAGED).count()
 
-            student_active_loans_count = student_active_qs.count()
-            total_on_loan = borrowed_assets + student_active_loans_count
+                # Active Student Loans currently released
+                student_active_qs = StudentReservation.objects.filter(
+                    status=StudentReservation.Status.RELEASED
+                )
+                if chair_dept:
+                    student_active_qs = student_active_qs.filter(asset__department=chair_dept)
+
+                student_active_loans_count = student_active_qs.count()
+                total_on_loan = borrowed_assets + student_active_loans_count
 
             context['total_assets'] = total_assets
             context['available_assets'] = available_assets
@@ -161,7 +209,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             # B. REQUIRES ATTENTION OPERATIONAL QUEUES
             # ---------------------------------------------------------
             # 1. Pending Student Reservations (Actionable queue strictly for authorized custodians)
-            if is_custodian:
+            if is_custodian and not chair_missing_dept:
                 pending_res_qs = StudentReservation.objects.filter(
                     status=StudentReservation.Status.PENDING
                 )
@@ -186,7 +234,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 context['pending_reservations_list'] = []
 
             # 2. Guard Returns (Actionable queue strictly for authorized custodians)
-            if is_custodian:
+            if is_custodian and not chair_missing_dept:
                 guard_returns_qs = StudentReservation.objects.filter(
                     status=StudentReservation.Status.RETURNED_TO_GUARD
                 )
@@ -213,17 +261,19 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 Q(status=AssetBorrowing.Status.OVERDUE) |
                 Q(status=AssetBorrowing.Status.RELEASED, requested_return__lt=now)
             )
-            if chair_dept:
+            if chair_missing_dept:
+                borrowing_overdue_qs = AssetBorrowing.objects.none()
+            elif chair_dept:
                 borrowing_overdue_qs = borrowing_overdue_qs.filter(
                     Q(borrower_department=chair_dept) | Q(asset__department=chair_dept)
                 )
-            elif role == User.Role.FACULTY:
+            elif is_faculty:
                 borrowing_overdue_qs = borrowing_overdue_qs.filter(borrower__user=user)
 
             faculty_overdue_count = borrowing_overdue_qs.count()
 
             # Overdue student loans are only actionable and linkable for custodians
-            if is_custodian:
+            if is_custodian and not chair_missing_dept:
                 student_overdue_qs = StudentReservation.objects.filter(
                     status=StudentReservation.Status.RELEASED,
                     requested_return__lt=now
@@ -256,7 +306,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 except Exception:
                     b.loan_url = ''
 
-            if is_custodian:
+            if is_custodian and not chair_missing_dept:
                 overdue_student_slice = list(
                     student_overdue_qs.select_related(
                         'asset', 'asset__category', 'asset__department', 'category', 'equipment_type_ref'
@@ -288,14 +338,17 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             active_borrowings_qs = AssetBorrowing.objects.filter(
                 status__in=[AssetBorrowing.Status.RELEASED, AssetBorrowing.Status.OVERDUE]
             )
-            if chair_dept:
+            if chair_missing_dept:
+                pending_borrowings_qs = AssetBorrowing.objects.none()
+                active_borrowings_qs = AssetBorrowing.objects.none()
+            elif chair_dept:
                 pending_borrowings_qs = pending_borrowings_qs.filter(
                     Q(borrower_department=chair_dept) | Q(asset__department=chair_dept)
                 )
                 active_borrowings_qs = active_borrowings_qs.filter(
                     Q(borrower_department=chair_dept) | Q(asset__department=chair_dept)
                 )
-            elif role == User.Role.FACULTY:
+            elif is_faculty:
                 pending_borrowings_qs = pending_borrowings_qs.filter(borrower__user=user)
                 active_borrowings_qs = active_borrowings_qs.filter(borrower__user=user)
 
@@ -317,10 +370,13 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 ],
                 severity=AssetMaintenance.Severity.CRITICAL
             )
-            if chair_dept:
+            if chair_missing_dept:
+                open_maintenance_qs = AssetMaintenance.objects.none()
+                critical_maintenance_qs = AssetMaintenance.objects.none()
+            elif chair_dept:
                 open_maintenance_qs = open_maintenance_qs.filter(asset__department=chair_dept)
                 critical_maintenance_qs = critical_maintenance_qs.filter(asset__department=chair_dept)
-            elif role == User.Role.FACULTY:
+            elif is_faculty:
                 open_maintenance_qs = open_maintenance_qs.filter(reported_by=user)
                 critical_maintenance_qs = critical_maintenance_qs.filter(reported_by=user)
 
@@ -342,12 +398,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             transfers_qs = AssetTransfer.objects.filter(
                 status__in=[AssetTransfer.Status.PENDING, AssetTransfer.Status.APPROVED]
             )
-            if chair_dept:
+            if chair_missing_dept or is_faculty:
+                transfers_qs = AssetTransfer.objects.none()
+            elif chair_dept:
                 transfers_qs = transfers_qs.filter(
                     Q(from_department=chair_dept) | Q(to_department=chair_dept)
                 )
-            elif role == User.Role.FACULTY:
-                transfers_qs = AssetTransfer.objects.none()
 
             context['pending_transfers_count'] = transfers_qs.count()
             pending_transfers_slice = list(
@@ -362,32 +418,42 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     t.detail_url = ''
             context['pending_transfers_list'] = pending_transfers_slice
 
-            # 6. Consumables & Supplies
-            low_supplies = supply_services.get_low_stock_supplies()
-            context['low_stock_supplies_count'] = len(low_supplies)
-            context['out_of_stock_supplies_count'] = sum(1 for s in low_supplies if s.calculated_stock <= 0)
-            context['low_stock_supplies_list'] = low_supplies[:5]
+            # 6. Consumables & Supplies (Restricted from Faculty and unconfigured Dept Chairs)
+            if not is_faculty and not chair_missing_dept:
+                low_supplies = supply_services.get_low_stock_supplies()
+                context['low_stock_supplies_count'] = len(low_supplies)
+                context['out_of_stock_supplies_count'] = sum(1 for s in low_supplies if s.calculated_stock <= 0)
+                context['low_stock_supplies_list'] = low_supplies[:5]
+            else:
+                context['low_stock_supplies_count'] = 0
+                context['out_of_stock_supplies_count'] = 0
+                context['low_stock_supplies_list'] = []
 
             # 7. Disposals
-            context['disposed_assets_count'] = asset_qs.filter(status=Asset.Status.DISPOSED).count()
-            disposal_qs = AssetDisposal.objects.filter(
-                status__in=[AssetDisposal.Status.PENDING, AssetDisposal.Status.APPROVED]
-            )
-            if chair_dept:
-                disposal_qs = disposal_qs.filter(asset__department=chair_dept)
-            elif role == User.Role.FACULTY:
-                disposal_qs = AssetDisposal.objects.none()
-            context['pending_disposals_count'] = disposal_qs.count()
+            if chair_missing_dept or is_faculty:
+                context['disposed_assets_count'] = 0
+                context['pending_disposals_count'] = 0
+            else:
+                context['disposed_assets_count'] = asset_qs.filter(status=Asset.Status.DISPOSED).count()
+                disposal_qs = AssetDisposal.objects.filter(
+                    status__in=[AssetDisposal.Status.PENDING, AssetDisposal.Status.APPROVED]
+                )
+                if chair_dept:
+                    disposal_qs = disposal_qs.filter(asset__department=chair_dept)
+                context['pending_disposals_count'] = disposal_qs.count()
 
             # ---------------------------------------------------------
-            # C. RECENT ACTIVITY
+            # C. RECENT ACTIVITY (Raw audit log strictly restricted to Administrators)
             # ---------------------------------------------------------
-            context['recent_activities'] = list(AuditLog.objects.select_related('user')[:7])
+            if is_custodian:
+                context['recent_activities'] = list(AuditLog.objects.select_related('user')[:7])
+            else:
+                context['recent_activities'] = []
 
             # ---------------------------------------------------------
             # D. DISTRIBUTION / ANALYTICS CHARTS (Optimized, Non-Faculty)
             # ---------------------------------------------------------
-            if role != User.Role.FACULTY:
+            if not is_faculty and not chair_missing_dept:
                 # 1. Assets by Category
                 cat_counts = (
                     asset_qs.exclude(status=Asset.Status.DISPOSED)
@@ -439,11 +505,24 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             # ---------------------------------------------------------
             # MASTER DIRECTORY METRICS
             # ---------------------------------------------------------
-            context['total_employees'] = Employee.objects.filter(is_active=True).count()
-            context['total_departments'] = Department.objects.filter(is_active=True).count()
-            context['total_locations'] = Location.objects.filter(is_active=True).count()
-            context['total_categories'] = AssetCategory.objects.filter(is_active=True).count()
-            context['total_brands'] = Brand.objects.filter(is_active=True).count()
+            if chair_missing_dept or is_faculty:
+                context['total_employees'] = 0
+                context['total_departments'] = 0
+                context['total_locations'] = 0
+                context['total_categories'] = 0
+                context['total_brands'] = 0
+            elif chair_dept:
+                context['total_employees'] = Employee.objects.filter(is_active=True, department=chair_dept).count()
+                context['total_departments'] = 1
+                context['total_locations'] = Location.objects.filter(is_active=True, department=chair_dept).count()
+                context['total_categories'] = AssetCategory.objects.filter(is_active=True).count()
+                context['total_brands'] = Brand.objects.filter(is_active=True).count()
+            else:
+                context['total_employees'] = Employee.objects.filter(is_active=True).count()
+                context['total_departments'] = Department.objects.filter(is_active=True).count()
+                context['total_locations'] = Location.objects.filter(is_active=True).count()
+                context['total_categories'] = AssetCategory.objects.filter(is_active=True).count()
+                context['total_brands'] = Brand.objects.filter(is_active=True).count()
 
         except Exception as e:
             import logging

@@ -787,12 +787,37 @@ class DashboardPhase3BBackendTests(TestCase):
             severity=AssetMaintenance.Severity.CRITICAL
         )
 
+        # Global audit log and low stock supply (must NOT be exposed to Faculty)
+        AuditLog.objects.create(
+            user=self.admin,
+            action='ASSET_CREATED',
+            model_name='Asset',
+            object_id=str(self.asset_acct_available.pk),
+            object_repr='CBA-IT-00006 (Confidential ACCT Asset)'
+        )
+        sup_cat = SupplyCategory.objects.create(name='Restricted Supplies', code='RSUP')
+        Supply.objects.create(
+            item_name='Depleted Toner Cartridge',
+            category=sup_cat,
+            reorder_level=5
+        )
+
+        # Active assignment for Faculty
+        from apps.assignments.models import AssetAssignment
+        AssetAssignment.objects.create(
+            asset=self.asset_ba_assigned,
+            employee=self.emp_faculty_ba,
+            condition_at_assignment=Asset.Condition.GOOD,
+            assigned_by=self.admin,
+            status=AssetAssignment.Status.ACTIVE
+        )
+
         self.client.login(username='prof_ba', password='Pass1234!')
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         ctx = response.context
 
-        # Faculty restricted from staff queues
+        # Faculty restricted from staff queues, global supplies, and global audit records
         self.assertEqual(ctx['pending_reservations_count'], 0)
         self.assertEqual(ctx['pending_reservations_list'], [])
         self.assertEqual(ctx['guard_returns_count'], 0)
@@ -801,6 +826,17 @@ class DashboardPhase3BBackendTests(TestCase):
         self.assertEqual(ctx['pending_transfers_count'], 0)
         self.assertEqual(ctx['pending_transfers_list'], [])
         self.assertEqual(ctx['pending_disposals_count'], 0)
+        self.assertEqual(ctx['low_stock_supplies_count'], 0)
+        self.assertEqual(ctx['out_of_stock_supplies_count'], 0)
+        self.assertEqual(ctx['low_stock_supplies_list'], [])
+        self.assertEqual(ctx['recent_activities'], [])
+
+        # Faculty operational overview reflects ONLY their own assignments, borrowings, and defect reports
+        self.assertEqual(ctx['assigned_assets'], 1)
+        self.assertEqual(ctx['borrowed_assets'], 1)
+        self.assertEqual(ctx['maintenance_assets'], 1)
+        self.assertEqual(ctx['total_assets'], 2)  # 1 assigned + 1 borrowed under faculty custody
+        self.assertEqual(ctx['available_assets'], 0)
 
         # Faculty sees ONLY their own overdue loan
         self.assertEqual(ctx['overdue_loans_count'], 1)
@@ -817,6 +853,112 @@ class DashboardPhase3BBackendTests(TestCase):
         self.assertEqual(ctx['category_chart_labels'], [])
         self.assertEqual(ctx['condition_chart_labels'], [])
         self.assertEqual(ctx['department_chart_labels'], [])
+
+        # Admin still sees the audit log in recent_activities
+        self.client.login(username='admin_user', password='Pass1234!')
+        resp_admin = self.client.get(reverse('dashboard'))
+        self.assertEqual(len(resp_admin.context['recent_activities']), 1)
+
+    def test_dept_chair_without_department_fails_closed(self):
+        """A DEPT_CHAIR without an employee profile or linked department receives empty/zero state, not college-wide data."""
+        chair_no_profile = User.objects.create_user(
+            'chair_no_profile', 'chair.noprofile@cba.edu', 'Pass1234!', role=User.Role.DEPT_CHAIR
+        )
+        chair_null_dept = User.objects.create_user(
+            'chair_null_dept', 'chair.nulldept@cba.edu', 'Pass1234!', role=User.Role.DEPT_CHAIR
+        )
+        Employee.objects.create(
+            user=chair_null_dept,
+            employee_id='EMP-CHAIR-NULL',
+            first_name='Unassigned',
+            last_name='Chair',
+            department=None,
+            location=None,
+            is_active=True
+        )
+
+        # Populate college-wide operational records
+        AssetBorrowing.objects.create(
+            asset=self.asset_ba_available,
+            borrower=self.emp_faculty_ba,
+            borrower_department=self.dept_ba,
+            purpose='BA Lecture',
+            requested_start=self.now - timedelta(hours=3),
+            requested_return=self.now - timedelta(hours=1),
+            status=AssetBorrowing.Status.RELEASED,
+            released_by=self.admin
+        )
+        AssetMaintenance.objects.create(
+            asset=self.asset_ba_maintenance,
+            issue_title='BA Maintenance',
+            reported_by=self.admin,
+            status=AssetMaintenance.Status.REPORTED,
+            severity=AssetMaintenance.Severity.CRITICAL
+        )
+        AssetTransfer.objects.create(
+            asset=self.asset_ba_available,
+            from_department=self.dept_ba,
+            to_department=self.dept_acct,
+            reason='Transfer',
+            status=AssetTransfer.Status.PENDING,
+            requested_by=self.admin
+        )
+        AssetDisposal.objects.create(
+            asset=self.asset_ba_unserviceable,
+            reason='Scrap',
+            disposal_method=AssetDisposal.DisposalMethod.SCRAP,
+            status=AssetDisposal.Status.PENDING,
+            requested_by=self.admin
+        )
+        sup_cat = SupplyCategory.objects.create(name='Paper', code='PAP')
+        Supply.objects.create(item_name='Low Paper', category=sup_cat, reorder_level=10)
+        AuditLog.objects.create(user=self.admin, action='ASSET_UPDATED', model_name='Asset', object_repr='CBA-IT-00001')
+
+        for unconfigured_chair in [chair_no_profile, chair_null_dept]:
+            self.client.force_login(unconfigured_chair)
+            response = self.client.get(reverse('dashboard'))
+            self.assertEqual(response.status_code, 200)
+            ctx = response.context
+
+            # Fail-closed asset overview metrics
+            self.assertEqual(ctx['total_assets'], 0)
+            self.assertEqual(ctx['available_assets'], 0)
+            self.assertEqual(ctx['unserviceable_assets'], 0)
+            self.assertEqual(ctx['assigned_assets'], 0)
+            self.assertEqual(ctx['borrowed_assets'], 0)
+            self.assertEqual(ctx['maintenance_assets'], 0)
+            self.assertEqual(ctx['damaged_assets'], 0)
+            self.assertEqual(ctx['student_active_loans_count'], 0)
+            self.assertEqual(ctx['total_on_loan_assets'], 0)
+
+            # Fail-closed operational queues
+            self.assertEqual(ctx['pending_reservations_count'], 0)
+            self.assertEqual(ctx['guard_returns_count'], 0)
+            self.assertEqual(ctx['overdue_loans_count'], 0)
+            self.assertEqual(ctx['overdue_loans_list'], [])
+            self.assertEqual(ctx['pending_borrowings_count'], 0)
+            self.assertEqual(ctx['active_borrowings_count'], 0)
+            self.assertEqual(ctx['open_maintenance_count'], 0)
+            self.assertEqual(ctx['critical_maintenance_count'], 0)
+            self.assertEqual(ctx['open_maintenance_list'], [])
+            self.assertEqual(ctx['pending_transfers_count'], 0)
+            self.assertEqual(ctx['pending_transfers_list'], [])
+            self.assertEqual(ctx['low_stock_supplies_count'], 0)
+            self.assertEqual(ctx['low_stock_supplies_list'], [])
+            self.assertEqual(ctx['pending_disposals_count'], 0)
+            self.assertEqual(ctx['recent_activities'], [])
+
+            # Fail-closed charts & directory counts
+            self.assertEqual(ctx['category_chart_labels'], [])
+            self.assertEqual(ctx['condition_chart_labels'], [])
+            self.assertEqual(ctx['department_chart_labels'], [])
+            self.assertEqual(ctx['total_employees'], 0)
+            self.assertEqual(ctx['total_departments'], 0)
+            self.assertEqual(ctx['total_locations'], 0)
+
+            # Verify user role and department were NOT mutated
+            unconfigured_chair.refresh_from_db()
+            self.assertEqual(unconfigured_chair.role, User.Role.DEPT_CHAIR)
 
     def test_overdue_borrowing_comprehensive_status_matrix(self):
         """Verifies exact status and timestamp combinations determining overdue state."""

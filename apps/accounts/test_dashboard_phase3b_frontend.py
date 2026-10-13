@@ -364,3 +364,118 @@ class DashboardFrontendPhase3BTests(TestCase):
             for user in [self.admin, self.dean, self.chair, self.faculty]:
                 self.client.force_login(user)
                 self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_faculty_dashboard_hides_audit_supplies_categories_and_routes_personal_links(self):
+        """Faculty dashboard omits global audit logs, supply reports, and category admin links, and routes loan queues to personal borrowings."""
+        from apps.audit.models import AuditLog
+
+        # Create global audit entry and low-stock supply
+        AuditLog.objects.create(
+            user=self.admin,
+            action='ASSET_CREATED',
+            model_name='Asset',
+            object_id=str(self.asset.pk),
+            object_repr='CBA-SECRET-AUDIT-999'
+        )
+        scat = SupplyCategory.objects.create(name='Paper', code='PPR2')
+        Supply.objects.create(
+            item_name='Restricted Supply Paper',
+            supply_code='SUP-RES-001',
+            category=scat,
+            reorder_level=10,
+            unit=Supply.Unit.REAM
+        )
+
+        # Create overdue and pending borrowings for Faculty
+        AssetBorrowing.objects.create(
+            asset=self.asset,
+            borrower=self.emp_fac,
+            borrower_department=self.dept,
+            purpose='Faculty Overdue Loan',
+            requested_start=self.now - timezone.timedelta(hours=5),
+            requested_return=self.now - timezone.timedelta(hours=1),
+            status=AssetBorrowing.Status.RELEASED,
+            released_by=self.admin
+        )
+        asset_2 = Asset.objects.create(
+            item_name='Second Faculty Laptop',
+            asset_code='CBA-IT-00100',
+            category=self.cat,
+            department=self.dept,
+            current_location=self.loc,
+            condition=Asset.Condition.GOOD,
+            status=Asset.Status.AVAILABLE
+        )
+        AssetBorrowing.objects.create(
+            asset=asset_2,
+            borrower=self.emp_fac,
+            borrower_department=self.dept,
+            purpose='Faculty Pending Loan',
+            requested_start=self.now + timezone.timedelta(hours=2),
+            requested_return=self.now + timezone.timedelta(hours=6),
+            status=AssetBorrowing.Status.PENDING
+        )
+
+        self.client.force_login(self.faculty)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+
+        # 1. Global audit records and audit links are NOT exposed to Faculty
+        self.assertNotIn('CBA-SECRET-AUDIT-999', content)
+        self.assertNotIn('Recent System Activity', content)
+        self.assertNotIn(reverse('audit:audit_log_list'), content)
+
+        # 2. Restricted supply alerts, supply reports, and inventory category admin links are NOT shown to Faculty
+        self.assertNotIn('Restricted Supply Paper', content)
+        self.assertNotIn('Consumables &amp; Supplies', content)
+        self.assertNotIn(reverse('reports:supplies_low_stock'), content)
+        self.assertNotIn(reverse('supplies:low_stock_list'), content)
+        self.assertNotIn(reverse('inventory:category_list'), content)
+
+        # 3. Overdue and pending borrowing links route Faculty to permitted personal borrowing page
+        self.assertIn(reverse('borrowing:my_borrowings'), content)
+        self.assertIn('View My Loans', content)
+        self.assertNotIn(f'href="{reverse("borrowing:active_list")}"', content)
+        self.assertNotIn(f'href="{reverse("borrowing:request_list")}"', content)
+        self.assertNotIn(f'href="{reverse("borrowing:request_list")}?status=PENDING"', content)
+
+        # 4. Verify all personal links rendered for Faculty return 200 OK
+        for permitted_url in [
+            reverse('borrowing:my_borrowings'),
+            reverse('assignments:my_accountability'),
+            reverse('maintenance:my_reports'),
+            reverse('inventory:asset_scan'),
+        ]:
+            self.assertEqual(self.client.get(permitted_url).status_code, 200)
+
+    def test_damaged_assets_kpi_filter_link_and_inventory_filtering(self):
+        """Damaged Assets KPI card links to ?status=DAMAGED and filters AssetListView accurately."""
+        damaged_asset = Asset.objects.create(
+            item_name='Damaged Audio Mixer',
+            asset_code='CBA-IT-00101',
+            category=self.cat,
+            department=self.dept,
+            current_location=self.loc,
+            condition=Asset.Condition.POOR,
+            status=Asset.Status.DAMAGED
+        )
+
+        expected_filter_url = f"{reverse('inventory:asset_list')}?status=DAMAGED"
+        legacy_broken_url = f"{reverse('inventory:asset_list')}?condition=DAMAGED"
+
+        for staff_user in [self.admin, self.dean, self.chair]:
+            self.client.force_login(staff_user)
+            dash_resp = self.client.get(reverse('dashboard'))
+            self.assertEqual(dash_resp.status_code, 200)
+            dash_html = dash_resp.content.decode('utf-8')
+
+            self.assertIn(expected_filter_url, dash_html)
+            self.assertNotIn(legacy_broken_url, dash_html)
+
+            # Follow the Damaged KPI filter link and verify it returns only damaged assets
+            list_resp = self.client.get(expected_filter_url)
+            self.assertEqual(list_resp.status_code, 200)
+            list_html = list_resp.content.decode('utf-8')
+            self.assertIn(damaged_asset.item_name, list_html)
+            self.assertNotIn(self.asset.item_name, list_html)
