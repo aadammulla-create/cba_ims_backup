@@ -30,14 +30,14 @@
                     {% for s in supplies %}
                     <tr>
                         <td>
-                            <a href="{% url 'supplies:supply_detail' s.supply_code %}" class="font-monospace fw-bold text-decoration-none">
+                            <a href="{% url 'supplies:supply_detail' s.supply_code %}" class="cba-code text-decoration-none">
                                 {{ s.supply_code }}
                             </a>
                         </td>
                         <td>
                             <div class="fw-semibold">{{ s.item_name }}</div>
                             {% if not s.is_active %}
-                                <span class="badge bg-secondary">Inactive</span>
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Inactive</span>
                             {% endif %}
                         </td>
                         <td><span class="badge bg-light text-dark border">{{ s.category.name }}</span></td>
@@ -54,11 +54,11 @@
                         </td>
                         <td class="text-center">
                             {% if s.calculated_stock <= 0 %}
-                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
                             {% elif s.calculated_stock <= s.reorder_level %}
-                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
                             {% else %}
-                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>In Stock</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>In Stock</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
@@ -92,16 +92,16 @@
         <div class="mobile-card">
             <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
-                    <span class="font-monospace small text-primary fw-bold">{{ s.supply_code }}</span>
+                    <span class="cba-code text-primary">{{ s.supply_code }}</span>
                     <h6 class="fw-bold mb-0 mt-1">{{ s.item_name }}</h6>
                 </div>
                 <div>
                     {% if s.calculated_stock <= 0 %}
-                        <span class="badge bg-danger">Out of Stock</span>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Out of Stock</span>
                     {% elif s.calculated_stock <= s.reorder_level %}
-                        <span class="badge bg-warning text-dark">Low Stock</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Low Stock</span>
                     {% else %}
-                        <span class="badge bg-success">In Stock</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">In Stock</span>
                     {% endif %}
                 </div>
             </div>
@@ -127,14 +127,14 @@
             </div>
 
             <div class="card-actions d-flex gap-2">
-                <a href="{% url 'supplies:supply_detail' s.supply_code %}" class="btn btn-sm btn-outline-secondary flex-fill">
+                <a href="{% url 'supplies:supply_detail' s.supply_code %}" class="btn btn-sm btn-outline-secondary flex-fill" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">
                     <i class="bi bi-eye me-1"></i> Details
                 </a>
                 {% if request.user.is_admin %}
-                <a href="{% url 'supplies:stock_in_specific' s.supply_code %}" class="btn btn-sm btn-outline-success flex-fill">
+                <a href="{% url 'supplies:stock_in_specific' s.supply_code %}" class="btn btn-sm btn-outline-success flex-fill" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">
                     <i class="bi bi-box-arrow-in-down me-1"></i> In
                 </a>
-                <a href="{% url 'supplies:stock_out_specific' s.supply_code %}" class="btn btn-sm btn-outline-primary flex-fill">
+                <a href="{% url 'supplies:stock_out_specific' s.supply_code %}" class="btn btn-sm btn-outline-primary flex-fill" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">
                     <i class="bi bi-box-arrow-up me-1"></i> Out
                 </a>
                 {% endif %}

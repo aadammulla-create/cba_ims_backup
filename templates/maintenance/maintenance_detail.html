@@ -29,27 +29,27 @@
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <h3 class="mb-0 fw-bold font-monospace text-primary">{{ case.case_number }}</h3>
                     {% if case.status == 'REPORTED' %}
-                        <span class="badge bg-secondary fs-6">Reported</span>
+                        <span class="badge" style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">Reported</span>
                     {% elif case.status == 'ASSESSED' %}
-                        <span class="badge bg-primary fs-6">Assessed</span>
+                        <span class="badge" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">Assessed</span>
                     {% elif case.status == 'IN_REPAIR' %}
-                        <span class="badge bg-warning text-dark fs-6">In Repair</span>
+                        <span class="badge" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;">In Repair</span>
                     {% elif case.status == 'COMPLETED' %}
-                        <span class="badge bg-success fs-6">Completed</span>
+                        <span class="badge" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">Completed</span>
                     {% elif case.status == 'FOR_REPLACEMENT' %}
-                        <span class="badge bg-danger fs-6">For Replacement</span>
+                        <span class="badge" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">For Replacement</span>
                     {% elif case.status == 'CANCELLED' %}
-                        <span class="badge bg-light text-dark border fs-6">Cancelled</span>
+                        <span class="badge" style="background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">Cancelled</span>
                     {% endif %}
 
                     {% if case.severity == 'CRITICAL' %}
-                        <span class="badge bg-danger fs-6">Critical Severity</span>
+                        <span class="badge" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">Critical Severity</span>
                     {% elif case.severity == 'HIGH' %}
-                        <span class="badge bg-warning text-dark fs-6">High Severity</span>
+                        <span class="badge" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;">High Severity</span>
                     {% elif case.severity == 'MEDIUM' %}
-                        <span class="badge bg-info text-dark fs-6">Medium Severity</span>
+                        <span class="badge" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;">Medium Severity</span>
                     {% else %}
-                        <span class="badge bg-secondary fs-6">Low Severity</span>
+                        <span class="badge" style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">Low Severity</span>
                     {% endif %}
                 </div>
                 <h5 class="text-dark fw-semibold mt-2 mb-1">{{ case.issue_title }}</h5>
@@ -63,32 +63,32 @@
             <!-- Action Buttons -->
             <div class="d-flex flex-wrap gap-2">
                 {% if can_assess %}
-                    <a href="{% url 'maintenance:maintenance_assess' case.pk %}" class="btn btn-primary btn-sm">
+                    <a href="{% url 'maintenance:maintenance_assess' case.pk %}" class="btn btn-primary-cba btn-sm">
                         <i class="bi bi-clipboard-check me-1"></i> Technical Assessment
                     </a>
                 {% endif %}
                 {% if can_start_repair %}
-                    <a href="{% url 'maintenance:maintenance_start_repair' case.pk %}" class="btn btn-warning text-dark btn-sm">
+                    <a href="{% url 'maintenance:maintenance_start_repair' case.pk %}" class="btn btn-secondary-cba btn-sm">
                         <i class="bi bi-wrench me-1"></i> Dispatch to Repair
                     </a>
                 {% endif %}
                 {% if can_complete %}
-                    <a href="{% url 'maintenance:maintenance_complete' case.pk %}" class="btn btn-success btn-sm">
+                    <a href="{% url 'maintenance:maintenance_complete' case.pk %}" class="btn btn-primary-cba btn-sm">
                         <i class="bi bi-check-circle me-1"></i> Complete Repair
                     </a>
                 {% endif %}
                 {% if can_replace %}
-                    <a href="{% url 'maintenance:maintenance_for_replacement' case.pk %}" class="btn btn-outline-danger btn-sm">
+                    <a href="{% url 'maintenance:maintenance_for_replacement' case.pk %}" class="btn btn-outline-cba btn-sm">
                         <i class="bi bi-arrow-repeat me-1"></i> Mark For Replacement
                     </a>
                 {% endif %}
                 {% if case.status == 'FOR_REPLACEMENT' and request.user.is_admin and case.asset.status != 'DISPOSED' %}
-                    <a href="{% url 'disposals:request_create_specific' asset_code=case.asset.asset_code %}?maintenance_ref={{ case.pk }}" class="btn btn-danger btn-sm">
+                    <a href="{% url 'disposals:request_create_specific' asset_code=case.asset.asset_code %}?maintenance_ref={{ case.pk }}" class="btn btn-danger-cba btn-sm">
                         <i class="bi bi-trash3 me-1"></i> Begin Disposal Process
                     </a>
                 {% endif %}
                 {% if can_cancel %}
-                    <a href="{% url 'maintenance:maintenance_cancel' case.pk %}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{% url 'maintenance:maintenance_cancel' case.pk %}" class="btn btn-secondary-cba btn-sm">
                         <i class="bi bi-x-circle me-1"></i> Cancel Case
                     </a>
                 {% endif %}
@@ -99,28 +99,28 @@
         <hr class="my-4">
         <div class="row text-center g-2">
             <div class="col-3">
-                <div class="p-2 rounded {% if case.status in 'REPORTED,ASSESSED,IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}bg-primary text-white{% else %}bg-light text-muted{% endif %}">
+                <div class="p-2 rounded border" style="background-color: {% if case.status in 'REPORTED,ASSESSED,IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}#eff6ff; border-color: #bfdbfe !important; color: #1e40af;{% else %}#f8fafc; border-color: #e2e8f0 !important; color: #64748b;{% endif %}">
                     <i class="bi bi-flag-fill d-block mb-1"></i>
                     <small class="fw-bold d-block">1. Reported</small>
                     <span class="small" style="font-size: 0.75rem;">{{ case.reported_at|date:"M d" }}</span>
                 </div>
             </div>
             <div class="col-3">
-                <div class="p-2 rounded {% if case.status in 'ASSESSED,IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}bg-primary text-white{% else %}bg-light text-muted{% endif %}">
+                <div class="p-2 rounded border" style="background-color: {% if case.status in 'ASSESSED,IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}#eff6ff; border-color: #bfdbfe !important; color: #1e40af;{% else %}#f8fafc; border-color: #e2e8f0 !important; color: #64748b;{% endif %}">
                     <i class="bi bi-clipboard-check d-block mb-1"></i>
                     <small class="fw-bold d-block">2. Assessed</small>
                     <span class="small" style="font-size: 0.75rem;">{{ case.assessed_at|date:"M d"|default:"Pending" }}</span>
                 </div>
             </div>
             <div class="col-3">
-                <div class="p-2 rounded {% if case.status in 'IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}bg-warning text-dark{% else %}bg-light text-muted{% endif %}">
+                <div class="p-2 rounded border" style="background-color: {% if case.status in 'IN_REPAIR,COMPLETED,FOR_REPLACEMENT' %}#fffbeb; border-color: #fde68a !important; color: #92400e;{% else %}#f8fafc; border-color: #e2e8f0 !important; color: #64748b;{% endif %}">
                     <i class="bi bi-wrench d-block mb-1"></i>
                     <small class="fw-bold d-block">3. In Repair</small>
                     <span class="small" style="font-size: 0.75rem;">{{ case.repair_started_at|date:"M d"|default:"Pending" }}</span>
                 </div>
             </div>
             <div class="col-3">
-                <div class="p-2 rounded {% if case.status == 'COMPLETED' %}bg-success text-white{% elif case.status == 'FOR_REPLACEMENT' %}bg-danger text-white{% elif case.status == 'CANCELLED' %}bg-secondary text-white{% else %}bg-light text-muted{% endif %}">
+                <div class="p-2 rounded border" style="background-color: {% if case.status == 'COMPLETED' %}#f0fdf4; border-color: #bbf7d0 !important; color: #166534;{% elif case.status == 'FOR_REPLACEMENT' %}#fef2f2; border-color: #fecaca !important; color: #991b1b;{% elif case.status == 'CANCELLED' %}#f8fafc; border-color: #e2e8f0 !important; color: #64748b;{% else %}#f8fafc; border-color: #e2e8f0 !important; color: #64748b;{% endif %}">
                     {% if case.status == 'FOR_REPLACEMENT' %}
                         <i class="bi bi-exclamation-triangle d-block mb-1"></i>
                         <small class="fw-bold d-block">4. Replacement</small>

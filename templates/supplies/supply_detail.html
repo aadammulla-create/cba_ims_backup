@@ -14,22 +14,22 @@
 </nav>
 
 <!-- Supply Header Banner -->
-<div class="card mb-4 shadow-sm">
+<div class="card mb-4 shadow-sm border-0">
     <div class="card-body p-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <div class="d-flex align-items-center gap-2 mb-1">
-                    <span class="font-monospace fs-5 fw-bold text-primary">{{ supply.supply_code }}</span>
+                    <span class="cba-code text-primary fs-5">{{ supply.supply_code }}</span>
                     {% if stock_status == 'OUT_OF_STOCK' %}
-                        <span class="badge bg-danger px-2 py-1"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
                     {% elif stock_status == 'LOW_STOCK' %}
-                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock Warning</span>
+                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock Warning</span>
                     {% else %}
-                        <span class="badge bg-success px-2 py-1"><i class="bi bi-check-circle me-1"></i>In Stock</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle me-1"></i>In Stock</span>
                     {% endif %}
 
                     {% if not supply.is_active %}
-                        <span class="badge bg-secondary px-2 py-1">Inactive</span>
+                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Inactive</span>
                     {% endif %}
                 </div>
                 <h3 class="fw-bold mb-1">{{ supply.item_name }}</h3>
@@ -42,21 +42,21 @@
 
             <!-- Action Buttons for Admin -->
             <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'supplies:supply_list' %}" class="btn btn-outline-secondary btn-sm">
+                <a href="{% url 'supplies:supply_list' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi bi-arrow-left me-1"></i> Catalog
                 </a>
                 {% if request.user.is_admin %}
-                <a href="{% url 'supplies:stock_in_specific' supply.supply_code %}" class="btn btn-success btn-sm">
+                <a href="{% url 'supplies:stock_in_specific' supply.supply_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
                 </a>
-                <a href="{% url 'supplies:stock_out_specific' supply.supply_code %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'supplies:stock_out_specific' supply.supply_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi bi-box-arrow-up me-1"></i> Stock Out
                 </a>
-                <a href="{% url 'supplies:stock_adjust_specific' supply.supply_code %}" class="btn btn-outline-warning text-dark btn-sm" title="Compensating Inventory Adjustment">
+                <a href="{% url 'supplies:stock_adjust_specific' supply.supply_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;" title="Compensating Inventory Adjustment">
                     <i class="bi bi-sliders me-1"></i> Adjust
                 </a>
-                <a href="{% url 'supplies:supply_edit' supply.supply_code %}" class="btn btn-outline-secondary btn-sm" title="Edit Metadata">
-                    <i class="bi bi-pencil"></i> Edit
+                <a href="{% url 'supplies:supply_edit' supply.supply_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;" title="Edit Metadata">
+                    <i class="bi bi-pencil me-1"></i> Edit
                 </a>
                 <!-- Inline Alpine Confirmation for Safe Supply Toggle -->
                 <form method="post"
@@ -66,9 +66,10 @@
                       @keydown.escape.window="confirming = false">
                     {% csrf_token %}
                     <button type="button"
-                            class="btn btn-sm {% if supply.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                            class="btn {% if supply.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
                             x-show="!confirming"
                             @click="confirming = true"
+                            style="min-height: 44px; display: inline-flex; align-items: center;"
                             title="Toggle Active Status">
                         <i class="bi {% if supply.is_active %}bi-pause-circle{% else %}bi-play-circle{% endif %} me-1"></i>
                         {% if supply.is_active %}Deactivate{% else %}Activate{% endif %}
@@ -76,19 +77,20 @@
                     <div x-show="confirming"
                          x-cloak
                          @click.outside="confirming = false"
-                         class="d-inline-flex align-items-center gap-1 bg-white border border-danger-subtle rounded px-2 py-1 shadow-sm">
+                         class="d-inline-flex align-items-center gap-1 bg-white border border-danger-subtle rounded px-2 py-1 shadow-sm"
+                         style="min-height: 44px;">
                         <span class="text-danger small fw-semibold text-nowrap">
                             {% if supply.is_active %}Deactivate item?{% else %}Activate item?{% endif %}
                         </span>
                         <button type="submit"
-                                class="btn btn-sm {% if supply.is_active %}btn-danger{% else %}btn-success{% endif %} py-0 px-2 text-nowrap"
-                                style="font-size: 0.75rem;">
+                                class="btn btn-sm {% if supply.is_active %}btn-danger{% else %}btn-success{% endif %} py-1 px-2 text-nowrap"
+                                style="font-size: 0.8rem;">
                             Yes
                         </button>
                         <button type="button"
-                                class="btn btn-sm btn-outline-secondary py-0 px-1"
+                                class="btn btn-sm btn-outline-secondary py-1 px-2"
                                 @click="confirming = false"
-                                style="font-size: 0.75rem;"
+                                style="font-size: 0.8rem;"
                                 title="Cancel">
                             <i class="bi bi-x"></i>
                         </button>

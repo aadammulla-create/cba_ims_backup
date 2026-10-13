@@ -26,12 +26,12 @@
 {% else %}
 
 <!-- Employee Header Card -->
-<div class="card shadow-sm mb-4">
+<div class="card shadow-sm border-0 mb-4">
     <div class="card-body p-4">
         <div class="row align-items-center g-3">
-            <div class="col-12 col-md-8">
+            <div class="col-12 col-md-7">
                 <div class="d-flex align-items-center">
-                    <div class="rounded-circle bg-primary text-white p-3 me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                    <div class="rounded-circle bg-primary-subtle text-primary border border-primary-subtle p-3 me-3 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
                         <i class="bi bi-person-badge fs-3"></i>
                     </div>
                     <div>
@@ -44,11 +44,11 @@
                     </div>
                 </div>
             </div>
-            <div class="col-12 col-md-5 text-md-end">
-                <a href="{% url 'inventory:asset_scan' %}" class="btn btn-outline-primary btn-sm me-1">
+            <div class="col-12 col-md-5 text-md-end d-flex flex-wrap justify-content-md-end gap-2">
+                <a href="{% url 'inventory:asset_scan' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi bi-camera me-1"></i> Scan QR
                 </a>
-                <a href="{% url 'assignments:print_accountability' employee.pk %}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                <a href="{% url 'assignments:print_accountability' employee.pk %}" target="_blank" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi bi-printer me-1"></i> Print Certificate
                 </a>
             </div>
@@ -59,42 +59,30 @@
 <!-- Accountability Stats -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-4">
-        <div class="card stat-card bg-primary text-white h-100 shadow-sm">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="stat-label text-white-50">Active Items</span>
-                    <i class="bi bi-box-seam stat-icon text-white-50"></i>
-                </div>
-                <div class="stat-value">{{ active_assignments|length }}</div>
-            </div>
+        <div class="kpi-card h-100">
+            <div class="kpi-label">Active Items</div>
+            <div class="kpi-value">{{ active_assignments|length }}</div>
+            <div class="kpi-meta text-muted small">Assigned equipment in personal custody</div>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="card stat-card bg-success text-white h-100 shadow-sm">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="stat-label text-white-50">Clearances / Past Items</span>
-                    <i class="bi bi-check-circle stat-icon text-white-50"></i>
-                </div>
-                <div class="stat-value">{{ historical_assignments|length }}</div>
-            </div>
+        <div class="kpi-card h-100">
+            <div class="kpi-label">Past Turnovers</div>
+            <div class="kpi-value">{{ historical_assignments|length }}</div>
+            <div class="kpi-meta text-muted small">Returned equipment clearances</div>
         </div>
     </div>
     <div class="col-12 col-md-4">
-        <div class="card stat-card bg-light text-dark h-100 shadow-sm border">
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="stat-label text-muted">Accountability Status</span>
-                    <i class="bi bi-shield-check stat-icon text-success"></i>
-                </div>
-                <div class="stat-value fs-5 mt-1">
-                    {% if active_assignments %}
-                        <span class="badge bg-warning text-dark">Active Equipment Custody</span>
-                    {% else %}
-                        <span class="badge bg-success">Cleared of Accountability</span>
-                    {% endif %}
-                </div>
+        <div class="kpi-card h-100">
+            <div class="kpi-label">Accountability Status</div>
+            <div class="kpi-value fs-5 mt-1">
+                {% if active_assignments %}
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Active Equipment Custody</span>
+                {% else %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">Cleared of Accountability</span>
+                {% endif %}
             </div>
+            <div class="kpi-meta text-muted small">Institutional property standing</div>
         </div>
     </div>
 </div>

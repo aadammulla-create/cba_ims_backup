@@ -5,16 +5,16 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+<div class="cba-page-header">
     <div>
-        <h4 class="mb-1 fw-bold">Maintenance & Repair Archive</h4>
-        <p class="text-muted small mb-0">Historical log of resolved equipment defects, completed service actions, replacement recommendations, and cancellations.</p>
+        <h1 class="cba-header-title">Maintenance &amp; Repair Archive</h1>
+        <p class="cba-header-subtitle">Historical log of resolved equipment defects, completed service actions, replacement recommendations, and cancellations.</p>
     </div>
-    <div class="d-flex gap-2">
-        <a href="{% url 'maintenance:case_list' %}" class="btn btn-outline-primary btn-sm">
+    <div class="cba-header-actions">
+        <a href="{% url 'maintenance:case_list' %}" class="btn btn-secondary-cba">
             <i class="bi bi-arrow-left me-1"></i> Active Queue
         </a>
-        <a href="{% url 'maintenance:report_create' %}" class="btn btn-danger btn-sm">
+        <a href="{% url 'maintenance:report_create' %}" class="btn btn-danger-cba">
             <i class="bi bi-exclamation-octagon me-1"></i> Report Defect
         </a>
     </div>
@@ -26,7 +26,7 @@
         <form method="get" class="row g-2 align-items-center">
             <div class="col-12 col-md-4">
                 <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                     <input type="text" name="q" value="{{ request.GET.q|default:'' }}" class="form-control border-start-0" placeholder="Case #, asset, action taken, provider...">
                 </div>
             </div>
@@ -57,8 +57,8 @@
                 </select>
             </div>
             <div class="col-12 col-md-1 d-flex gap-1">
-                <button type="submit" class="btn btn-secondary btn-sm w-100">Filter</button>
-                <a href="{% url 'maintenance:history_list' %}" class="btn btn-outline-secondary btn-sm" title="Clear Filters"><i class="bi bi-x-circle"></i></a>
+                <button type="submit" class="btn btn-secondary-cba btn-sm w-100">Filter</button>
+                <a href="{% url 'maintenance:history_list' %}" class="btn btn-outline-cba btn-sm" title="Clear Filters"><i class="bi bi-x-circle"></i></a>
             </div>
         </form>
     </div>
@@ -101,8 +101,8 @@
                                         {{ case.asset.item_name }}
                                     </a>
                                 </div>
-                                <div class="text-muted small">
-                                    <code>{{ case.asset.asset_code }}</code>
+                                 <div class="text-muted small">
+                                    <span class="cba-code">{{ case.asset.asset_code }}</span>
                                     {% if case.asset.department %} &bull; {{ case.asset.department.code }}{% endif %}
                                 </div>
                             </td>
@@ -141,13 +141,13 @@
                             </td>
                             <td>
                                 {% if case.status == 'COMPLETED' %}
-                                    <span class="badge bg-success">Completed</span>
+                                    <span class="badge" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">Completed</span>
                                     <div class="text-muted small mt-1">{{ case.repair_completed_at|date:"M d, Y"|default:case.updated_at|date:"M d, Y" }}</div>
                                 {% elif case.status == 'FOR_REPLACEMENT' %}
-                                    <span class="badge bg-danger">For Replacement</span>
+                                    <span class="badge" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">For Replacement</span>
                                     <div class="text-muted small mt-1">{{ case.updated_at|date:"M d, Y" }}</div>
                                 {% elif case.status == 'CANCELLED' %}
-                                    <span class="badge bg-secondary">Cancelled</span>
+                                    <span class="badge" style="background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">Cancelled</span>
                                     <div class="text-muted small mt-1">{{ case.cancelled_at|date:"M d, Y"|default:case.updated_at|date:"M d, Y" }}</div>
                                 {% endif %}
                             </td>
@@ -183,18 +183,18 @@
                         </div>
                         <div>
                             {% if case.status == 'COMPLETED' %}
-                                <span class="badge bg-success">Completed</span>
+                                <span class="badge" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">Completed</span>
                             {% elif case.status == 'FOR_REPLACEMENT' %}
-                                <span class="badge bg-danger">For Replacement</span>
+                                <span class="badge" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">For Replacement</span>
                             {% elif case.status == 'CANCELLED' %}
-                                <span class="badge bg-secondary">Cancelled</span>
+                                <span class="badge" style="background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">Cancelled</span>
                             {% endif %}
                         </div>
                     </div>
 
                     <h6 class="fw-bold mb-1">{{ case.asset.item_name }}</h6>
                     <div class="text-muted small mb-2">
-                        <code>{{ case.asset.asset_code }}</code>
+                        <span class="cba-code">{{ case.asset.asset_code }}</span>
                     </div>
 
                     <div class="p-2 bg-light rounded small mb-2">
@@ -212,7 +212,7 @@
                     {% endif %}
 
                     <div class="mt-3 pt-2 border-top">
-                        <a href="{% url 'maintenance:maintenance_detail' case.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+                        <a href="{% url 'maintenance:maintenance_detail' case.pk %}" class="btn btn-secondary-cba btn-sm w-100">
                             <i class="bi bi-eye me-1"></i> View Record
                         </a>
                     </div>

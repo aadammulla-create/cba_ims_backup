@@ -213,7 +213,7 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ## 8. Phase 3D, Part 1: Operations UI Refinement (Inventory & Borrowing)
 
-**Status:** Completed, verified, and approved for private backup on branch `feat/phase-3d-operations-ui` (based on Phase 3C commit `2c243de`). Phase 3D Part 2 is pending.
+**Status:** Completed, verified, and approved for private backup on branch `feat/phase-3d-operations-ui` (based on Phase 3C commit `2c243de`).
 
 ### Scope Delivered:
 1. **Inventory Asset List & Detail Refinements:**
@@ -234,17 +234,46 @@ This reduces total test suite run time by ~50-60% without weakening assertions o
 
 ---
 
-## 9. Next Planned Development Phase & Roadmap
+## 9. Phase 3D, Part 2: Remaining Operations UI Refinement (Maintenance, Transfers, Assignments, Supplies, Disposals)
 
-- **Current Phase — Phase 3D, Part 1: Operations UI Refinement (Inventory & Borrowing):**
-  - Completed, verified, and approved for private backup on `feat/phase-3d-operations-ui`.
-- **Next Phase — Phase 3D, Part 2: Assignments, Maintenance & Transfers UI Refinement:**
-  - Align employee accountability/assignments, maintenance triage/cases, and transfer workflows with consistent `DESIGN.md v2.0` ergonomics.
-- **Phase 3E: Acceptance Verification & Production Release:**
-  - Comprehensive end-to-end user acceptance testing on isolated staging database.
-  - Apply missing Neon PostgreSQL migrations in verified dependency order.
-  - Execute demo equipment seeder in dry-run then atomic mode.
-  - Production deployment to Vercel.
+**Status:** Completed, verified, and approved for private backup on branch `feat/phase-3d-operations-ui` (commit based on Phase 3D Part 1 `d2b170a`).
+
+### Scope Delivered:
+1. **Maintenance & Defect Reporting (`templates/maintenance/`):**
+   - Refined `maintenance_list.html`, `maintenance_history_list.html`, `my_maintenance_list.html`, and `maintenance_detail.html`.
+   - Institutional headers (`.cba-page-header`), `.kpi-card` metric grid, 3-step lifecycle progress stepper, subtle tinted status badges, and role-scoped triage actions.
+2. **Asset Transfers (`templates/transfers/`):**
+   - Refined `pending_transfer_list.html`, `transfer_history_list.html`, `transfer_detail.html`, and `transfer_form.html`.
+   - Movement route card with responsive flow (horizontal on desktop, vertical on mobile), dynamic location JS (`locations_json`), and approval/rejection banner.
+3. **Asset Assignments & Accountability (`templates/assignments/`):**
+   - Refined `current_assignment_list.html`, `partials/_assignment_results.html`, `assignment_history_list.html`, `assignment_form.html`, `assignment_confirm_return.html`, and `my_accountability.html`.
+   - Preserved all filter IDs and DOM assertions, printable PAR receipt (`printable_accountability.html`), and role-based routing (Faculty redirected to personal accountability).
+4. **Consumable Supplies & Transactions (`templates/supplies/`):**
+   - Refined `supply_list.html`, `partials/_supply_results.html`, `low_stock_list.html`, `transaction_list.html`, and `supply_detail.html`.
+   - Preserved HTMX pagination, search inputs, stock adjustment modals, and Alpine.js state (`x-data="{ confirming: false }"`).
+5. **Asset Disposal (`templates/disposals/`):**
+   - Refined `disposal_list.html` and `disposal_detail.html`.
+   - Standardized KPI cards, empty state suppressing `<table>` when empty, subtle status badges, 44×44px mobile filter and card touch targets, and role-gated admin approval actions.
+6. **Mobile Touch Targets & Visual QA (`DESIGN.md v2.0`):**
+   - Verified 0px horizontal overflow and 0 undersized controls across all 5 representative screens at 1440px and 390px in headless Chrome under Django's standard test runner.
+   - 10 synthetic visual QA screenshots preserved in `docs/visual-qa/`.
+7. **Quality Gates & Integrity:**
+   - 125/125 operational module unit tests passing across all 5 modules.
+   - 4/4 targeted role permission and navigation tests passing across `ADMIN`, `DEAN`, `DEPT_CHAIR`, and `FACULTY`.
+   - `manage.py check` passes with 0 issues; `makemigrations --check --dry-run` reports no changes.
+   - `git diff --check` passes with 0 whitespace warnings.
+   - Institutional database `db.sqlite3` (`946,176` bytes, 25 assets) preserved untouched.
+
+---
+
+## 10. Next Planned Development Phase & Roadmap
+
+- **Current Phase — Phase 3D, Part 2: Remaining Operations UI Refinement:**
+  - Completed, verified, and backed up on `feat/phase-3d-operations-ui`.
+- **Next Phase — Phase 3E: Acceptance Verification & Production Release:**
+  - Full system regression run across complete test suite.
+  - Final verification of role permissions, critical workflows, and security barriers.
+  - Verification of database safety and documentation readiness for deployment.
 
 ---
 

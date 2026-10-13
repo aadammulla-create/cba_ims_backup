@@ -4,28 +4,47 @@
 {% block page_title %}Request Asset Transfer{% endblock %}
 
 {% block content %}
-<!-- Breadcrumb Navigation -->
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'transfers:pending_list' %}" class="text-decoration-none">Transfers</a></li>
-        {% if preselected_asset %}
-            <li class="breadcrumb-item"><a href="{% url 'inventory:asset_detail' preselected_asset.asset_code %}" class="text-decoration-none">{{ preselected_asset.asset_code }}</a></li>
-        {% endif %}
-        <li class="breadcrumb-item active" aria-current="page">Request Transfer</li>
-    </ol>
-</nav>
+<!-- Page Header -->
+<div class="cba-page-header mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'transfers:pending_list' %}" class="text-decoration-none">Transfers</a></li>
+                    {% if preselected_asset %}
+                        <li class="breadcrumb-item"><a href="{% url 'inventory:asset_detail' preselected_asset.asset_code %}" class="text-decoration-none">{{ preselected_asset.asset_code }}</a></li>
+                    {% endif %}
+                    <li class="breadcrumb-item active" aria-current="page">Request Transfer</li>
+                </ol>
+            </nav>
+            <h1 class="cba-header-title">Request Asset Transfer</h1>
+            <p class="cba-header-subtitle">Specify target destination department and physical room for asset reallocation</p>
+        </div>
+        <div class="cba-header-actions">
+            {% if preselected_asset %}
+                <a href="{% url 'inventory:asset_detail' preselected_asset.asset_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Asset
+                </a>
+            {% else %}
+                <a href="{% url 'transfers:pending_list' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Transfers
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
 <div class="row justify-content-center">
     <div class="col-lg-9 col-xl-8">
         <!-- Preselected Asset Origin Card (Read-only snapshot) -->
         {% if preselected_asset %}
-        <div class="card mb-4 border-primary shadow-sm">
-            <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>Selected Asset for Relocation</h6>
-                <span class="badge bg-white text-primary font-monospace">{{ preselected_asset.asset_code }}</span>
+        <div class="card mb-4 border-0 shadow-sm">
+            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-box-seam text-primary me-2"></i>Selected Asset for Relocation</h6>
+                <span class="cba-code text-primary">{{ preselected_asset.asset_code }}</span>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="row g-3">
                     <div class="col-sm-6">
                         <div class="small text-muted">Item Name:</div>
@@ -36,22 +55,22 @@
                         <div class="small text-muted">Operational Status:</div>
                         <div>
                             {% if preselected_asset.status == 'AVAILABLE' %}
-                                <span class="badge bg-success">Available</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Available</span>
                             {% elif preselected_asset.status == 'ASSIGNED' %}
-                                <span class="badge bg-warning text-dark">Assigned</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Assigned</span>
                             {% else %}
-                                <span class="badge bg-secondary">{{ preselected_asset.get_status_display }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">{{ preselected_asset.get_status_display }}</span>
                             {% endif %}
                             <span class="badge bg-light text-dark border ms-1 font-monospace">SN: {{ preselected_asset.serial_number|default:"None" }}</span>
                         </div>
                     </div>
                     <div class="col-sm-6">
                         <div class="small text-muted">Current Origin Department:</div>
-                        <div class="fw-semibold text-danger"><i class="bi bi-building me-1"></i>{{ preselected_asset.department.name }}</div>
+                        <div class="fw-semibold text-dark"><i class="bi bi-building me-1 text-muted"></i>{{ preselected_asset.department.name }}</div>
                     </div>
                     <div class="col-sm-6">
                         <div class="small text-muted">Current Physical Location:</div>
-                        <div class="fw-semibold text-danger"><i class="bi bi-geo-alt me-1"></i>{{ preselected_asset.current_location.name|default:"Not designated" }}</div>
+                        <div class="fw-semibold text-dark"><i class="bi bi-geo-alt me-1 text-muted"></i>{{ preselected_asset.current_location.name|default:"Not designated" }}</div>
                     </div>
                     {% if current_assignment %}
                     <div class="col-12 border-top pt-2">
@@ -69,8 +88,8 @@
         {% endif %}
 
         <!-- Transfer Form Card -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
                 <h5 class="mb-0 fw-bold">
                     <i class="bi bi-arrow-left-right text-primary me-2"></i>Initiate Asset Transfer Request
                 </h5>
@@ -200,13 +219,13 @@
                     </div>
 
                     <!-- Form Actions -->
-                    <div class="form-actions d-flex justify-content-end gap-2">
+                    <div class="form-actions d-flex justify-content-end gap-2 pt-3 border-top">
                         {% if preselected_asset %}
-                            <a href="{% url 'inventory:asset_detail' preselected_asset.asset_code %}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{% url 'inventory:asset_detail' preselected_asset.asset_code %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">Cancel</a>
                         {% else %}
-                            <a href="{% url 'transfers:pending_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{% url 'transfers:pending_list' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">Cancel</a>
                         {% endif %}
-                        <button type="submit" class="btn btn-primary px-4">
+                        <button type="submit" class="btn btn-primary-cba px-4" style="min-height: 44px; display: inline-flex; align-items: center;">
                             <i class="bi bi-check-lg me-1"></i> Submit Transfer Request
                         </button>
                     </div>

@@ -21,29 +21,29 @@
                 <div class="d-flex align-items-center gap-2 mb-1">
                     <span class="font-monospace fs-5 fw-bold text-primary">Transfer #{{ transfer.pk }}</span>
                     {% if transfer.status == 'PENDING' %}
-                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Pending Approval</span>
+                        <span class="badge px-2 py-1" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a;"><i class="bi bi-hourglass-split me-1"></i>Pending Approval</span>
                     {% elif transfer.status == 'APPROVED' %}
-                        <span class="badge bg-info text-dark px-2 py-1"><i class="bi bi-check-circle me-1"></i>Approved / Awaiting Movement</span>
+                        <span class="badge px-2 py-1" style="background-color: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;"><i class="bi bi-check-circle me-1"></i>Approved / Awaiting Movement</span>
                     {% elif transfer.status == 'COMPLETED' %}
-                        <span class="badge bg-success px-2 py-1"><i class="bi bi-check2-all me-1"></i>Completed</span>
+                        <span class="badge px-2 py-1" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;"><i class="bi bi-check2-all me-1"></i>Completed</span>
                     {% elif transfer.status == 'REJECTED' %}
-                        <span class="badge bg-danger px-2 py-1"><i class="bi bi-x-circle me-1"></i>Rejected</span>
+                        <span class="badge px-2 py-1" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;"><i class="bi bi-x-circle me-1"></i>Rejected</span>
                     {% elif transfer.status == 'CANCELLED' %}
-                        <span class="badge bg-secondary px-2 py-1"><i class="bi bi-dash-circle me-1"></i>Cancelled</span>
+                        <span class="badge px-2 py-1" style="background-color: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;"><i class="bi bi-dash-circle me-1"></i>Cancelled</span>
                     {% endif %}
                 </div>
                 <h4 class="fw-bold mb-1">{{ transfer.asset.item_name }}</h4>
                 <p class="text-muted mb-0 small">
-                    <span class="font-monospace fw-bold">{{ transfer.asset.asset_code }}</span> &bull;
+                    <span class="cba-code">{{ transfer.asset.asset_code }}</span> &bull;
                     {{ transfer.asset.category.name }}
                     {% if transfer.asset.serial_number %}&bull; <span class="font-monospace">SN: {{ transfer.asset.serial_number }}</span>{% endif %}
                 </p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{% url 'inventory:asset_detail' transfer.asset.asset_code %}" class="btn btn-outline-primary btn-sm">
+                <a href="{% url 'inventory:asset_detail' transfer.asset.asset_code %}" class="btn btn-outline-cba btn-sm">
                     <i class="bi bi-box-seam me-1"></i> View Asset
                 </a>
-                <a href="{% url 'transfers:pending_list' %}" class="btn btn-outline-secondary btn-sm">
+                <a href="{% url 'transfers:pending_list' %}" class="btn btn-secondary-cba btn-sm">
                     <i class="bi bi-arrow-left me-1"></i> Back to Queue
                 </a>
             </div>
@@ -55,16 +55,16 @@
     <!-- Left Column: Movement Specifications -->
     <div class="col-lg-8">
         <!-- Origin to Destination Route Card -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3">
+        <div class="card shadow-sm mb-4 border-0">
+            <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-signpost-2 text-primary me-2"></i>Movement Route</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <div class="row align-items-center g-3">
                     <!-- Origin -->
                     <div class="col-md-5">
-                        <div class="p-3 border rounded bg-light h-100">
-                            <span class="badge bg-danger mb-2">Origin Snapshot</span>
+                        <div class="p-3 border rounded bg-white h-100">
+                            <span class="badge mb-2" style="background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">Origin Snapshot</span>
                             <h5 class="fw-bold mb-1">{{ transfer.from_department.name }}</h5>
                             <div class="text-muted small mb-2"><i class="bi bi-tag me-1"></i>Dept Code: {{ transfer.from_department.code }}</div>
                             <div class="fw-semibold text-dark">
@@ -84,8 +84,8 @@
 
                     <!-- Destination -->
                     <div class="col-md-5">
-                        <div class="p-3 border rounded bg-light border-success h-100">
-                            <span class="badge bg-success mb-2">Target Destination</span>
+                        <div class="p-3 border rounded bg-white h-100">
+                            <span class="badge mb-2" style="background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">Target Destination</span>
                             <h5 class="fw-bold mb-1">{{ transfer.to_department.name }}</h5>
                             <div class="text-muted small mb-2"><i class="bi bi-tag me-1"></i>Dept Code: {{ transfer.to_department.code }}</div>
                             <div class="fw-semibold text-dark">
@@ -127,19 +127,20 @@
     <!-- Right Column: Audit & Status Stepper -->
     <div class="col-lg-4">
         <!-- Status & Workflow Timeline -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-white py-3">
+        <!-- Lifecycle Stepper -->
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
                 <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>Lifecycle Timeline</h6>
             </div>
             <div class="card-body">
                 <ul class="list-unstyled mb-0 position-relative">
                     <!-- Step 1: Requested -->
                     <li class="mb-3 d-flex align-items-start">
-                        <div class="rounded-circle bg-primary text-white p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <div class="rounded-circle bg-primary-subtle text-primary border border-primary-subtle me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
                             <i class="bi bi-send-check"></i>
                         </div>
                         <div>
-                            <div class="fw-bold small">Requested</div>
+                            <div class="fw-semibold small">Requested</div>
                             <div class="text-muted small">{{ transfer.created_at|date:"M d, Y H:i" }}</div>
                             <small class="text-muted">By {{ transfer.requested_by.username|default:"System" }}</small>
                         </div>
@@ -148,13 +149,13 @@
                     <!-- Step 2: Approval / Rejection -->
                     <li class="mb-3 d-flex align-items-start">
                         <div class="rounded-circle 
-                            {% if transfer.status in 'APPROVED,COMPLETED' %}bg-info text-dark
-                            {% elif transfer.status == 'REJECTED' %}bg-danger text-white
-                            {% else %}bg-light text-muted border{% endif %} p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            {% if transfer.status in 'APPROVED,COMPLETED' %}bg-info-subtle text-info-emphasis border border-info-subtle
+                            {% elif transfer.status == 'REJECTED' %}bg-danger-subtle text-danger border border-danger-subtle
+                            {% else %}bg-light text-muted border{% endif %} me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
                             <i class="bi {% if transfer.status == 'REJECTED' %}bi-x-lg{% else %}bi-check-lg{% endif %}"></i>
                         </div>
                         <div>
-                            <div class="fw-bold small">
+                            <div class="fw-semibold small">
                                 {% if transfer.status == 'REJECTED' %}Rejected{% else %}Authorization{% endif %}
                             </div>
                             {% if transfer.approved_at %}
@@ -171,13 +172,13 @@
                     <!-- Step 3: Completion -->
                     <li class="d-flex align-items-start">
                         <div class="rounded-circle 
-                            {% if transfer.status == 'COMPLETED' %}bg-success text-white
-                            {% elif transfer.status == 'CANCELLED' %}bg-secondary text-white
-                            {% else %}bg-light text-muted border{% endif %} p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                            {% if transfer.status == 'COMPLETED' %}bg-success-subtle text-success border border-success-subtle
+                            {% elif transfer.status == 'CANCELLED' %}bg-secondary-subtle text-secondary border border-secondary-subtle
+                            {% else %}bg-light text-muted border{% endif %} me-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
                             <i class="bi {% if transfer.status == 'CANCELLED' %}bi-slash-circle{% else %}bi-box-seam{% endif %}"></i>
                         </div>
                         <div>
-                            <div class="fw-bold small">
+                            <div class="fw-semibold small">
                                 {% if transfer.status == 'CANCELLED' %}Cancelled{% else %}Physical Arrival &amp; Completion{% endif %}
                             </div>
                             {% if transfer.completed_at %}
@@ -196,35 +197,35 @@
 
         <!-- Administrative Actions -->
         {% if request.user.is_admin and transfer.is_open %}
-        <div class="card shadow-sm border-warning">
-            <div class="card-header bg-warning-subtle py-3">
-                <h6 class="mb-0 fw-bold"><i class="bi bi-gear text-dark me-2"></i>Administrative Actions</h6>
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-shield-lock text-primary me-2"></i>Administrative Actions</h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-3">
                 <div class="d-grid gap-2">
                     {% if transfer.status == 'PENDING' %}
                     <form method="post" action="{% url 'transfers:transfer_approve' transfer.pk %}" data-confirm="Approve this transfer request?">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-primary-cba w-100" style="min-height: 44px;">
                             <i class="bi bi-check-lg me-1"></i> Approve Request
                         </button>
                     </form>
                     <form method="post" action="{% url 'transfers:transfer_reject' transfer.pk %}" data-confirm="Reject this transfer request?">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-danger w-100">
+                        <button type="submit" class="btn btn-outline-danger w-100" style="min-height: 44px;">
                             <i class="bi bi-x-lg me-1"></i> Reject Request
                         </button>
                     </form>
                     {% elif transfer.status == 'APPROVED' %}
                     <form method="post" action="{% url 'transfers:transfer_complete' transfer.pk %}" data-confirm="Confirm physical arrival and complete this transfer? Asset location will be updated.">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-primary-cba w-100" style="min-height: 44px;">
                             <i class="bi bi-box-arrow-in-right me-1"></i> Complete Transfer
                         </button>
                     </form>
                     <form method="post" action="{% url 'transfers:transfer_cancel' transfer.pk %}" data-confirm="Cancel this approved transfer?">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-outline-secondary w-100">
+                        <button type="submit" class="btn btn-secondary-cba w-100" style="min-height: 44px;">
                             <i class="bi bi-slash-circle me-1"></i> Cancel Transfer
                         </button>
                     </form>

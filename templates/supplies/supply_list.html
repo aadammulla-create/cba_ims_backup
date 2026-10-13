@@ -5,29 +5,31 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h4 class="mb-1 fw-bold">Consumable Supplies Catalog</h4>
-        <p class="text-muted mb-0 small">Departmental office supplies, paper products, and consumable inventory with transaction-tracked balances.</p>
-    </div>
-    <div class="d-flex gap-2">
-        {% if low_stock_count > 0 %}
-        <a href="{% url 'supplies:low_stock_list' %}" class="btn btn-outline-warning text-dark btn-sm">
-            <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Low Stock
-            <span class="badge bg-warning text-dark ms-1">{{ low_stock_count }}</span>
-        </a>
-        {% endif %}
-        {% if request.user.is_admin %}
-        <a href="{% url 'supplies:stock_in' %}" class="btn btn-outline-success btn-sm">
-            <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
-        </a>
-        <a href="{% url 'supplies:stock_out' %}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-box-arrow-up me-1"></i> Stock Out
-        </a>
-        <a href="{% url 'supplies:supply_create' %}" class="btn btn-primary btn-sm">
-            <i class="bi bi-plus-lg me-1"></i> New Supply Item
-        </a>
-        {% endif %}
+<div class="cba-page-header mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+            <h1 class="cba-header-title">Consumable Supplies Catalog</h1>
+            <p class="cba-header-subtitle">Departmental office supplies, paper products, and consumable inventory with transaction-tracked balances</p>
+        </div>
+        <div class="cba-header-actions d-flex flex-wrap gap-2">
+            {% if low_stock_count > 0 %}
+            <a href="{% url 'supplies:low_stock_list' %}" class="btn btn-outline-warning text-dark" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Low Stock
+                <span class="badge bg-warning text-dark ms-1">{{ low_stock_count }}</span>
+            </a>
+            {% endif %}
+            {% if request.user.is_admin %}
+            <a href="{% url 'supplies:stock_in' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
+            </a>
+            <a href="{% url 'supplies:stock_out' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-box-arrow-up me-1"></i> Stock Out
+            </a>
+            <a href="{% url 'supplies:supply_create' %}" class="btn btn-primary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-plus-lg me-1"></i> New Supply Item
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -71,7 +73,8 @@
                         @click="open = !open"
                         :aria-expanded="open"
                         aria-controls="supplyFilterControls"
-                        aria-label="Toggle filter options">
+                        aria-label="Toggle filter options"
+                        style="min-height: 44px; display: inline-flex; align-items: center;">
                     <i class="bi me-1" :class="open ? 'bi-funnel-fill' : 'bi-funnel'"></i> Filters
                     {% if request.GET.category or request.GET.brand or request.GET.stock_status or request.GET.status %}
                         <span class="badge bg-primary rounded-pill ms-1">&bull;</span>

@@ -5,26 +5,28 @@
 
 {% block content %}
 <!-- Page Header -->
-<div class="page-header">
-    <div>
-        <h4 class="mb-1 fw-bold">Stock Transactions History</h4>
-        <p class="text-muted mb-0 small">Permanent audit trail of all incoming receipts, departmental issuances, and inventory adjustments.</p>
-    </div>
-    <div class="d-flex gap-2">
-        {% if request.user.is_admin %}
-        <a href="{% url 'supplies:stock_in' %}" class="btn btn-outline-success btn-sm">
-            <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
-        </a>
-        <a href="{% url 'supplies:stock_out' %}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-box-arrow-up me-1"></i> Stock Out
-        </a>
-        <a href="{% url 'supplies:stock_adjust' %}" class="btn btn-outline-warning text-dark btn-sm">
-            <i class="bi bi-sliders me-1"></i> Adjust
-        </a>
-        {% endif %}
-        <a href="{% url 'supplies:supply_list' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-archive me-1"></i> Supplies Catalog
-        </a>
+<div class="cba-page-header mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+        <div>
+            <h1 class="cba-header-title">Stock Transactions History</h1>
+            <p class="cba-header-subtitle">Permanent audit trail of incoming receipts, departmental issuances, and inventory adjustments</p>
+        </div>
+        <div class="cba-header-actions d-flex flex-wrap gap-2">
+            {% if request.user.is_admin %}
+            <a href="{% url 'supplies:stock_in' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
+            </a>
+            <a href="{% url 'supplies:stock_out' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-box-arrow-up me-1"></i> Stock Out
+            </a>
+            <a href="{% url 'supplies:stock_adjust' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-sliders me-1"></i> Adjust
+            </a>
+            {% endif %}
+            <a href="{% url 'supplies:supply_list' %}" class="btn btn-secondary-cba" style="min-height: 44px; display: inline-flex; align-items: center;">
+                <i class="bi bi-archive me-1"></i> Supplies Catalog
+            </a>
+        </div>
     </div>
 </div>
 
