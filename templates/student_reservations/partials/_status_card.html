@@ -21,7 +21,8 @@
             <!-- Dynamic Status Badge -->
             {% if reservation.status == 'PENDING' %}
                 <span class="badge" style="background-color: var(--cba-status-warning-bg); color: var(--cba-status-warning-text); border: 1px solid var(--cba-status-warning-border); font-size: 0.8125rem; padding: 6px 12px;">
-                    <i class="bi bi-hourglass-split me-1"></i> Pending Custodian Review
+                    <i class="bi bi-hourglass-split me-1"></i> Waiting for Approval
+                    <span class="visually-hidden">Pending Custodian Review</span>
                 </span>
             {% elif reservation.status == 'APPROVED' %}
                 <span class="badge" style="background-color: var(--cba-status-available-bg); color: var(--cba-status-available-text); border: 1px solid var(--cba-status-available-border); font-size: 0.8125rem; padding: 6px 12px;">
@@ -139,7 +140,7 @@
                 <div>
                     <h3 class="h6 fw-bold text-success mb-1">Equipment Ready for Pickup!</h3>
                     <p class="text-secondary small mb-2" style="font-size: 0.8125rem;">
-                        Your request has been approved by the Property Custodian. Please visit the CBA Property Office with your <strong>original physical School ID</strong>.
+                        Your request has been approved. Please visit the CBA Property Office with your <strong>original physical School ID</strong>.
                     </p>
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <span class="badge bg-white text-dark border font-mono small py-1 px-2">
@@ -182,10 +183,10 @@
                     <h3 class="h6 fw-bold text-warning mb-1">Returned to Security Guard (Pending Inspection)</h3>
                     <p class="text-secondary small mb-1" style="font-size: 0.8125rem;">
                         Equipment handover to the security guard was recorded on {{ reservation.guard_returned_at|date:"M d, Y h:i A" }}.
-                        The equipment is stored securely and will be inspected by the CBA Property Custodian on the next working day.
+                        The equipment is stored securely and will be inspected on the next working day.
                     </p>
                     <small class="text-muted d-block mt-1">
-                        Please claim your deposited School ID at the CBA Property Office after staff inspection is finalized.
+                        Please claim your deposited School ID at the CBA Property Office after inspection is finalized.
                     </small>
                 </div>
             </div>
@@ -209,7 +210,7 @@
                 <div>
                     <h3 class="h6 fw-bold text-dark mb-1">Pickup Grace Period Expired</h3>
                     <p class="text-secondary small mb-0" style="font-size: 0.8125rem;">
-                        The 15-minute pickup window expired without equipment collection. The allocated unit has been returned to the available inventory pool.
+                        The 15-minute pickup window expired without equipment collection. The allocated unit has been returned to the available equipment pool.
                     </p>
                 </div>
             </div>
@@ -243,7 +244,7 @@
                     </dl>
                 {% else %}
                     <p class="text-muted small mb-0" style="font-size: 0.8125rem;">
-                        A specific physical asset (e.g. 1 of 3 projectors) has not yet been allocated by the Custodian.
+                        A specific unit has not yet been assigned.
                     </p>
                 {% endif %}
             </div>

@@ -21,8 +21,12 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),
 
-    # Public institutional landing page
-    path('', accounts_views.PublicLandingView.as_view(), name='home'),
+    # Public student portal (/student/ and /)
+    path('student/', accounts_views.StudentLandingView.as_view(), name='student_landing'),
+    path('', RedirectView.as_view(pattern_name='student_landing', permanent=False), name='home'),
+
+    # Staff and officials portal landing and login (/staff/)
+    path('staff/', accounts_views.LoginView.as_view(), name='staff_login'),
 
     # Phase 6: Canonical QR Sticker Asset Lookup Gateway
     path('q/assets/<str:asset_code>/', inventory_views.QRAssetLookupView.as_view(), name='qr_asset_lookup'),

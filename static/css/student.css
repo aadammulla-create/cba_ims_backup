@@ -1,0 +1,332 @@
+/* CBA Equipment Reservations — Student UX Scoped Styles */
+
+.student-ui {
+  --student-blue: #1d4ed8;
+  --student-ink: #172236;
+  --student-muted: #526174;
+  --student-border: #e2e8f0;
+  color: var(--student-ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background-color: #ffffff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.student-ui .student-hero,
+.student-ui .student-page-heading,
+.student-ui .student-confirmation,
+.student-ui .student-track {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.student-ui .student-hero {
+  padding-block: clamp(44px, 8vw, 96px) 48px;
+}
+
+.student-ui .student-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  color: var(--student-blue);
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.student-ui h1 {
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  line-height: 1.15;
+  letter-spacing: -.035em;
+  font-weight: 750;
+  color: var(--student-ink);
+  margin-bottom: 16px;
+}
+
+.student-ui .student-lede,
+.student-ui .student-page-heading p {
+  max-width: 52ch;
+  color: var(--student-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.student-ui .student-actions,
+.student-ui .student-steps {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.student-ui .student-actions {
+  margin-top: 28px;
+}
+
+.student-ui .student-steps {
+  margin: 20px auto 48px;
+  max-width: 720px;
+  padding-block: 18px;
+  border-top: 1px solid var(--student-border);
+  color: var(--student-muted);
+  font-size: 0.95rem;
+}
+
+.student-ui .student-steps span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.student-ui .student-steps strong {
+  color: var(--student-blue);
+  margin-right: 6px;
+}
+
+.student-ui .student-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 11px 20px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.student-ui .student-btn-primary {
+  background: var(--student-blue);
+  color: white;
+}
+
+.student-ui .student-btn-primary:hover {
+  background: #1e40af;
+  color: white;
+}
+
+.student-ui .student-btn-link {
+  background: transparent;
+  color: var(--student-blue);
+  border-color: transparent;
+}
+
+.student-ui .student-btn-link:hover {
+  background: #f1f5f9;
+  color: #1e40af;
+}
+
+.student-ui .student-btn:focus-visible,
+.student-ui a:focus-visible,
+.student-ui input:focus-visible,
+.student-ui select:focus-visible,
+.student-ui button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.student-ui .student-page-heading {
+  padding-block: 28px 18px;
+}
+
+.student-ui .student-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--student-ink);
+  margin-block: 24px 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--student-border);
+}
+
+.student-ui .student-note {
+  font-size: .88rem;
+  color: var(--student-muted);
+  margin-top: 12px;
+}
+
+.student-ui .student-token {
+  padding: 20px;
+  border: 1px solid var(--student-border);
+  border-radius: 10px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-block: 20px;
+}
+
+.student-ui .student-token-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--student-muted);
+}
+
+.student-ui .student-token-value {
+  font-size: .95rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  width: 100%;
+}
+
+.student-ui .student-track-form {
+  display: grid;
+  gap: 12px;
+  margin-block: 24px;
+}
+
+.student-ui .student-track-form label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--student-ink);
+}
+
+.student-ui .student-track-form input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.student-ui .student-track-form input:focus {
+  border-color: var(--student-blue);
+}
+
+.student-ui .student-error {
+  color: #9f1239;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-top: 14px;
+}
+
+.student-ui .student-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  color: var(--student-ink);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.student-ui .student-brand:hover {
+  color: var(--student-ink);
+}
+
+.student-ui .student-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  background: #1e3a8a;
+  color: #fff;
+  border-radius: 6px;
+}
+
+.student-ui .student-public-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.student-ui .student-public-nav a {
+  padding: 8px 14px;
+  color: var(--student-muted);
+  text-decoration: none;
+  font-weight: 550;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.student-ui .student-public-nav a:hover {
+  color: var(--student-ink);
+  background: #f1f5f9;
+}
+
+.student-ui .student-public-nav a.active {
+  color: var(--student-blue);
+  font-weight: 600;
+  background: #eff6ff;
+}
+
+.student-ui .student-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--student-muted);
+  text-decoration: none;
+  font-weight: 550;
+  margin-bottom: 10px;
+}
+
+.student-ui .student-back:hover {
+  color: var(--student-blue);
+}
+
+.student-ui .student-confirmation-state {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #059669;
+  margin-bottom: 6px;
+}
+
+.student-ui .student-policy-note {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid var(--student-border);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--student-muted);
+  line-height: 1.5;
+  margin-block: 16px;
+}
+
+@media (max-width: 575.98px) {
+  .student-ui .student-hero {
+    padding-top: 38px;
+  }
+  .student-ui .student-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .student-ui .student-btn {
+    width: 100%;
+  }
+  .student-ui .student-steps {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .student-ui .student-token button {
+    width: 100%;
+  }
+}

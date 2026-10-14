@@ -1,35 +1,18 @@
 {% extends 'student_reservations/base_student.html' %}
 {% load static %}
 
-{% block title %}Reserve Equipment — CBA Student Equipment Reservations{% endblock %}
+{% block title %}Reserve Equipment — CBA Equipment Reservations{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-12 col-lg-9 col-xl-8">
 
-        <!-- Form Header Card with Condensed Policy Callout -->
-        <div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs mb-3">
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <a href="{% url 'student_reservations:catalog' %}" class="btn btn-sm btn-light border py-1 px-2 text-secondary">
-                    <i class="bi bi-arrow-left me-1"></i> Catalog
-                </a>
-                <span class="inst-badge">STUDENT RESERVATION</span>
-            </div>
-            <h1 class="h4 fw-bold text-dark mb-1" style="letter-spacing: -0.015em;">
-                Equipment Reservation Request
-            </h1>
-            <p class="text-secondary small mb-3">
-                Reserve instructional equipment in 1–2 minutes. No account or password required.
-            </p>
-
-            <!-- Condensed School ID & Grace Period Banner -->
-            <div class="p-2.5 rounded border border-primary-subtle d-flex align-items-center gap-2.5 small" style="background-color: var(--cba-primary-light);">
-                <i class="bi bi-shield-check text-primary fs-5 flex-shrink-0"></i>
-                <div class="text-secondary" style="font-size: 0.8125rem;">
-                    <strong class="text-dark">Physical School ID Custody Policy:</strong> Your original physical School ID must be deposited at the CBA Property Office upon pickup. Approved reservations are held for a <strong>15-minute grace period</strong> from your scheduled pickup time.
-                </div>
-            </div>
-        </div>
+        <!-- Form Header per Section 4 -->
+        <header class="student-page-heading mb-3">
+            <a class="student-back" href="{% url 'student_reservations:catalog' %}">← Equipment</a>
+            <h1>Reserve equipment</h1>
+            <p>Complete the details below. No account needed.</p>
+        </header>
 
         <!-- Streamlined Single-Page Reservation Form -->
         {{ category_types_data|json_script:"category-types-data" }}
@@ -52,10 +35,7 @@
 
                 <!-- SECTION 1: Equipment & Schedule -->
                 <div class="mb-4">
-                    <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-light-subtle">
-                        <span class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.7rem;">1</span>
-                        <h2 class="h6 fw-bold text-dark mb-0">Equipment &amp; Schedule</h2>
-                    </div>
+                    <h2 class="student-section-title">Equipment & schedule</h2>
 
                     <div class="row g-3">
                         <!-- Category Selector -->
@@ -145,12 +125,9 @@
                     </div>
                 </div>
 
-                <!-- SECTION 2: Student Details & Purpose -->
+                <!-- SECTION 2: Your Details -->
                 <div class="mb-4">
-                    <div class="d-flex align-items-center gap-2 mb-3 pb-1 border-bottom border-light-subtle">
-                        <span class="badge bg-primary text-white rounded-pill px-2 py-1" style="font-size: 0.7rem;">2</span>
-                        <h2 class="h6 fw-bold text-dark mb-0">Student Identification &amp; Purpose</h2>
-                    </div>
+                    <h2 class="student-section-title">Your details</h2>
 
                     <div class="row g-3">
                         <!-- Student ID Number -->
@@ -331,19 +308,19 @@
                     </div>
                 </div>
 
-                <!-- Submit Button & Disclaimer -->
+                <!-- Submit Button & Policy Guidance -->
                 <div class="pt-3 border-top border-light-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-                    <div class="text-muted small" style="font-size: 0.75rem;">
-                        <i class="bi bi-shield-lock me-1"></i>
-                        Original School ID must be physically deposited at the CBA Property Office at pickup.
+                    <div class="text-muted small" style="font-size: 0.8rem;">
+                        <i class="bi bi-info-circle me-1 text-primary"></i>
+                        <strong>Physical School ID Custody Policy:</strong> Bring your original School ID when collecting approved equipment.
                     </div>
 
                     <div class="d-flex gap-2">
-                        <a href="{% url 'student_reservations:catalog' %}" class="btn btn-secondary-cba">
+                        <a href="{% url 'student_reservations:catalog' %}" class="btn btn-sm btn-light border py-1.5 px-3">
                             Cancel
                         </a>
-                        <button type="submit" class="btn btn-primary-cba" :disabled="submitting">
-                            <span x-show="!submitting"><i class="bi bi-send me-1.5"></i> Submit Reservation Request</span>
+                        <button type="submit" class="btn btn-sm btn-primary-cba px-3 py-1.5" :disabled="submitting">
+                            <span x-show="!submitting">Submit request &rarr;</span>
                             <span x-show="submitting" x-cloak><span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting...</span>
                         </button>
                     </div>

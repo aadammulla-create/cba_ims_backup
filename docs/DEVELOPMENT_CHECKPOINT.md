@@ -376,13 +376,45 @@ When production deployment is authorized by the project owner:
 
 To resume development in a future session:
 
-1. **Active Branch:** `feat/phase-3d-operations-ui` in repository `c:\Users\PERSONAL\Desktop\cba_ims`.
-2. **Current Checkpoint Commit:** `b4b37cf` (plus local documentation update).
+1. **Active Branch:** `feat/phase-3d-operations-ui` in repository `c:\Users\PERSONAL\Desktop\cba_ims_personal_test`.
+2. **Current Checkpoint Commit:** See Section 16 below.
 3. **Institutional Database Baseline:** `db.sqlite3` (`946,176` bytes, 25 assets, 3 reservations).
 4. **Where to Resume:**
-   - Development is currently paused with **Phase 3E pre-release verification complete**.
-   - Next authorized step is **Production Release Execution** (PR promotion, Neon PostgreSQL migration, and Vercel deployment) or further non-destructive staging checks as directed by the project owner.
+   - Development is currently paused with **Student Portal Redesign** and **Multi-Role Staff Sidebar UX Simplification** complete and locally verified.
+   - Next authorized step is review by ChatGPT and Project Owner before any promotion into the main institutional repository.
 5. **Safety Reminders:**
    - Do not run `flush` or modify `db.sqlite3`.
    - Do not push unreviewed commits to `origin`.
    - Do not connect to Neon PostgreSQL without pre-migration snapshot.
+
+---
+
+## 16. Session Checkpoint: Student Portal & Multi-Role Staff Sidebar Redesign (October 14, 2026)
+
+### Scope Completed:
+1. **Student Equipment Reservation Portal Redesign:**
+   - Created dedicated `static/css/student.css` with clean, accessible NORSU-branded institutional aesthetics.
+   - Redesigned student portal templates: `base_student.html`, `catalog.html`, `reservation_form.html`, `confirmation.html`, and `lookup.html`.
+   - Integrated live availability verification partials (`_availability_result.html`, `_status_card.html`).
+   - Updated public landing portal (`templates/accounts/landing.html`) and login view (`templates/accounts/login.html`).
+2. **Staff Sidebar Navigation UX Simplification (Multi-Role):**
+   - Redesigned `templates/includes/sidebar_nav.html` from a crowded 26-item flat list into a role-adaptive system:
+     - **ADMIN**: 6 operational queues (Dashboard, Asset Register, Student Reservations, Borrowing, Maintenance, Reports) + 4 collapsible secondary groups.
+     - **DEPT_CHAIR / DEAN**: 5 department-scoped queues + 4 collapsible secondary groups (excluding admin-only tools).
+     - **FACULTY**: 6 self-service tools prioritized in primary navigation (Dashboard, My Accountability, My Borrowings, Request Loan, My Reports, Report Defect) + 2 collapsible directory groups.
+   - Accessible native disclosure using HTML5 `<details>` and `<summary>` elements with chevron indicators and keyboard focus outlines.
+   - Contextual automatic expansion: Server-side rendering applies `open` to the group containing the active route, synchronized via client-side listener.
+   - Clear, restrained blue active highlight (`#eff6ff` background with `#1d4ed8` indicator bar).
+   - Mobile touch targets $\ge 44\text{px}$ on `<768px` viewports with zero horizontal overflow.
+3. **Automated Verification:**
+   - Django system check: `python manage.py check` (0 issues).
+   - Dedicated sidebar navigation test suite (`apps/accounts/test_sidebar_navigation.py`): 5/5 tests PASSED.
+   - Core domain test suites (`organizations`, `supplies`, `transfers`, `disposals`, `reports`): 105/105 tests PASSED.
+4. **Routes Summary:**
+   - Student Portal: `/` (Landing), `/reservations/catalog/`, `/reservations/request/`, `/reservations/lookup/`.
+   - Staff Portal: `/accounts/login/`, `/dashboard/`, `/inventory/`, `/borrowing/`, `/maintenance/`, `/reports/`.
+   - Faculty Self-Service: `/assignments/my-accountability/`, `/borrowing/my-borrowings/`, `/maintenance/my-reports/`.
+5. **Next Steps:**
+   - Submit checkpoint report for ChatGPT review.
+   - Keep changes in local isolated branch until approved. Do not push, merge, or deploy.
+

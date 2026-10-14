@@ -1,0 +1,25 @@
+{% extends 'student_reservations/base_student.html' %}
+{% load static %}
+
+{% block title %}CBA Equipment Reservations — College of Business Administration{% endblock %}
+
+{% block content %}
+<section class="student-hero" aria-labelledby="student-home-title">
+  <p class="student-eyebrow">COLLEGE OF BUSINESS ADMINISTRATION</p>
+  <h1 id="student-home-title">Reserve equipment for your next class.</h1>
+  <p class="student-lede">Choose a projector, select your schedule, and send a request. No account needed.</p>
+  <div class="student-actions">
+    <a class="student-btn student-btn-primary" href="{% url 'student_reservations:catalog' %}">
+      Browse equipment <span aria-hidden="true">→</span>
+    </a>
+    <a class="student-btn student-btn-link" href="{% url 'student_reservations:public_lookup_search' %}">
+      Track my request
+    </a>
+  </div>
+</section>
+<section class="student-steps" aria-label="How reservations work">
+  <span><strong>01</strong> Choose equipment</span>
+  <span><strong>02</strong> Submit request</span>
+  <span><strong>03</strong> Collect after approval</span>
+</section>
+{% endblock %}

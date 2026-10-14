@@ -12,8 +12,9 @@ from apps.student_reservations.models import StudentReservation
 
 
 class Phase3CPublicLandingAndLoginTests(TestCase):
-    """Focused Phase 3C verification tests for the public landing page,
-    staff login redesign, routing/redirect rules, and public/private boundaries.
+    """Targeted verification tests for the separate Student Portal (/student/)
+    and Staff & Officials Portal (/staff/), routing/redirect rules, authentication,
+    and public/private security boundaries.
     """
 
     @classmethod
@@ -36,7 +37,7 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
             role=User.Role.FACULTY,
         )
 
-        # Seed private operational records to verify they are never leaked on '/'
+        # Seed private operational records to verify they are never leaked
         cls.dept = Department.objects.create(name='Accountancy', code='ACCT3C')
         cls.category = AssetCategory.objects.create(name='IT Equipment 3C', code='IT3C')
         cls.private_asset = Asset.objects.create(
@@ -70,43 +71,85 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
         )
 
     # ------------------------------------------------------------------
-    # 1. Public Landing Page & Primary Actions
+    # 1. Student Portal (/student/ and /)
     # ------------------------------------------------------------------
 
-    def test_anonymous_root_returns_public_landing_page_http_200(self):
-        """Anonymous GET / serves the public landing page (HTTP 200) without redirecting."""
+    def test_anonymous_root_redirects_to_student_landing_page(self):
+        """Anonymous GET / redirects (HTTP 302) to /student/."""
         response = self.client.get(reverse('home'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('student_landing'))
+
+    def test_student_landing_page_returns_http_200_with_student_branding(self):
+        """GET /student/ returns HTTP 200 with dedicated student branding and elements."""
+        response = self.client.get(reverse('student_landing'))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'accounts/landing.html')
-        self.assertContains(response, 'CBA IMS')
+        self.assertTemplateUsed(response, 'student_reservations/landing.html')
+
+        # Student-facing branding
+        self.assertContains(response, 'CBA Equipment Reservations')
         self.assertContains(response, 'College of Business Administration')
-        self.assertContains(response, 'Student Reservation Process Overview')
-        self.assertContains(response, 'Public Student Services')
-        self.assertContains(response, 'Authenticated Staff Operations')
 
-    def test_public_landing_page_includes_primary_action_links_for_anonymous_visitor(self):
-        """Public homepage exposes Browse Equipment, Track Reservation, Reserve, and Staff Sign In."""
-        response = self.client.get('/')
+        # Permitted student features
+        self.assertContains(response, 'Browse equipment')
+        self.assertContains(response, 'Reserve equipment for your next class')
+        self.assertContains(response, 'Track my request')
+        self.assertContains(response, 'How reservations work')
+        self.assertContains(response, '01')
+        self.assertContains(response, 'Choose equipment')
+        self.assertContains(response, '02')
+        self.assertContains(response, 'Submit request')
+        self.assertContains(response, '03')
+        self.assertContains(response, 'Collect after approval')
+
+    def test_student_portal_does_not_contain_staff_links_or_internal_terms(self):
+        """Student landing page must not show CBA IMS, Staff Sign In, dashboard links, or internal ops."""
+        response = self.client.get(reverse('student_landing'))
         self.assertEqual(response.status_code, 200)
+        html = response.content.decode('utf-8')
 
-        catalog_url = reverse('student_reservations:catalog')
-        request_url = reverse('student_reservations:public_request')
-        lookup_url = reverse('student_reservations:public_lookup_search')
-        login_url = reverse('accounts:login')
+        # Forbidden terminology & branding
+        self.assertNotIn('CBA IMS', html)
+        self.assertNotIn('Inventory Management System', html)
+        self.assertNotIn('Staff Sign In', html)
+        self.assertNotIn('Go to Dashboard', html)
+        self.assertNotIn('Custodian Queue', html)
+        self.assertNotIn('Property Custodian', html)
+        self.assertNotIn('/staff/', html)
+        self.assertNotIn('/accounts/login/', html)
+        self.assertNotIn('reverse("dashboard")', html)
 
-        self.assertContains(response, 'Browse Equipment')
-        self.assertContains(response, 'Track Reservation')
-        self.assertContains(response, 'Track Reservation Status')
-        self.assertNotContains(response, 'Track or Cancel Reservation')
-        self.assertContains(response, 'Staff Sign In')
-        self.assertContains(response, f'href="{catalog_url}"')
-        self.assertContains(response, f'href="{request_url}"')
-        self.assertContains(response, f'href="{lookup_url}"')
-        self.assertContains(response, f'href="{login_url}"')
+    def test_public_student_pages_do_not_leak_custodian_navigation_or_staff_links(self):
+        """Student reservation base and catalog layouts must not contain custodian links or staff links."""
+        routes = [
+            reverse('student_reservations:catalog'),
+            reverse('student_reservations:public_request'),
+            reverse('student_reservations:public_lookup_search'),
+        ]
+        for url in routes:
+            with self.subTest(url=url):
+                # Test anonymous visitor
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 200)
+                html = response.content.decode('utf-8')
+                self.assertNotIn('Custodian Queue', html)
+                self.assertNotIn('/staff/', html)
+                self.assertNotIn('Staff Sign In', html)
+                self.assertNotIn('CBA IMS', html)
+
+                # Test authenticated admin visitor on public student pages
+                self.client.force_login(self.admin_user)
+                admin_response = self.client.get(url)
+                self.assertEqual(admin_response.status_code, 200)
+                admin_html = admin_response.content.decode('utf-8')
+                self.assertNotIn('Custodian Queue', admin_html)
+                self.assertNotIn('Property Custodian Queue', admin_html)
+                self.assertNotIn('/staff/', admin_html)
+                self.client.logout()
 
     def test_public_landing_page_does_not_expose_private_records_or_pii(self):
-        """Public homepage must never expose private inventory items, student PII, or audit logs."""
-        response = self.client.get('/')
+        """Student landing page must never expose private inventory items, student PII, or audit logs."""
+        response = self.client.get(reverse('student_landing'))
         self.assertEqual(response.status_code, 200)
         html = response.content.decode('utf-8')
 
@@ -121,57 +164,36 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
         self.assertNotIn('Internal custodian audit trail entry', html)
 
     # ------------------------------------------------------------------
-    # 2. Anonymous vs. Authenticated Routing & Dashboard Access
+    # 2. Staff and Officials Portal (/staff/ and /accounts/login/)
     # ------------------------------------------------------------------
 
-    def test_anonymous_dashboard_redirects_to_staff_login_with_next(self):
-        """Anonymous GET /dashboard/ redirects to /accounts/login/?next=/dashboard/."""
-        response = self.client.get(reverse('dashboard'))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], '/accounts/login/?next=/dashboard/')
-
-    def test_authenticated_user_visiting_root_sees_go_to_dashboard_action(self):
-        """Authenticated users visiting GET / receive HTTP 200 with a clear Go to Dashboard action."""
-        self.client.force_login(self.faculty_user)
-        response = self.client.get('/')
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'accounts/landing.html')
-        self.assertContains(response, 'Go to Dashboard')
-        self.assertContains(response, f'href="{reverse("dashboard")}"')
-
-    def test_authenticated_user_visiting_login_redirects_to_dashboard(self):
-        """Authenticated users visiting GET /accounts/login/ are redirected to /dashboard/."""
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('accounts:login'))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response['Location'], reverse('dashboard'))
-
-    def test_authenticated_user_can_access_dashboard(self):
-        """Authenticated staff users can access GET /dashboard/ (HTTP 200)."""
-        self.client.force_login(self.admin_user)
-        response = self.client.get(reverse('dashboard'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'accounts/dashboard.html')
-
-    # ------------------------------------------------------------------
-    # 3. Staff Login Redesign & Authentication Behavior
-    # ------------------------------------------------------------------
-
-    def test_staff_login_page_renders_institutional_layout_and_form(self):
-        """GET /accounts/login/ renders Staff Sign In heading, LoginForm, CSRF token, and homepage link."""
-        response = self.client.get(reverse('accounts:login'))
+    def test_staff_portal_renders_workspace_layout_and_login_form(self):
+        """GET /staff/ renders Staff Workspace branding, LoginForm, and CSRF token."""
+        response = self.client.get(reverse('staff_login'))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'accounts/login.html')
         self.assertIsInstance(response.context['form'], LoginForm)
-        self.assertContains(response, 'Staff Sign In')
-        self.assertContains(response, 'CBA IMS')
+        self.assertContains(response, 'CBA IMS &mdash; Staff Workspace')
+        self.assertContains(response, 'Personnel access')
+        self.assertContains(response, 'Equipment, custody, and accountability.')
         self.assertContains(response, 'csrfmiddlewaretoken')
-        self.assertContains(response, f'href="{reverse("home")}"')
+        self.assertContains(response, 'Sign In to Staff Workspace')
 
-    def test_successful_staff_login_redirects_to_dashboard_by_default(self):
-        """Valid staff login POST without next parameter redirects to /dashboard/."""
+        # Must not contain student reservation actions or forms
+        self.assertNotContains(response, 'Browse equipment')
+        self.assertNotContains(response, 'How reservations work')
+
+    def test_accounts_login_backward_compatibility(self):
+        """GET /accounts/login/ maintains full compatibility and serves the staff login view."""
+        response = self.client.get(reverse('accounts:login'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'accounts/login.html')
+        self.assertContains(response, 'CBA IMS &mdash; Staff Workspace')
+
+    def test_successful_staff_login_redirects_to_dashboard(self):
+        """Valid staff login POST at /staff/ without next parameter redirects to /dashboard/."""
         response = self.client.post(
-            reverse('accounts:login'),
+            reverse('staff_login'),
             {'username': self.admin_user.username, 'password': self.password},
         )
         self.assertEqual(response.status_code, 302)
@@ -180,7 +202,7 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
     def test_failed_staff_login_displays_error_alert_and_stays_on_login(self):
         """Invalid credentials return HTTP 200 with clear error message and unauthenticated session."""
         response = self.client.post(
-            reverse('accounts:login'),
+            reverse('staff_login'),
             {'username': self.admin_user.username, 'password': 'WrongPassword!999'},
         )
         self.assertEqual(response.status_code, 200)
@@ -189,18 +211,18 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
 
     # ------------------------------------------------------------------
-    # 4. Safe Handling of `next` Redirects
+    # 3. Safe Handling of `next` Redirects
     # ------------------------------------------------------------------
 
     def test_login_honors_valid_safe_internal_next_url(self):
         """Valid internal next URL is preserved in the login form and honored upon login."""
         safe_next = '/inventory/assets/'
-        get_res = self.client.get(reverse('accounts:login'), {'next': safe_next})
+        get_res = self.client.get(reverse('staff_login'), {'next': safe_next})
         self.assertEqual(get_res.status_code, 200)
         self.assertContains(get_res, f'name="next" value="{safe_next}"')
 
         post_res = self.client.post(
-            reverse('accounts:login'),
+            reverse('staff_login'),
             {
                 'username': self.admin_user.username,
                 'password': self.password,
@@ -222,7 +244,7 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
             with self.subTest(unsafe_next=unsafe_next):
                 self.client.logout()
                 response = self.client.post(
-                    f"{reverse('accounts:login')}?next={unsafe_next}",
+                    f"{reverse('staff_login')}?next={unsafe_next}",
                     {
                         'username': self.faculty_user.username,
                         'password': self.password,
@@ -232,25 +254,51 @@ class Phase3CPublicLandingAndLoginTests(TestCase):
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(response['Location'], reverse('dashboard'))
 
-    def test_authenticated_user_on_login_rejects_unsafe_next_url(self):
-        """Authenticated user visiting /accounts/login/?next=//evil.example.com redirects safely to /dashboard/."""
-        self.client.force_login(self.faculty_user)
-        response = self.client.get(reverse('accounts:login'), {'next': '//evil.example.com/steal'})
+    def test_authenticated_user_visiting_staff_login_redirects_to_dashboard(self):
+        """Authenticated staff visiting GET /staff/ are redirected to /dashboard/."""
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse('staff_login'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('dashboard'))
 
     # ------------------------------------------------------------------
-    # 5. Existing Student Reservation Workflows Connected & Public
+    # 4. Security & Role-Based Access Control (RBAC)
     # ------------------------------------------------------------------
 
-    def test_existing_public_student_reservation_routes_remain_accessible_without_login(self):
-        """Catalog, reservation request form, and reservation lookup remain accessible anonymously."""
-        public_routes = [
-            reverse('student_reservations:catalog'),
-            reverse('student_reservations:public_request'),
-            reverse('student_reservations:public_lookup_search'),
+    def test_anonymous_user_cannot_access_internal_management_views(self):
+        """Anonymous access to internal views must redirect to login."""
+        internal_urls = [
+            reverse('dashboard'),
+            reverse('inventory:asset_list'),
+            reverse('student_reservations:custodian_list'),
+            reverse('maintenance:case_list'),
+            reverse('supplies:supply_list'),
+            reverse('transfers:pending_list'),
+            reverse('disposals:pending_list'),
+            reverse('reports:reports_dashboard'),
+            reverse('audit:audit_log_list'),
         ]
-        for url in public_routes:
+        for url in internal_urls:
             with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.status_code, 302)
+                self.assertIn('/accounts/login/', response['Location'])
+
+    def test_non_admin_cannot_access_admin_queues_and_logs(self):
+        """Faculty cannot access custodian reservation queue or audit logs (HTTP 403)."""
+        self.client.force_login(self.faculty_user)
+        restricted_urls = [
+            reverse('student_reservations:custodian_list'),
+            reverse('audit:audit_log_list'),
+        ]
+        for url in restricted_urls:
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertEqual(response.status_code, 403)
+
+    def test_authenticated_user_can_access_dashboard(self):
+        """Authenticated staff users can access GET /dashboard/ (HTTP 200)."""
+        self.client.force_login(self.admin_user)
+        response = self.client.get(reverse('dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'accounts/dashboard.html')

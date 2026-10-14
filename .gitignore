@@ -64,4 +64,11 @@ Thumbs.db
 
 # Visual QA unredacted captures
 docs/visual-qa/screens/
+docs/visual-qa/sidebar_redesign/
+
+# Personal test credentials & local scratch
+TEST_ACCOUNT_CREDENTIALS.txt
+setup_fictional_test_data.py
+scripts/capture_sidebar_qa.py
+
 

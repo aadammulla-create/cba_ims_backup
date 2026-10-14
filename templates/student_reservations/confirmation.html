@@ -1,164 +1,97 @@
 {% extends 'student_reservations/base_student.html' %}
 {% load static %}
 
-{% block title %}Reservation Confirmed — CBA Student Equipment Reservations{% endblock %}
+{% block title %}Request Received — CBA Equipment Reservations{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-lg-8 col-xl-7">
+<section class="student-confirmation" aria-labelledby="received-title">
+  <p class="student-confirmation-state">✓ Request submitted</p>
+  <h1 id="received-title">Request received.</h1>
+  <p class="student-lede">Waiting for approval. Save your tracking code to check for updates.</p>
 
-        <!-- Confirmation Hero Card -->
-        <div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs mb-3 text-center">
-            <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-2"
-                 style="width: 52px; height: 52px; background-color: var(--cba-status-available-bg); border: 1px solid var(--cba-status-available-border); color: var(--cba-status-available-text);">
-                <i class="bi bi-check-lg fs-2"></i>
-            </div>
-            <h1 class="h4 fw-bold text-dark mb-1" style="letter-spacing: -0.015em;">
-                Reservation Request Submitted
-            </h1>
-            <p class="text-secondary small mb-3">
-                Your equipment reservation has been recorded and is currently awaiting Property Custodian review.
-            </p>
+  <div class="student-token" x-data="{ copied: false }">
+    <span class="student-token-label">Your tracking code</span>
+    <code x-ref="tokenValue" class="student-token-value">{{ reservation.lookup_token }}</code>
+    <button class="student-btn student-btn-primary" type="button"
+      @click="navigator.clipboard.writeText($refs.tokenValue.textContent.trim()).then(() => copied = true)">
+      <span x-show="!copied">Copy code</span>
+      <span class="visually-hidden">Copy Token</span>
+      <span x-show="copied" x-cloak>Copied</span>
+    </button>
+  </div>
 
-            <!-- Secure Lookup Token Box -->
-            <div class="p-3 rounded border border-primary-subtle text-start mb-3" style="background-color: var(--cba-primary-light);"
-                 x-data="{ copied: false, token: '{{ reservation.lookup_token }}' }">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="text-primary fw-semibold small text-uppercase" style="font-size: 0.725rem; letter-spacing: 0.05em;">
-                        <i class="bi bi-key-fill me-1"></i> Your Secure Tracking Token
-                    </span>
-                    <span class="badge bg-white text-primary border border-primary-subtle small font-mono">SAVE THIS</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 mt-1">
-                    <code class="form-control form-control-sm font-mono text-dark bg-white border border-light-subtle select-all text-break py-1 px-2"
-                          style="font-size: 0.85rem; user-select: all;" x-text="token">{{ reservation.lookup_token }}</code>
-                    <button type="button" class="btn btn-sm btn-primary-cba text-nowrap px-3"
-                            @click="navigator.clipboard.writeText(token); copied = true; setTimeout(() => copied = false, 2500)">
-                        <span x-show="!copied"><i class="bi bi-clipboard me-1"></i> Copy Token</span>
-                        <span x-show="copied" x-cloak><i class="bi bi-check-circle-fill me-1"></i> Copied!</span>
-                    </button>
-                </div>
-                <div class="alert alert-warning py-1.5 px-2 mt-2 mb-0 d-flex align-items-center gap-1.5 small" style="font-size: 0.75rem;">
-                    <i class="bi bi-info-circle-fill text-warning flex-shrink-0"></i>
-                    <span><strong>Notice:</strong> No automated SMS or email notification is sent. Please copy or bookmark your tracking token now to check your reservation status.</span>
-                </div>
-            </div>
+  <div class="student-actions mb-3">
+    <a class="student-btn student-btn-link ps-0" href="{% url 'student_reservations:public_lookup' token=reservation.lookup_token %}">
+      Check reservation status &rarr;
+    </a>
+  </div>
 
-            <!-- Direct Actions -->
-            <div class="d-flex flex-wrap justify-content-center gap-2">
-                <a href="{% url 'student_reservations:public_lookup' token=reservation.lookup_token %}" class="btn btn-primary-cba">
-                    <i class="bi bi-search me-1.5"></i> Track Live Status Now
-                </a>
-                <a href="{% url 'student_reservations:catalog' %}" class="btn btn-secondary-cba">
-                    <i class="bi bi-grid me-1.5"></i> Return to Catalog
-                </a>
-            </div>
-        </div>
+  <p class="student-note">Notice: No automated SMS or email notification is sent. Keep this code somewhere safe.</p>
+</section>
 
-        <!-- Reservation Summary Card -->
-        <div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs mb-3">
-            <h2 class="h6 fw-bold text-dark mb-3 pb-2 border-bottom border-light-subtle">
-                <i class="bi bi-card-checklist me-1.5 text-primary"></i> Reservation Summary
-            </h2>
+<!-- Concise Summary Card -->
+<div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs my-4" style="max-width: 720px; margin-inline: auto;">
+    <h2 class="h6 fw-bold text-dark mb-3 pb-2 border-bottom border-light-subtle">
+        Reservation Summary
+    </h2>
 
-            <dl class="row g-2 mb-0 small">
-                <dt class="col-sm-4 text-secondary">Student Name:</dt>
-                <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.student_name }}</dd>
+    <dl class="row g-2 mb-0 small">
+        <dt class="col-sm-4 text-secondary">Student Name:</dt>
+        <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.student_name }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Student ID Number:</dt>
-                <dd class="col-sm-8 font-mono text-dark">{{ reservation.student_id }}</dd>
+        <dt class="col-sm-4 text-secondary">Student ID Number:</dt>
+        <dd class="col-sm-8 font-mono text-dark">{{ reservation.student_id }}</dd>
 
-                {% if reservation.course_year_section %}
-                <dt class="col-sm-4 text-secondary">Course &amp; Section:</dt>
-                <dd class="col-sm-8 text-dark">{{ reservation.course_year_section }}</dd>
-                {% endif %}
+        {% if reservation.course_year_section %}
+        <dt class="col-sm-4 text-secondary">Course &amp; Section:</dt>
+        <dd class="col-sm-8 text-dark">{{ reservation.course_year_section }}</dd>
+        {% endif %}
 
-                {% if reservation.email %}
-                <dt class="col-sm-4 text-secondary">Email Address:</dt>
-                <dd class="col-sm-8 text-dark">{{ reservation.email }}</dd>
-                {% endif %}
+        {% if reservation.email %}
+        <dt class="col-sm-4 text-secondary">Email Address:</dt>
+        <dd class="col-sm-8 text-dark">{{ reservation.email }}</dd>
+        {% endif %}
 
-                {% if reservation.contact_number %}
-                <dt class="col-sm-4 text-secondary">Mobile Contact:</dt>
-                <dd class="col-sm-8 text-dark font-mono">{{ reservation.contact_number }}</dd>
-                {% endif %}
+        {% if reservation.contact_number %}
+        <dt class="col-sm-4 text-secondary">Mobile Contact:</dt>
+        <dd class="col-sm-8 text-dark font-mono">{{ reservation.contact_number }}</dd>
+        {% endif %}
 
-                <dt class="col-sm-4 text-secondary">Equipment Category:</dt>
-                <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.category.name }}</dd>
+        <dt class="col-sm-4 text-secondary">Equipment:</dt>
+        <dd class="col-sm-8 text-dark fw-semibold">
+            {{ reservation.category.name }}
+            {% if reservation.equipment_type_ref %}
+                ({{ reservation.equipment_type_ref.name }})
+            {% elif reservation.equipment_type %}
+                ({{ reservation.equipment_type }})
+            {% endif %}
+        </dd>
 
-                {% if reservation.equipment_type_ref %}
-                <dt class="col-sm-4 text-secondary">Equipment Type:</dt>
-                <dd class="col-sm-8 text-dark fw-semibold">{{ reservation.equipment_type_ref.name }}</dd>
-                {% elif reservation.equipment_type %}
-                <dt class="col-sm-4 text-secondary">Requested Model/Type:</dt>
-                <dd class="col-sm-8 text-dark">{{ reservation.equipment_type }}</dd>
-                {% endif %}
+        <dt class="col-sm-4 text-secondary">Schedule:</dt>
+        <dd class="col-sm-8 text-dark">
+            {{ reservation.requested_pickup|date:"M d, Y, h:i A" }} &ndash; {{ reservation.requested_return|date:"M d, Y, h:i A" }}
+        </dd>
 
-                <dt class="col-sm-4 text-secondary">Requested Schedule:</dt>
-                <dd class="col-sm-8 text-dark">
-                    <span class="d-block">{{ reservation.requested_pickup|date:"M d, Y — h:i A" }}</span>
-                    <span class="text-muted">&darr; until</span>
-                    <span class="d-block">{{ reservation.requested_return|date:"M d, Y — h:i A" }}</span>
-                </dd>
+        <dt class="col-sm-4 text-secondary">Purpose:</dt>
+        <dd class="col-sm-8 text-dark">{{ reservation.purpose }}</dd>
 
-                <dt class="col-sm-4 text-secondary">Purpose:</dt>
-                <dd class="col-sm-8 text-dark">{{ reservation.purpose }}</dd>
+        {% if reservation.room_venue %}
+        <dt class="col-sm-4 text-secondary">Venue / Room:</dt>
+        <dd class="col-sm-8 text-dark">{{ reservation.room_venue }}</dd>
+        {% endif %}
 
-                {% if reservation.room_venue %}
-                <dt class="col-sm-4 text-secondary">Venue / Room:</dt>
-                <dd class="col-sm-8 text-dark">{{ reservation.room_venue }}</dd>
-                {% endif %}
+        <dt class="col-sm-4 text-secondary">Status:</dt>
+        <dd class="col-sm-8">
+            <span class="badge" style="background-color: var(--cba-status-warning-bg); color: var(--cba-status-warning-text); border: 1px solid var(--cba-status-warning-border);">
+                {{ reservation.get_status_display }}
+            </span>
+        </dd>
+    </dl>
+</div>
 
-                <dt class="col-sm-4 text-secondary">Status:</dt>
-                <dd class="col-sm-8">
-                    <span class="badge" style="background-color: var(--cba-status-warning-bg); color: var(--cba-status-warning-text); border: 1px solid var(--cba-status-warning-border);">
-                        {{ reservation.get_status_display }}
-                    </span>
-                </dd>
-            </dl>
-        </div>
-
-        <!-- Next Steps Institutional Checklist -->
-        <div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs">
-            <h2 class="h6 fw-bold text-dark mb-3">
-                <i class="bi bi-list-check me-1.5 text-primary"></i> What Happens Next?
-            </h2>
-
-            <div class="d-flex flex-column gap-3 small text-secondary">
-                <div class="d-flex align-items-start gap-2.5">
-                    <div class="badge rounded-circle p-1.5 bg-light border border-light-subtle text-primary fw-bold" style="width: 24px; height: 24px;">1</div>
-                    <div>
-                        <strong class="text-dark d-block">Custodian Allocation</strong>
-                        <span>The Property Custodian will verify office availability and assign a specific equipment asset unit (e.g., Projector 1, 2, or 3).</span>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-start gap-2.5">
-                    <div class="badge rounded-circle p-1.5 bg-light border border-light-subtle text-primary fw-bold" style="width: 24px; height: 24px;">2</div>
-                    <div>
-                        <strong class="text-dark d-block">Check Approval Status</strong>
-                        <span>Bookmark this page or check your status token before heading to the CBA Property Office.</span>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-start gap-2.5">
-                    <div class="badge rounded-circle p-1.5 bg-light border border-light-subtle text-primary fw-bold" style="width: 24px; height: 24px;">3</div>
-                    <div>
-                        <strong class="text-dark d-block">Physical School ID Handover</strong>
-                        <span>Present your original physical School ID at the office. You will leave the ID in office custody during your borrowing interval.</span>
-                    </div>
-                </div>
-
-                <div class="d-flex align-items-start gap-2.5">
-                    <div class="badge rounded-circle p-1.5 bg-light border border-light-subtle text-primary fw-bold" style="width: 24px; height: 24px;">4</div>
-                    <div>
-                        <strong class="text-dark d-block">Return &amp; ID Collection</strong>
-                        <span>Return the equipment directly to the CBA office, or after hours to an authorized security guard. Collect your deposited ID upon inspection.</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
+<!-- Concise pickup and School ID guidance -->
+<div class="student-policy-note mb-4" style="max-width: 720px; margin-inline: auto;">
+    <h2 class="h6 fw-bold text-dark mb-1.5">What Happens Next?</h2>
+    <p class="mb-0">Bring your original School ID when collecting approved equipment at the CBA Property Office. Pickup has a 15-minute grace period. Return equipment directly or after hours to an authorized security guard.</p>
 </div>
 {% endblock %}
