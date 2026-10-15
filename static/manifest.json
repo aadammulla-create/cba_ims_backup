@@ -1,11 +1,12 @@
 {
-    "name": "CBA Equipment Reservations",
-    "short_name": "CBA Reservations",
-    "description": "Equipment reservations for the College of Business Administration",
-    "start_url": "/",
+    "id": "cba-ims-staff",
+    "name": "CBA Asset & Inventory Management System",
+    "short_name": "CBA IMS",
+    "description": "Asset & Inventory Management System for the College of Business Administration",
+    "start_url": "/staff/",
     "display": "standalone",
-    "background_color": "#f8f9fa",
-    "theme_color": "#212529",
+    "background_color": "#f8fafc",
+    "theme_color": "#1d4ed8",
     "orientation": "any",
     "scope": "/",
     "icons": [

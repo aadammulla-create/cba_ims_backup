@@ -167,14 +167,31 @@ class PWAResponsiveTests(TestCase):
         import os, json
         from django.contrib.staticfiles import finders
 
-        # Manifest
+        # Staff Manifest
         manifest_path = finders.find('manifest.json')
         self.assertIsNotNone(manifest_path, "manifest.json must be discoverable by static finders")
         self.assertTrue(os.path.exists(manifest_path))
         with open(manifest_path, 'r', encoding='utf-8') as f:
             manifest_data = json.load(f)
         self.assertEqual(manifest_data.get('short_name'), 'CBA IMS')
+        self.assertEqual(manifest_data.get('name'), 'CBA Asset & Inventory Management System')
+        self.assertEqual(manifest_data.get('id'), 'cba-ims-staff')
+        self.assertEqual(manifest_data.get('start_url'), '/staff/')
         self.assertEqual(manifest_data.get('display'), 'standalone')
+
+        # Student Manifest
+        student_manifest_path = finders.find('manifest_student.json')
+        self.assertIsNotNone(student_manifest_path, "manifest_student.json must be discoverable by static finders")
+        self.assertTrue(os.path.exists(student_manifest_path))
+        with open(student_manifest_path, 'r', encoding='utf-8') as f:
+            student_manifest = json.load(f)
+        self.assertEqual(student_manifest.get('short_name'), 'CBA Reservations')
+        self.assertEqual(student_manifest.get('name'), 'CBA Equipment Reservations')
+        self.assertEqual(student_manifest.get('id'), 'cba-reservations-student')
+        self.assertEqual(student_manifest.get('start_url'), '/student/')
+        self.assertEqual(student_manifest.get('display'), 'standalone')
+        self.assertNotIn('IMS', student_manifest.get('short_name'))
+        self.assertNotIn('Inventory', student_manifest.get('name'))
 
         # Service Worker
         sw_path = finders.find('sw.js')
@@ -211,5 +228,29 @@ class PWAResponsiveTests(TestCase):
         self.assertIn('id="sidebarMenu"', content)
         self.assertIn('offcanvas', content)
 
-        # Manifest link
+        # Staff Manifest link
         self.assertIn('manifest.json', content)
+
+    def test_student_and_staff_manifest_links_are_separated(self):
+        """Student portal references student manifest, while staff layout references staff manifest."""
+        # Student landing
+        student_response = self.client.get(reverse('student_landing'))
+        self.assertEqual(student_response.status_code, 200)
+        student_content = student_response.content.decode('utf-8')
+        self.assertIn('manifest_student.json', student_content)
+        self.assertNotIn('/static/manifest.json', student_content)
+
+        # Staff login page (/staff/)
+        staff_login_response = self.client.get(reverse('staff_login'))
+        self.assertEqual(staff_login_response.status_code, 200)
+        staff_login_content = staff_login_response.content.decode('utf-8')
+        self.assertIn('manifest.json', staff_login_content)
+        self.assertNotIn('manifest_student.json', staff_login_content)
+
+        # Staff dashboard (/dashboard/)
+        self.client.login(username='admin_pwa', password='Password123!')
+        staff_response = self.client.get(reverse('dashboard'))
+        self.assertEqual(staff_response.status_code, 200)
+        staff_content = staff_response.content.decode('utf-8')
+        self.assertIn('manifest.json', staff_content)
+        self.assertNotIn('manifest_student.json', staff_content)
