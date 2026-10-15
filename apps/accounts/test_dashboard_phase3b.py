@@ -1067,3 +1067,61 @@ class DashboardPhase3BBackendTests(TestCase):
         self.asset_ba_unserviceable.refresh_from_db()
         self.assertEqual(self.asset_ba_unserviceable.status, Asset.Status.AVAILABLE)
         self.assertEqual(self.asset_ba_unserviceable.condition, Asset.Condition.UNSERVICEABLE)
+
+    def test_recent_activities_handles_null_user_and_valid_users(self):
+        """
+        Regression test: Verify dashboard recent activities ledger renders safely when:
+        1. An audit log has user=None (displays 'System' without throwing VariableDoesNotExist).
+        2. An audit log has a user with full name (displays full name).
+        3. An audit log has a user with no full name (displays username).
+        """
+        # User with full name
+        user_full_name = User.objects.create_user(
+            'custodian_jane', 'jane@cba.edu', 'Pass1234!',
+            first_name='Jane', last_name='Custodian', role=User.Role.FACULTY
+        )
+        # User without full name (blank first and last name)
+        user_username_only = User.objects.create_user(
+            'auditor_mark', 'mark@cba.edu', 'Pass1234!',
+            first_name='', last_name='', role=User.Role.FACULTY
+        )
+
+        # 1. Audit log with user=None (e.g. automated cleanup, system maintenance)
+        AuditLog.objects.create(
+            user=None,
+            action='SYSTEM_MAINTENANCE',
+            model_name='System',
+            object_repr='Automated Cache Flush'
+        )
+        # 2. Audit log with user who has a full name
+        AuditLog.objects.create(
+            user=user_full_name,
+            action='CREATE',
+            model_name='Asset',
+            object_repr='Dell Inspiron 15'
+        )
+        # 3. Audit log with user who has no full name
+        AuditLog.objects.create(
+            user=user_username_only,
+            action='LOGIN',
+            model_name='User',
+            object_repr='auditor_mark'
+        )
+
+        # Log in as administrator (administrators see the Recent System Activity audit ledger)
+        self.client.login(username='admin_user', password='Pass1234!')
+        response = self.client.get(reverse('dashboard'))
+
+        # Verify page rendered successfully (no VariableDoesNotExist or 500 error)
+        self.assertEqual(response.status_code, 200)
+
+        # Verify context contains recent activities
+        self.assertGreaterEqual(len(response.context['recent_activities']), 3)
+
+        # 1. Null user renders 'System'
+        self.assertContains(response, 'System')
+        # 2. User with full name renders full name
+        self.assertContains(response, 'Jane Custodian')
+        # 3. User with no full name renders username
+        self.assertContains(response, 'auditor_mark')
+

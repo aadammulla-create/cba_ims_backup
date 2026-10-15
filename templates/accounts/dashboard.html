@@ -948,7 +948,7 @@
                                                 </span>
                                             </div>
                                             <div class="d-flex align-items-center gap-1.5 text-muted fs-xs">
-                                                <span class="text-secondary fw-medium">{{ act.user.get_full_name|default:act.user.username|default:"System" }}</span>
+                                                <span class="text-secondary fw-medium">{% if act.user %}{{ act.user.get_full_name|default:act.user.username }}{% else %}System{% endif %}</span>
                                                 <span>&bull;</span>
                                                 <span class="font-mono">{{ act.timestamp|date:"M j, Y H:i" }}</span>
                                                 <span class="text-muted d-none d-sm-inline">({{ act.timestamp|timesince }} ago)</span>
