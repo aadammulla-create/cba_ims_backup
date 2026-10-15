@@ -129,8 +129,14 @@
         <div class="container-xl d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2 gap-md-3">
                 <a class="student-brand" href="{% url 'student_landing' %}">
-                    <span class="student-brand-mark" aria-hidden="true">CBA</span>
-                    <span>Equipment Reservations</span>
+                    <span class="student-brand-logo-container" aria-hidden="true">
+                        <img src="{% static 'images/student/cba_logo.svg' %}" alt="CBA" class="student-brand-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">
+                        <span class="student-brand-mark" style="display: none;">CBA</span>
+                    </span>
+                    <span class="student-brand-text">
+                        <span class="student-brand-title">Equipment Reservations</span>
+                        <span class="student-brand-subtitle d-none d-sm-block">College of Business Administration</span>
+                    </span>
                 </a>
             </div>
 

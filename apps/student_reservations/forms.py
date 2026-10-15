@@ -9,11 +9,30 @@ from .models import StudentReservation
 
 PURPOSE_CHOICES = [
     ('', '-- Select Purpose of Use --'),
-    ('Class Presentation / Reporting', 'Class Presentation / Reporting'),
-    ('Department / College Seminar or Event', 'Department / College Seminar or Event'),
-    ('Student Organization Activity', 'Student Organization Activity'),
-    ('Thesis / Capstone / Research Defense', 'Thesis / Capstone / Research Defense'),
+    ('Class presentation', 'Class presentation'),
+    ('Thesis defense', 'Thesis defense'),
+    ('Research presentation', 'Research presentation'),
+    ('Classroom activity', 'Classroom activity'),
+    ('Seminar / workshop', 'Seminar / workshop'),
+    ('Student organization activity', 'Student organization activity'),
+    ('College event', 'College event'),
     ('Other', 'Other (specify below)'),
+]
+
+VENUE_CHOICES = [
+    ('', '-- Select Room or Venue (Optional) --'),
+    ('CBA Room 1', 'CBA Room 1'),
+    ('CBA Room 2', 'CBA Room 2'),
+    ('CBA Room 3', 'CBA Room 3'),
+    ('CBA Room 4', 'CBA Room 4'),
+    ('CBA Room 5', 'CBA Room 5'),
+    ('CBA Room 6', 'CBA Room 6'),
+    ('CBA Room 7', 'CBA Room 7'),
+    ('CBA Room 8', 'CBA Room 8'),
+    ('CBA Room 9', 'CBA Room 9'),
+    ('CBA Room 10', 'CBA Room 10'),
+    ('CBA Cafeteria', 'CBA Cafeteria'),
+    ('Other', 'Other (specify venue below)'),
 ]
 
 
@@ -28,6 +47,12 @@ class PublicStudentReservationForm(forms.ModelForm):
         max_length=300,
         required=False,
         widget=forms.TextInput(attrs={'placeholder': 'Please specify brief activity purpose...'}),
+        help_text="Required when 'Other' is selected."
+    )
+    room_venue_other = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'placeholder': 'Specify room or venue name...'}),
         help_text="Required when 'Other' is selected."
     )
 
@@ -51,6 +76,7 @@ class PublicStudentReservationForm(forms.ModelForm):
             'requested_pickup': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'requested_return': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'purpose': forms.Select(choices=PURPOSE_CHOICES),
+            'room_venue': forms.Select(choices=VENUE_CHOICES),
         }
 
     def __init__(self, *args, **kwargs):
@@ -90,11 +116,29 @@ class PublicStudentReservationForm(forms.ModelForm):
         self.fields['room_venue'].required = False
         self.fields['equipment_type'].required = False
 
+        # Handle room_venue dropdown vs custom venue
+        initial_venue = self.initial.get('room_venue') or (self.instance.room_venue if self.instance.pk else '')
+        if initial_venue:
+            standard_venues = [c[0] for c in VENUE_CHOICES if c[0] and c[0] != 'Other']
+            if initial_venue in standard_venues:
+                self.initial['room_venue'] = initial_venue
+            else:
+                self.initial['room_venue'] = 'Other'
+                self.initial['room_venue_other'] = initial_venue
+
         # If existing purpose instance value doesn't match predefined choices, preserve it in details
         initial_purpose = self.initial.get('purpose') or (self.instance.purpose if self.instance.pk else None)
         if initial_purpose:
             known_choices = [c[0] for c in PURPOSE_CHOICES if c[0]]
-            if initial_purpose not in known_choices:
+            legacy_map = {
+                'Class Presentation / Reporting': 'Class presentation',
+                'Thesis / Capstone / Research Defense': 'Thesis defense',
+                'Student Organization Activity': 'Student organization activity',
+                'Department / College Seminar or Event': 'College event',
+            }
+            if initial_purpose in legacy_map:
+                self.initial['purpose'] = legacy_map[initial_purpose]
+            elif initial_purpose not in known_choices:
                 # Value was entered freeform or with 'Other:'
                 if initial_purpose.startswith('Other: '):
                     self.initial['purpose'] = 'Other'
@@ -107,9 +151,9 @@ class PublicStudentReservationForm(forms.ModelForm):
         val = self.cleaned_data.get('student_id', '').strip()
         if not val:
             raise ValidationError("Student ID number is required.")
-        # Common university student ID pattern: e.g. 2023-12345 or alphanumeric with hyphens
+        # Common university student ID pattern: e.g. 9-digit format (2024XXXXX) or alphanumeric with hyphens
         if not re.match(r'^[A-Za-z0-9\-]{4,30}$', val):
-            raise ValidationError("Please enter a valid Student ID format (e.g. 2023-12345).")
+            raise ValidationError("Please enter a valid Student ID format (e.g. 2024XXXXX).")
         return val
 
     def clean_student_name(self):
@@ -167,6 +211,21 @@ class PublicStudentReservationForm(forms.ModelForm):
                 cleaned_data['purpose'] = f"Other: {purpose_details}"
         elif purpose_details:
             cleaned_data['purpose'] = f"{purpose} - {purpose_details}"
+
+        # Handle Room / Venue dropdown + conditional 'Other' details
+        room_venue = cleaned_data.get('room_venue', '').strip()
+        room_venue_other = cleaned_data.get('room_venue_other', '').strip()
+        if room_venue == 'Other':
+            if not room_venue_other:
+                self.add_error('room_venue_other', "Please specify your room or venue.")
+            else:
+                cleaned_data['room_venue'] = room_venue_other
+        elif room_venue:
+            cleaned_data['room_venue'] = room_venue
+        elif room_venue_other:
+            cleaned_data['room_venue'] = room_venue_other
+        else:
+            cleaned_data['room_venue'] = ''
 
         # Schedule validation
         if pickup and ret:

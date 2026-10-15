@@ -96,12 +96,21 @@ def _build_catalog_cards(categories, pickup_dt, return_dt):
             type_avail = len(services.get_available_assets_for_category(
                 cat, pickup_dt, return_dt, equipment_type_ref=eq_type
             ))
+            t_name_lower = eq_type.name.lower()
+            if 'projector' in t_name_lower:
+                illustration = '/static/images/student/projector_lcd.svg'
+            elif 'mic' in t_name_lower or 'sound' in t_name_lower or 'audio' in t_name_lower:
+                illustration = '/static/images/student/wireless_mic.svg'
+            else:
+                illustration = '/static/images/student/equipment_generic.svg'
+
             equipment_types_data.append({
                 'id': eq_type.id,
                 'name': eq_type.name,
                 'total_units': type_total,
                 'available_units': type_avail,
                 'is_available': type_avail > 0,
+                'illustration_url': illustration,
             })
 
         asset_with_img = tot_assets.filter(asset_image__isnull=False).exclude(asset_image='').first()
@@ -110,16 +119,22 @@ def _build_catalog_cards(categories, pickup_dt, return_dt):
         cat_name_lower = cat.name.lower()
         if 'projector' in cat_name_lower or 'av' in cat.code.lower() or 'audio-visual' in cat_name_lower:
             icon = 'bi bi-projector'
+            cat_illustration = '/static/images/student/projector_lcd.svg'
         elif 'speaker' in cat_name_lower or 'sound' in cat_name_lower or 'audio' in cat_name_lower or 'mic' in cat_name_lower:
             icon = 'bi bi-speaker'
+            cat_illustration = '/static/images/student/wireless_mic.svg'
         elif 'laptop' in cat_name_lower or 'it' in cat.code.lower() or 'computer' in cat_name_lower:
             icon = 'bi bi-laptop'
+            cat_illustration = '/static/images/student/equipment_generic.svg'
         elif 'display' in cat_name_lower or 'monitor' in cat_name_lower or 'screen' in cat_name_lower:
             icon = 'bi bi-display'
+            cat_illustration = '/static/images/student/equipment_generic.svg'
         elif 'cable' in cat_name_lower or 'adapter' in cat_name_lower or 'accessories' in cat_name_lower or 'clicker' in cat_name_lower:
             icon = 'bi bi-plug'
+            cat_illustration = '/static/images/student/equipment_generic.svg'
         else:
             icon = 'bi bi-box-seam'
+            cat_illustration = '/static/images/student/equipment_generic.svg'
 
         catalog_cards.append({
             'category': cat,
@@ -131,6 +146,7 @@ def _build_catalog_cards(categories, pickup_dt, return_dt):
             'models_preview': models_preview,
             'equipment_types': equipment_types_data,
             'sample_image_url': sample_image_url,
+            'illustration_url': sample_image_url or cat_illustration,
             'icon': icon,
         })
     return catalog_cards
@@ -277,16 +293,87 @@ class PublicReservationSubmitView(View):
         import json
         return json.dumps(cls._get_category_types_data())
 
+    @staticmethod
+    def _build_selection_context(cat, eq_type, pickup_val, return_val):
+        """
+        Builds display metadata for the prefilled selection summary card.
+        Only marks selection_prefilled=True when required details are present and valid.
+        """
+        if not cat:
+            return False, {}
+
+        pickup_dt = None
+        ret_dt = None
+        current_tz = timezone.get_current_timezone()
+
+        if isinstance(pickup_val, str) and pickup_val:
+            try:
+                pickup_dt = timezone.datetime.fromisoformat(pickup_val)
+                if timezone.is_naive(pickup_dt):
+                    pickup_dt = timezone.make_aware(pickup_dt, current_tz)
+            except Exception:
+                pass
+        elif hasattr(pickup_val, 'strftime'):
+            pickup_dt = pickup_val
+
+        if isinstance(return_val, str) and return_val:
+            try:
+                ret_dt = timezone.datetime.fromisoformat(return_val)
+                if timezone.is_naive(ret_dt):
+                    ret_dt = timezone.make_aware(ret_dt, current_tz)
+            except Exception:
+                pass
+        elif hasattr(return_val, 'strftime'):
+            ret_dt = return_val
+
+        has_types = cat.equipment_types.filter(is_active=True).exists()
+        type_required_and_missing = has_types and not eq_type
+
+        is_valid_schedule = pickup_dt and ret_dt and pickup_dt < ret_dt
+        is_prefilled = bool(cat and not type_required_and_missing and is_valid_schedule)
+
+        display_name = eq_type.name if eq_type else cat.name
+        name_lower = display_name.lower()
+        if 'projector' in name_lower:
+            illustration = '/static/images/student/projector_lcd.svg'
+        elif 'mic' in name_lower or 'sound' in name_lower or 'audio' in name_lower:
+            illustration = '/static/images/student/wireless_mic.svg'
+        else:
+            illustration = '/static/images/student/equipment_generic.svg'
+
+        duration = round((ret_dt - pickup_dt).total_seconds() / 3600, 1) if (pickup_dt and ret_dt) else None
+
+        selection_display = {
+            'category_name': cat.name,
+            'category_id': cat.id,
+            'type_name': display_name,
+            'type_id': eq_type.id if eq_type else '',
+            'has_type': bool(eq_type),
+            'pickup': pickup_dt.strftime('%b %d, %Y · %I:%M %p') if pickup_dt else (pickup_val or ''),
+            'return': ret_dt.strftime('%b %d, %Y · %I:%M %p') if ret_dt else (return_val or ''),
+            'pickup_raw': str(pickup_val or ''),
+            'return_raw': str(return_val or ''),
+            'duration_hours': duration,
+            'illustration_url': illustration,
+        }
+        return is_prefilled, selection_display
+
     def get(self, request, *args, **kwargs):
         initial_data = {}
+        cat = None
         category_id = request.GET.get('category')
         if category_id:
             try:
-                cat = AssetCategory.objects.get(pk=category_id, is_active=True, is_reservable=True)
-                initial_data['category'] = cat
-            except AssetCategory.DoesNotExist:
+                if str(category_id).isdigit():
+                    cat = AssetCategory.objects.get(pk=int(category_id), is_active=True, is_reservable=True)
+                else:
+                    cat = AssetCategory.objects.filter(code__iexact=str(category_id).strip(), is_active=True, is_reservable=True).first()
+                if cat:
+                    initial_data['category'] = cat.pk
+            except Exception:
                 pass
 
+        eq_type = None
         type_id = request.GET.get('type') or request.GET.get('equipment_type_id') or request.GET.get('equipment_type')
         if type_id:
             try:
@@ -296,9 +383,10 @@ class PublicReservationSubmitView(View):
                 else:
                     eq_type = EquipmentType.objects.select_related('category').filter(name__iexact=str(type_id).strip(), is_active=True).first()
                 if eq_type and eq_type.category.is_active and eq_type.category.is_reservable:
-                    initial_data['equipment_type_ref'] = eq_type
+                    initial_data['equipment_type_ref'] = eq_type.pk
                     if 'category' not in initial_data:
-                        initial_data['category'] = eq_type.category
+                        initial_data['category'] = eq_type.category.pk
+                        cat = eq_type.category
             except Exception:
                 pass
 
@@ -310,12 +398,26 @@ class PublicReservationSubmitView(View):
         if ret:
             initial_data['requested_return'] = ret
 
+        purpose_param = request.GET.get('purpose')
+        if purpose_param:
+            initial_data['purpose'] = purpose_param
+
+        venue_param = request.GET.get('room_venue') or request.GET.get('venue')
+        if venue_param:
+            initial_data['room_venue'] = venue_param
+
+        selection_prefilled, selection_display = self._build_selection_context(
+            cat, eq_type, pickup, ret
+        )
+
         form = PublicStudentReservationForm(initial=initial_data)
         category_types_data = self._get_category_types_data()
         return render(request, 'student_reservations/reservation_form.html', {
             'form': form,
             'category_types_data': category_types_data,
             'category_types_json': self._get_category_types_json(),
+            'selection_prefilled': selection_prefilled,
+            'selection_display': selection_display,
         })
 
     def post(self, request, *args, **kwargs):
@@ -333,10 +435,30 @@ class PublicReservationSubmitView(View):
                     'errors': form.errors.get_json_data()
                 }, status=400)
             category_types_data = self._get_category_types_data()
+            cat = None
+            eq_type = None
+            cid = request.POST.get('category')
+            if cid:
+                try:
+                    cat = AssetCategory.objects.get(pk=cid, is_active=True)
+                except Exception:
+                    pass
+            tid = request.POST.get('equipment_type_ref')
+            if tid:
+                try:
+                    from apps.inventory.models import EquipmentType
+                    eq_type = EquipmentType.objects.get(pk=tid, is_active=True)
+                except Exception:
+                    pass
+            _, selection_display = self._build_selection_context(
+                cat, eq_type, request.POST.get('requested_pickup'), request.POST.get('requested_return')
+            )
             return render(request, 'student_reservations/reservation_form.html', {
                 'form': form,
                 'category_types_data': category_types_data,
                 'category_types_json': self._get_category_types_json(),
+                'selection_prefilled': False,
+                'selection_display': selection_display,
             })
 
         data = form.cleaned_data
@@ -390,10 +512,30 @@ class PublicReservationSubmitView(View):
                 form.add_error(None, str(e.message if hasattr(e, 'message') else e))
 
             category_types_data = self._get_category_types_data()
+            cat = None
+            eq_type = None
+            cid = request.POST.get('category')
+            if cid:
+                try:
+                    cat = AssetCategory.objects.get(pk=cid, is_active=True)
+                except Exception:
+                    pass
+            tid = request.POST.get('equipment_type_ref')
+            if tid:
+                try:
+                    from apps.inventory.models import EquipmentType
+                    eq_type = EquipmentType.objects.get(pk=tid, is_active=True)
+                except Exception:
+                    pass
+            _, selection_display = self._build_selection_context(
+                cat, eq_type, request.POST.get('requested_pickup'), request.POST.get('requested_return')
+            )
             return render(request, 'student_reservations/reservation_form.html', {
                 'form': form,
                 'category_types_data': category_types_data,
                 'category_types_json': self._get_category_types_json(),
+                'selection_prefilled': False,
+                'selection_display': selection_display,
             })
 
 

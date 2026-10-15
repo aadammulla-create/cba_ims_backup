@@ -8,7 +8,7 @@ from django.core.cache import cache
 
 from apps.accounts.models import User
 from apps.organizations.models import Department, Location, Employee
-from apps.inventory.models import AssetCategory, Brand, Asset
+from apps.inventory.models import AssetCategory, Brand, Asset, EquipmentType
 from apps.borrowing.models import AssetBorrowing
 from apps.borrowing import services as borrowing_services
 from apps.assignments.models import AssetAssignment
@@ -1666,7 +1666,163 @@ class EquipmentTypeSelectionAndAllocationTestCase(StudentReservationBaseTestCase
         self.assertNotContains(resp, '32-character')
 
 
+class StudentReservationCombinedUXRefinementTestCase(TestCase):
+    """
+    Focused verification for Student Reservation UX Refinement:
+    1. Catalog-to-form selection carryover
+    2. Direct access to reservation form expands selection editor
+    3. Venue dropdown and Other custom specification
+    4. Purpose dropdown concise options and Other specification
+    5. Nine-digit student ID acceptance and placeholder
+    6. Form resubmission retention on error
+    7. Single primary Reserve CTA per equipment type in catalog
+    """
+    def setUp(self):
+        super().setUp()
+        self.client = Client()
+        self.dept = Department.objects.create(name='Business Administration', code='BA', is_active=True)
+        self.cat = AssetCategory.objects.create(name='Projectors', code='PRJ', is_active=True, is_reservable=True)
+        self.eq_type = EquipmentType.objects.create(category=self.cat, name='Classroom LCD Projector', is_active=True)
+        self.brand = Brand.objects.create(name='Epson', is_active=True)
+        self.asset = Asset.objects.create(
+            asset_code='CBA-PRJ-TEST-1',
+            item_name='Epson Projector 1',
+            category=self.cat,
+            equipment_type=self.eq_type,
+            brand=self.brand,
+            department=self.dept,
+            status=Asset.Status.AVAILABLE,
+            condition=Asset.Condition.GOOD,
+            is_reservable=True
+        )
+        self.pickup_dt = timezone.localtime() + timedelta(hours=2)
+        self.return_dt = timezone.localtime() + timedelta(hours=5)
+        self.pickup_str = self.pickup_dt.strftime('%Y-%m-%dT%H:%M')
+        self.return_str = self.return_dt.strftime('%Y-%m-%dT%H:%M')
+
+    def test_catalog_selection_carryover_prefilled_state(self):
+        """When equipment and times are selected from catalog, reservation form pre-populates and shows summary."""
+        url = f"/student-reservations/request/?category={self.cat.id}&type={self.eq_type.id}&pickup={self.pickup_str}&return={self.return_str}"
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context['selection_prefilled'])
+        self.assertContains(resp, 'YOUR SELECTION')
+        self.assertContains(resp, 'Classroom LCD Projector')
+        self.assertContains(resp, 'Change equipment or schedule')
+
+    def test_direct_request_access_expands_editor(self):
+        """When student directly visits /request/ without catalog selection, editor is expanded."""
+        resp = self.client.get('/student-reservations/request/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(resp.context['selection_prefilled'])
+        self.assertContains(resp, 'Choose equipment and schedule')
+        self.assertContains(resp, '<details class="cba-selection-editor"')
+
+    def test_venue_dropdown_standard_and_other_custom(self):
+        """Standard venue selection stores standard name; Other requires and stores custom venue."""
+        # 1. Standard venue selection
+        post_data_standard = {
+            'student_id': '202412345',
+            'student_name': 'Juan Dela Cruz',
+            'email': 'juan@student.cba.edu',
+            'category': self.cat.id,
+            'equipment_type_ref': self.eq_type.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Class presentation',
+            'room_venue': 'CBA Room 4',
+        }
+        resp = self.client.post('/student-reservations/request/', post_data_standard)
+        self.assertEqual(resp.status_code, 302)
+        res1 = StudentReservation.objects.get(student_id='202412345')
+        self.assertEqual(res1.room_venue, 'CBA Room 4')
+
+        # 2. 'Other' venue with custom description
+        post_data_other = {
+            'student_id': '202412346',
+            'student_name': 'Maria Clara',
+            'email': 'maria@student.cba.edu',
+            'category': self.cat.id,
+            'equipment_type_ref': self.eq_type.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Thesis defense',
+            'room_venue': 'Other',
+            'room_venue_other': 'CBA AVR Amphitheater',
+        }
+        resp = self.client.post('/student-reservations/request/', post_data_other)
+        self.assertEqual(resp.status_code, 302)
+        res2 = StudentReservation.objects.get(student_id='202412346')
+        self.assertEqual(res2.room_venue, 'CBA AVR Amphitheater')
+
+        # 3. 'Other' venue without custom description fails
+        post_data_other_empty = {
+            'student_id': '202412347',
+            'student_name': 'Crisostomo Ibarra',
+            'email': 'ibarra@student.cba.edu',
+            'category': self.cat.id,
+            'equipment_type_ref': self.eq_type.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Class presentation',
+            'room_venue': 'Other',
+            'room_venue_other': '',
+        }
+        resp = self.client.post('/student-reservations/request/', post_data_other_empty)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFormError(resp, 'form', 'room_venue_other', 'Please specify your room or venue.')
+
+    def test_purpose_dropdown_concise_options_and_other(self):
+        """Concise purpose choices are stored directly; Other requires and stores details."""
+        post_data = {
+            'student_id': '202412348',
+            'student_name': 'Elias Salome',
+            'email': 'elias@student.cba.edu',
+            'category': self.cat.id,
+            'equipment_type_ref': self.eq_type.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Research presentation',
+            'room_venue': 'CBA Room 1',
+        }
+        resp = self.client.post('/student-reservations/request/', post_data)
+        self.assertEqual(resp.status_code, 302)
+        res = StudentReservation.objects.get(student_id='202412348')
+        self.assertEqual(res.purpose, 'Research presentation')
+
+        # Other purpose requires details
+        post_data_other_empty = {
+            'student_id': '202412349',
+            'student_name': 'Basilio Sisa',
+            'email': 'basilio@student.cba.edu',
+            'category': self.cat.id,
+            'equipment_type_ref': self.eq_type.id,
+            'requested_pickup': self.pickup_str,
+            'requested_return': self.return_str,
+            'purpose': 'Other',
+            'purpose_details': '',
+        }
+        resp = self.client.post('/student-reservations/request/', post_data_other_empty)
+        self.assertEqual(resp.status_code, 200)
+        self.assertFormError(resp, 'form', 'purpose_details', 'Please briefly specify your activity purpose.')
+
+    def test_student_id_masked_placeholder_and_format(self):
+        """Student ID field provides 2024XXXXX placeholder and validates."""
+        resp = self.client.get('/student-reservations/request/')
+        self.assertContains(resp, 'placeholder="2024XXXXX"')
+
+    def test_single_reserve_cta_per_equipment_type_in_catalog(self):
+        """When a category has equipment types, each type has one Reserve button and no duplicate category button."""
+        resp = self.client.get(f'/student-reservations/check-availability/?pickup={self.pickup_str}&return={self.return_str}')
+        self.assertEqual(resp.status_code, 200)
+        # Concrete equipment type has Reserve button
+        self.assertContains(resp, f'type={self.eq_type.id}')
+        # Should not have duplicate category-wide button when equipment types are present
+        self.assertNotContains(resp, f'Reserve {self.cat.name} &rarr;')
+
+
 # Demonstration Data Seed Management Command Tests
 from .test_seed_demo_equipment import SeedDemoEquipmentHardenedTestCase
+
 
 

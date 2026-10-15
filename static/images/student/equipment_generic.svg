@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" width="160" height="120" fill="none">
+  <!-- Subtle background card -->
+  <rect width="160" height="120" rx="10" fill="#F1F5F9"/>
+  <ellipse cx="80" cy="100" rx="46" ry="6" fill="#CBD5E1" fill-opacity="0.6"/>
+  <!-- Generic instructional presentation device / equipment crate -->
+  <rect x="35" y="40" width="90" height="56" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+  <path d="M35 48C35 43.5817 38.5817 40 43 40H117C121.418 40 125 43.5817 125 48V56H35V48Z" fill="#F8FAFC"/>
+  <rect x="45" y="62" width="70" height="24" rx="4" fill="#EEF2F6" stroke="#CBD5E1" stroke-width="1"/>
+  <circle cx="80" cy="74" r="7" fill="#2563EB" fill-opacity="0.15" stroke="#2563EB" stroke-width="1.5"/>
+  <path d="M78 71L83 74L78 77V71Z" fill="#2563EB"/>
+  <circle cx="112" cy="48" r="2" fill="#22C55E"/>
+  <circle cx="118" cy="48" r="2" fill="#94A3B8"/>
+</svg>

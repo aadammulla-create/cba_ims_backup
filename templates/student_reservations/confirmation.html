@@ -14,9 +14,9 @@
     <code x-ref="tokenValue" class="student-token-value">{{ reservation.lookup_token }}</code>
     <button class="student-btn student-btn-primary" type="button"
       @click="navigator.clipboard.writeText($refs.tokenValue.textContent.trim()).then(() => copied = true)">
-      <span x-show="!copied">Copy code</span>
+      <span x-show.important="!copied">Copy code</span>
       <span class="visually-hidden">Copy Token</span>
-      <span x-show="copied" x-cloak>Copied</span>
+      <span x-show.important="copied" x-cloak>Copied</span>
     </button>
   </div>
 

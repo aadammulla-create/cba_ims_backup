@@ -4,332 +4,396 @@
 {% block title %}Reserve Equipment — CBA Equipment Reservations{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-12 col-lg-9 col-xl-8">
+<div class="cba-page-wrap">
 
-        <!-- Form Header per Section 4 -->
-        <header class="student-page-heading mb-3">
-            <a class="student-back" href="{% url 'student_reservations:catalog' %}">← Equipment</a>
-            <h1>Reserve equipment</h1>
-            <p>Complete the details below. No account needed.</p>
-        </header>
+    <!-- Form Breadcrumb & Heading -->
+    <header class="student-page-heading mb-4">
+        <a class="student-back" href="{% url 'student_reservations:catalog' %}">
+            <i class="bi bi-arrow-left me-1"></i> Back to equipment
+        </a>
+        <span class="cba-kicker">STEP 2 OF 2 · YOUR REQUEST</span>
+        <h1 class="h2 fw-bold text-dark mb-1">Complete your reservation</h1>
+        <p class="text-secondary">Provide your student contact details to submit your reservation. No account needed.</p>
+    </header>
 
-        <!-- Streamlined Single-Page Reservation Form -->
-        {{ category_types_data|json_script:"category-types-data" }}
-        <div class="bg-white p-3 p-md-4 rounded border border-light-subtle shadow-xs"
-             x-data="reservationForm()">
+    {{ category_types_data|json_script:"category-types-data" }}
 
-            <form method="post" action="{% url 'student_reservations:public_request' %}" novalidate @submit="submitting = true">
-                {% csrf_token %}
+    <form method="post" action="{% url 'student_reservations:public_request' %}" novalidate @submit="submitting = true"
+          x-data="reservationForm()" id="reservation-form">
+        {% csrf_token %}
 
-                {% if form.non_field_errors %}
-                <div class="alert alert-danger py-2 px-3 mb-3 d-flex align-items-center gap-2 small rounded border" role="alert">
-                    <i class="bi bi-exclamation-octagon-fill text-danger flex-shrink-0"></i>
-                    <div>
-                        {% for error in form.non_field_errors %}
-                            {{ error }}{% if not forloop.last %}<br>{% endif %}
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
+        <div class="row g-4 align-items-start">
+            <!-- Left Column: Form Details Card -->
+            <div class="col-12 col-lg-7 col-xl-8">
+                <div class="card border shadow-xs p-3 p-md-4 bg-white" style="border-radius: 14px;">
 
-                <!-- SECTION 1: Equipment & Schedule -->
-                <div class="mb-4">
-                    <h2 class="student-section-title">Equipment & schedule</h2>
-
-                    <div class="row g-3">
-                        <!-- Category Selector -->
-                        <div class="col-12" :class="currentTypes.length > 0 ? 'col-md-6' : 'col-12'">
-                            <label for="id_category" class="form-label fw-semibold small text-secondary mb-1">
-                                Equipment Category <span class="text-danger">*</span>
-                            </label>
-                            <select name="category" id="id_category"
-                                    class="form-select form-select-sm {% if form.category.errors %}is-invalid{% endif %}"
-                                    x-model="selectedCategory"
-                                    @change="onCategoryChange()"
-                                    required>
-                                <option value="">-- Select Equipment Category --</option>
-                                {% for cat in form.fields.category.queryset %}
-                                    <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ cat.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            {% if form.category.errors %}
-                                <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Broad category classification.
-                                </small>
-                            {% endif %}
-                        </div>
-
-                        <!-- Dependent Equipment Type Selector -->
-                        <div class="col-12 col-md-6" x-show="currentTypes.length > 0" x-cloak>
-                            <label for="id_equipment_type_ref" class="form-label fw-semibold small text-secondary mb-1">
-                                Equipment Type <span class="text-danger">*</span>
-                            </label>
-                            <select name="equipment_type_ref" id="id_equipment_type_ref"
-                                    class="form-select form-select-sm {% if form.equipment_type_ref.errors %}is-invalid{% endif %}"
-                                    x-model="selectedType"
-                                    :required="currentTypes.length > 0">
-                                <option value="">-- Select Equipment Type --</option>
-                                {% for et in form.fields.equipment_type_ref.queryset %}
-                                    <option value="{{ et.id }}" {% if form.equipment_type_ref.value|stringformat:"s" == et.id|stringformat:"s" %}selected{% endif %}>
-                                        {{ et.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            {% if form.equipment_type_ref.errors %}
-                                <div class="invalid-feedback d-block">{{ form.equipment_type_ref.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Specific equipment subtype (e.g. Projector, Wireless Mic).
-                                </small>
-                            {% endif %}
-                        </div>
-
-                        <!-- Pickup Datetime -->
-                        <div class="col-12 col-md-6">
-                            <label for="id_requested_pickup" class="form-label fw-semibold small text-secondary mb-1">
-                                Requested Pickup Date &amp; Time <span class="text-danger">*</span>
-                            </label>
-                            <input type="datetime-local" name="requested_pickup" id="id_requested_pickup"
-                                   class="form-control form-control-sm {% if form.requested_pickup.errors %}is-invalid{% endif %}"
-                                   value="{{ form.requested_pickup.value|default:'' }}" required>
-                            {% if form.requested_pickup.errors %}
-                                <div class="invalid-feedback d-block">{{ form.requested_pickup.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Held for 15 minutes past this time.
-                                </small>
-                            {% endif %}
-                        </div>
-
-                        <!-- Return Datetime (Outdated 48-hour text removed) -->
-                        <div class="col-12 col-md-6">
-                            <label for="id_requested_return" class="form-label fw-semibold small text-secondary mb-1">
-                                Requested Return Date &amp; Time <span class="text-danger">*</span>
-                            </label>
-                            <input type="datetime-local" name="requested_return" id="id_requested_return"
-                                   class="form-control form-control-sm {% if form.requested_return.errors %}is-invalid{% endif %}"
-                                   value="{{ form.requested_return.value|default:'' }}" required>
-                            {% if form.requested_return.errors %}
-                                <div class="invalid-feedback d-block">{{ form.requested_return.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Scheduled return deadline to the CBA Property Office.
-                                </small>
-                            {% endif %}
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger py-2.5 px-3 mb-4 d-flex align-items-center gap-2 small rounded border" role="alert">
+                        <i class="bi bi-exclamation-octagon-fill text-danger flex-shrink-0 fs-5"></i>
+                        <div>
+                            {% for error in form.non_field_errors %}
+                                {{ error }}{% if not forloop.last %}<br>{% endif %}
+                            {% endfor %}
                         </div>
                     </div>
-                </div>
+                    {% endif %}
 
-                <!-- SECTION 2: Your Details -->
-                <div class="mb-4">
-                    <h2 class="student-section-title">Your details</h2>
-
-                    <div class="row g-3">
-                        <!-- Student ID Number -->
-                        <div class="col-12 col-md-6">
-                            <label for="id_student_id" class="form-label fw-semibold small text-secondary mb-1">
-                                Student ID Number <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" name="student_id" id="id_student_id"
-                                   class="form-control form-control-sm font-mono {% if form.student_id.errors %}is-invalid{% endif %}"
-                                   placeholder="e.g. 2023-12345"
-                                   value="{{ form.student_id.value|default:'' }}" required>
-                            {% if form.student_id.errors %}
-                                <div class="invalid-feedback d-block">{{ form.student_id.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Must match your official physical school ID.
-                                </small>
-                            {% endif %}
+                    <!-- SECTION 1: Equipment & Schedule (Prefilled Summary + Accessible Change Disclosure) -->
+                    <div class="mb-4">
+                        {% if selection_prefilled and not form.errors %}
+                        <!-- Mobile: compact summary above student details (Single summary for mobile viewports) -->
+                        <div class="d-lg-none">
+                            {% include "student_reservations/partials/_selection_summary.html" with is_mobile=True %}
                         </div>
+                        {% endif %}
 
-                        <!-- Full Legal Name -->
-                        <div class="col-12 col-md-6">
-                            <label for="id_student_name" class="form-label fw-semibold small text-secondary mb-1">
-                                Full Legal Name <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" name="student_name" id="id_student_name"
-                                   class="form-control form-control-sm {% if form.student_name.errors %}is-invalid{% endif %}"
-                                   placeholder="e.g. Maria Santos Clara"
-                                   value="{{ form.student_name.value|default:'' }}" required>
-                            {% if form.student_name.errors %}
-                                <div class="invalid-feedback d-block">{{ form.student_name.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Contact Methods (Email OR Phone: At least one required) -->
-                        <div class="col-12">
-                            <div class="p-3 rounded bg-light border border-light-subtle">
-                                <div class="d-flex flex-wrap justify-content-between align-items-center gap-1.5 mb-1.5">
-                                    <label class="form-label fw-semibold small text-dark mb-0">
-                                        <i class="bi bi-chat-left-dots text-primary me-1"></i> Contact Method <span class="text-danger">*</span>
-                                    </label>
-                                    <span class="badge bg-white text-primary border border-primary-subtle" style="font-size: 0.725rem; font-weight: 500;">
-                                        Either Email OR Mobile is required (not both)
-                                    </span>
-                                </div>
-                                <p class="text-secondary small mb-2.5" style="font-size: 0.8rem; line-height: 1.4;">
-                                    Provide at least one valid way to reach you. If you provide a mobile number only, save your tracking token upon submission.
+                        <!-- Accessible Collapsible Selection Editor -->
+                        <details class="cba-selection-editor"
+                                 id="change-booking"
+                                 {% if not selection_prefilled or form.errors or form.category.errors or form.equipment_type_ref.errors or form.requested_pickup.errors or form.requested_return.errors %}open{% endif %}>
+                            <summary class="cba-selection-editor__summary d-flex align-items-center justify-content-between">
+                                <span>
+                                    {% if selection_prefilled and not form.errors %}
+                                        <i class="bi bi-sliders me-1.5 text-primary"></i> Change equipment or schedule
+                                    {% else %}
+                                        <i class="bi bi-calendar-event me-1.5 text-primary"></i> Choose equipment and schedule
+                                    {% endif %}
+                                </span>
+                                <span class="text-muted small fw-normal">
+                                    <i class="bi bi-chevron-down"></i>
+                                </span>
+                            </summary>
+                            <div class="cba-selection-editor__body">
+                                <p class="text-secondary small mb-3">
+                                    You can adjust the equipment or times below. Availability will be checked upon submission.
                                 </p>
-
-                                <div class="row g-2.5">
-                                    <div class="col-12 col-md-6">
-                                        <label for="id_email" class="form-label small text-secondary mb-1">
-                                            Email Address <span class="text-muted fw-normal">(Optional if phone provided)</span>
+                                <div class="row g-3">
+                                    <!-- Equipment Category -->
+                                    <div class="col-12" :class="currentTypes.length > 0 ? 'col-md-6' : 'col-12'">
+                                        <label for="id_category" class="form-label fw-semibold small text-secondary mb-1">
+                                            Equipment Category <span class="text-danger">*</span>
                                         </label>
-                                        <input type="email" name="email" id="id_email"
-                                               class="form-control form-control-sm bg-white {% if form.email.errors %}is-invalid{% endif %}"
-                                               placeholder="e.g. maria.clara@student.edu"
-                                               value="{{ form.email.value|default:'' }}">
-                                        {% if form.email.errors %}
-                                            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                                        <select name="category" id="id_category"
+                                                class="form-select {% if form.category.errors %}is-invalid{% endif %}"
+                                                x-model="selectedCategory"
+                                                @change="onCategoryChange()"
+                                                required>
+                                            <option value="">-- Select Equipment Category --</option>
+                                            {% for cat in form.fields.category.queryset %}
+                                                <option value="{{ cat.id }}" {% if form.category.value|stringformat:"s" == cat.id|stringformat:"s" %}selected{% endif %}>
+                                                    {{ cat.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if form.category.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
                                         {% endif %}
                                     </div>
 
-                                    <div class="col-12 col-md-6">
-                                        <label for="id_contact_number" class="form-label small text-secondary mb-1">
-                                            Mobile / Phone Number <span class="text-muted fw-normal">(Optional if email provided)</span>
+                                    <!-- Equipment Subtype -->
+                                    <div class="col-12 col-md-6" x-show.important="currentTypes.length > 0" x-cloak>
+                                        <label for="id_equipment_type_ref" class="form-label fw-semibold small text-secondary mb-1">
+                                            Equipment Type <span class="text-danger">*</span>
                                         </label>
-                                        <input type="tel" name="contact_number" id="id_contact_number"
-                                               class="form-control form-control-sm bg-white font-mono {% if form.contact_number.errors %}is-invalid{% endif %}"
-                                               placeholder="e.g. 09171234567"
-                                               value="{{ form.contact_number.value|default:'' }}">
-                                        {% if form.contact_number.errors %}
-                                            <div class="invalid-feedback d-block">{{ form.contact_number.errors.0 }}</div>
+                                        <select name="equipment_type_ref" id="id_equipment_type_ref"
+                                                class="form-select {% if form.equipment_type_ref.errors %}is-invalid{% endif %}"
+                                                x-model="selectedType"
+                                                @change="onTypeChange()"
+                                                :required="currentTypes.length > 0">
+                                            <option value="">-- Select Equipment Type --</option>
+                                            {% for et in form.fields.equipment_type_ref.queryset %}
+                                                <option value="{{ et.id }}" {% if form.equipment_type_ref.value|stringformat:"s" == et.id|stringformat:"s" %}selected{% endif %}>
+                                                    {{ et.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if form.equipment_type_ref.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.equipment_type_ref.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Pickup Datetime -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="id_requested_pickup" class="form-label fw-semibold small text-secondary mb-1">
+                                            Pickup date &amp; time <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="requested_pickup" id="id_requested_pickup"
+                                               class="form-control {% if form.requested_pickup.errors %}is-invalid{% endif %}"
+                                               value="{{ form.requested_pickup.value|default:'' }}"
+                                               x-model="pickupVal"
+                                               @input="onScheduleChange()"
+                                               required>
+                                        {% if form.requested_pickup.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.requested_pickup.errors.0 }}</div>
+                                        {% else %}
+                                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                                Held for 15 minutes past this time.
+                                            </small>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Return Datetime -->
+                                    <div class="col-12 col-md-6">
+                                        <label for="id_requested_return" class="form-label fw-semibold small text-secondary mb-1">
+                                            Return date &amp; time <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="datetime-local" name="requested_return" id="id_requested_return"
+                                               class="form-control {% if form.requested_return.errors %}is-invalid{% endif %}"
+                                               value="{{ form.requested_return.value|default:'' }}"
+                                               x-model="returnVal"
+                                               @input="onScheduleChange()"
+                                               required>
+                                        {% if form.requested_return.errors %}
+                                            <div class="invalid-feedback d-block">{{ form.requested_return.errors.0 }}</div>
+                                        {% else %}
+                                            <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                                Scheduled return to Property Office.
+                                            </small>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Purpose Dropdown -->
-                        <div class="col-12">
-                            <label for="id_purpose" class="form-label fw-semibold small text-secondary mb-1">
-                                Purpose of Use <span class="text-danger">*</span>
-                            </label>
-                            <select name="purpose" id="id_purpose"
-                                    class="form-select form-select-sm {% if form.purpose.errors %}is-invalid{% endif %}"
-                                    x-model="purposeValue"
-                                    required>
-                                <option value="">-- Select Purpose of Equipment Use --</option>
-                                <option value="Class Presentation / Reporting">Class Presentation / Reporting</option>
-                                <option value="Department / College Seminar or Event">Department / College Seminar or Event</option>
-                                <option value="Student Organization Activity">Student Organization Activity</option>
-                                <option value="Thesis / Capstone / Research Defense">Thesis / Capstone / Research Defense</option>
-                                <option value="Other">Other (specify details below)</option>
-                            </select>
-                            {% if form.purpose.errors %}
-                                <div class="invalid-feedback d-block">{{ form.purpose.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Conditional Purpose Details Input (Displayed when 'Other' selected) -->
-                        <div class="col-12" x-show="purposeValue === 'Other'" x-cloak>
-                            <label for="id_purpose_details" class="form-label fw-semibold small text-secondary mb-1">
-                                Activity Details / Description <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" name="purpose_details" id="id_purpose_details"
-                                   class="form-control form-control-sm {% if form.purpose_details.errors %}is-invalid{% endif %}"
-                                   placeholder="State the academic subject or event purpose..."
-                                   value="{{ form.purpose_details.value|default:'' }}">
-                            {% if form.purpose_details.errors %}
-                                <div class="invalid-feedback d-block">{{ form.purpose_details.errors.0 }}</div>
-                            {% else %}
-                                <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                    Briefly describe why the equipment is needed.
-                                </small>
-                            {% endif %}
-                        </div>
+                        </details>
                     </div>
-                </div>
 
-                <!-- COLLAPSIBLE: Additional Details (Optional) -->
-                <div class="mb-4">
-                    <div class="p-2.5 rounded bg-light border border-light-subtle">
-                        <button type="button" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-flex align-items-center justify-content-between w-100"
-                                @click="showOptional = !showOptional">
-                            <span class="fw-semibold small">
-                                <i class="bi" :class="showOptional ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
-                                Additional Details (Optional: Room, Section, Model Preference)
-                            </span>
-                            <span class="badge bg-white text-secondary border font-sans" style="font-size: 0.7rem;" x-text="showOptional ? 'Collapse' : 'Expand'">
-                                Expand
-                            </span>
-                        </button>
+                    <!-- SECTION 2: Student Details -->
+                    <div class="mb-4">
+                        <span class="cba-kicker">STUDENT INFORMATION</span>
+                        <h2 class="h5 fw-bold text-dark mb-3">Your details</h2>
 
-                        <div class="row g-3 mt-1 pt-2 border-top border-light-subtle" x-show="showOptional" x-cloak>
-                            <!-- Course, Year & Section -->
-                            <div class="col-12 col-md-4">
-                                <label for="id_course_year_section" class="form-label small text-secondary mb-1">
-                                    Course, Year &amp; Section
+                        <div class="row g-3">
+                            <!-- Student ID Number -->
+                            <div class="col-12 col-md-6">
+                                <label for="id_student_id" class="form-label fw-semibold small text-secondary mb-1">
+                                    Student ID Number <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" name="course_year_section" id="id_course_year_section"
-                                       class="form-control form-control-sm bg-white {% if form.course_year_section.errors %}is-invalid{% endif %}"
-                                       placeholder="e.g. BSBA MM 3-A"
-                                       value="{{ form.course_year_section.value|default:'' }}">
-                                {% if form.course_year_section.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.course_year_section.errors.0 }}</div>
+                                <input type="text" name="student_id" id="id_student_id"
+                                       class="form-control font-mono {% if form.student_id.errors %}is-invalid{% endif %}"
+                                       placeholder="2024XXXXX"
+                                       inputmode="numeric"
+                                       value="{{ form.student_id.value|default:'' }}" required>
+                                {% if form.student_id.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.student_id.errors.0 }}</div>
+                                {% else %}
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                        Nine-digit student ID number (no hyphen), as shown on your School ID.
+                                    </small>
                                 {% endif %}
                             </div>
 
-                            <!-- Room / Venue -->
-                            <div class="col-12 col-md-4">
-                                <label for="id_room_venue" class="form-label small text-secondary mb-1">
-                                    Intended Room / Venue
+                            <!-- Full Legal Name -->
+                            <div class="col-12 col-md-6">
+                                <label for="id_student_name" class="form-label fw-semibold small text-secondary mb-1">
+                                    Full Legal Name <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" name="room_venue" id="id_room_venue"
-                                       class="form-control form-control-sm bg-white {% if form.room_venue.errors %}is-invalid{% endif %}"
-                                       placeholder="e.g. CBA Room 304, AVR"
-                                       value="{{ form.room_venue.value|default:'' }}">
+                                <input type="text" name="student_name" id="id_student_name"
+                                       class="form-control {% if form.student_name.errors %}is-invalid{% endif %}"
+                                       placeholder="As shown on School ID"
+                                       value="{{ form.student_name.value|default:'' }}" required>
+                                {% if form.student_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.student_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Contact Methods (Email OR Phone: At least one required) -->
+                            <div class="col-12">
+                                <div class="p-3 rounded bg-light border border-light-subtle">
+                                    <div class="mb-2">
+                                        <label class="form-label fw-semibold small text-dark mb-1">
+                                            <i class="bi bi-chat-left-dots text-primary me-1"></i> Contact Information <span class="text-danger">*</span>
+                                        </label>
+                                        <p class="text-secondary small mb-0" style="font-size: 0.8rem; line-height: 1.4;">
+                                            Provide an email address or mobile number so the Property Office can send updates.
+                                        </p>
+                                    </div>
+
+                                    <div class="row g-2.5">
+                                        <div class="col-12 col-md-6">
+                                            <label for="id_email" class="form-label small text-secondary mb-1">
+                                                Email Address <span class="text-muted fw-normal">(Optional if mobile provided)</span>
+                                            </label>
+                                            <input type="email" name="email" id="id_email"
+                                                   class="form-control bg-white {% if form.email.errors %}is-invalid{% endif %}"
+                                                   placeholder="name@student.edu.ph"
+                                                   value="{{ form.email.value|default:'' }}">
+                                            {% if form.email.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="id_contact_number" class="form-label small text-secondary mb-1">
+                                                Mobile / Phone Number <span class="text-muted fw-normal">(Optional if email provided)</span>
+                                            </label>
+                                            <input type="tel" name="contact_number" id="id_contact_number"
+                                                   class="form-control bg-white font-mono {% if form.contact_number.errors %}is-invalid{% endif %}"
+                                                   placeholder="09xx xxx xxxx"
+                                                   value="{{ form.contact_number.value|default:'' }}">
+                                            {% if form.contact_number.errors %}
+                                                <div class="invalid-feedback d-block">{{ form.contact_number.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Purpose Dropdown & Conditional Details -->
+                            <div class="col-12 col-md-6">
+                                <label for="id_purpose" class="form-label fw-semibold small text-secondary mb-1">
+                                    Purpose of Use <span class="text-danger">*</span>
+                                </label>
+                                <select name="purpose" id="id_purpose"
+                                        class="form-select {% if form.purpose.errors %}is-invalid{% endif %}"
+                                        x-model="purposeValue"
+                                        required>
+                                    <option value="">-- Select Purpose of Use --</option>
+                                    {% for val, label in form.fields.purpose.widget.choices %}
+                                        {% if val %}
+                                            <option value="{{ val }}" {% if form.purpose.value == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                {% if form.purpose.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.purpose.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Room / Venue Dropdown & Conditional Details -->
+                            <div class="col-12 col-md-6">
+                                <label for="id_room_venue" class="form-label fw-semibold small text-secondary mb-1">
+                                    Room or Venue <span class="text-muted fw-normal">(Optional)</span>
+                                </label>
+                                <select name="room_venue" id="id_room_venue"
+                                        class="form-select {% if form.room_venue.errors %}is-invalid{% endif %}"
+                                        x-model="roomVenueValue">
+                                    <option value="">-- Select Room or Venue --</option>
+                                    {% for val, label in form.fields.room_venue.widget.choices %}
+                                        {% if val %}
+                                            <option value="{{ val }}" {% if form.room_venue.value == val %}selected{% endif %}>{{ label }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
                                 {% if form.room_venue.errors %}
                                     <div class="invalid-feedback d-block">{{ form.room_venue.errors.0 }}</div>
                                 {% endif %}
                             </div>
 
-                            <!-- Equipment Preference -->
-                            <div class="col-12 col-md-4">
-                                <label for="id_equipment_type" class="form-label small text-secondary mb-1">
-                                    Specific Model / Brand Note (Optional)
+                            <!-- Conditional Purpose Details Input (Displayed when 'Other' selected) -->
+                            <div class="col-12" x-show.important="purposeValue === 'Other'" x-cloak>
+                                <label for="id_purpose_details" class="form-label fw-semibold small text-secondary mb-1">
+                                    Activity Purpose Details <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" name="equipment_type" id="id_equipment_type"
-                                       class="form-control form-control-sm bg-white {% if form.equipment_type.errors %}is-invalid{% endif %}"
-                                       placeholder="e.g. Prefer HDMI Epson unit"
-                                       value="{{ form.equipment_type.value|default:'' }}">
-                                {% if form.equipment_type.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.equipment_type.errors.0 }}</div>
+                                <input type="text" name="purpose_details" id="id_purpose_details"
+                                       class="form-control {% if form.purpose_details.errors %}is-invalid{% endif %}"
+                                       placeholder="Please specify brief activity purpose..."
+                                       value="{{ form.purpose_details.value|default:'' }}">
+                                {% if form.purpose_details.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.purpose_details.errors.0 }}</div>
+                                {% else %}
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                        Briefly describe why the equipment is needed.
+                                    </small>
+                                {% endif %}
+                            </div>
+
+                            <!-- Conditional Room/Venue Other Input (Displayed when 'Other' selected) -->
+                            <div class="col-12" x-show.important="roomVenueValue === 'Other'" x-cloak>
+                                <label for="id_room_venue_other" class="form-label fw-semibold small text-secondary mb-1">
+                                    Specify Room or Venue <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="room_venue_other" id="id_room_venue_other"
+                                       class="form-control {% if form.room_venue_other.errors %}is-invalid{% endif %}"
+                                       placeholder="Specify room number or campus venue..."
+                                       value="{{ form.room_venue_other.value|default:'' }}">
+                                {% if form.room_venue_other.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.room_venue_other.errors.0 }}</div>
+                                {% else %}
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                        State the room or campus location where the equipment will be used.
+                                    </small>
                                 {% endif %}
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Submit Button & Policy Guidance -->
-                <div class="pt-3 border-top border-light-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-                    <div class="text-muted small" style="font-size: 0.8rem;">
-                        <i class="bi bi-info-circle me-1 text-primary"></i>
-                        <strong>Physical School ID Custody Policy:</strong> Bring your original School ID when collecting approved equipment.
+                    <!-- SECTION 3: Collapsible Additional Details (Optional) -->
+                    <div class="mb-4">
+                        <div class="p-3 rounded bg-light border border-light-subtle">
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none text-secondary p-0 d-flex align-items-center justify-content-between w-100"
+                                    @click="showOptional = !showOptional">
+                                <span class="fw-semibold small">
+                                    <i class="bi" :class="showOptional ? 'bi-chevron-down' : 'bi-chevron-right'"></i>
+                                    Additional Details (Optional: Section, Specific Model Note)
+                                </span>
+                                <span class="badge bg-white text-secondary border font-sans" style="font-size: 0.725rem;" x-text="showOptional ? 'Collapse' : 'Expand'">
+                                    Expand
+                                </span>
+                            </button>
+
+                            <div class="row g-3 mt-1 pt-3 border-top border-light-subtle" x-show.important="showOptional" x-cloak>
+                                <!-- Course, Year & Section -->
+                                <div class="col-12 col-md-6">
+                                    <label for="id_course_year_section" class="form-label small text-secondary mb-1">
+                                        Course, Year &amp; Section
+                                    </label>
+                                    <input type="text" name="course_year_section" id="id_course_year_section"
+                                           class="form-control bg-white {% if form.course_year_section.errors %}is-invalid{% endif %}"
+                                           placeholder="e.g. BSBA MM 3-A"
+                                           value="{{ form.course_year_section.value|default:'' }}">
+                                    {% if form.course_year_section.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.course_year_section.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Specific Model Preference Note -->
+                                <div class="col-12 col-md-6">
+                                    <label for="id_equipment_type" class="form-label small text-secondary mb-1">
+                                        Specific Model / Brand Note (Optional)
+                                    </label>
+                                    <input type="text" name="equipment_type" id="id_equipment_type"
+                                           class="form-control bg-white {% if form.equipment_type.errors %}is-invalid{% endif %}"
+                                           placeholder="e.g. Prefer Epson HDMI unit"
+                                           value="{{ form.equipment_type.value|default:'' }}">
+                                    {% if form.equipment_type.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.equipment_type.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'student_reservations:catalog' %}" class="btn btn-sm btn-light border py-1.5 px-3">
-                            Cancel
-                        </a>
-                        <button type="submit" class="btn btn-sm btn-primary-cba px-3 py-1.5" :disabled="submitting">
-                            <span x-show="!submitting">Submit request &rarr;</span>
-                            <span x-show="submitting" x-cloak><span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting...</span>
-                        </button>
-                    </div>
-                </div>
+                    <!-- Bottom Action Row -->
+                    <div class="pt-3 border-top border-light-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                        <div class="text-muted small" style="font-size: 0.8rem;">
+                            <i class="bi bi-info-circle me-1 text-primary"></i>
+                            <strong>Physical School ID Custody Policy:</strong> Bring your original School ID when collecting approved equipment.
+                        </div>
 
-            </form>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'student_reservations:catalog' %}" class="btn btn-light border px-3" style="min-height: 44px; display: inline-flex; align-items: center;">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary-cba px-4 fw-semibold" style="min-height: 44px;" :disabled="submitting">
+                                <span x-show.important="!submitting">Submit request &rarr;</span>
+                                <span x-show.important="submitting" x-cloak>
+                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span> Submitting...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Right Column: Sticky Selection Summary Card on Desktop (Single summary on desktop) -->
+            <aside class="col-12 col-lg-5 col-xl-4 d-none d-lg-block">
+                <div class="position-sticky" style="top: 80px;">
+                    {% include "student_reservations/partials/_selection_summary.html" with is_mobile=False %}
+                </div>
+            </aside>
         </div>
 
-    </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -348,17 +412,102 @@ function reservationForm() {
 
     const initialCat = '{{ form.category.value|default:""|escapejs }}';
     const initialType = '{{ form.equipment_type_ref.value|default:""|escapejs }}';
+    const initialPickup = '{{ form.requested_pickup.value|default:""|escapejs }}';
+    const initialReturn = '{{ form.requested_return.value|default:""|escapejs }}';
+    const initialPurpose = '{{ form.purpose.value|default:""|escapejs }}';
+    const initialVenue = '{{ form.room_venue.value|default:""|escapejs }}';
+
+    const defaultTypeName = '{{ selection_display.type_name|default:""|escapejs }}';
+    const defaultCategoryName = '{{ selection_display.category_name|default:""|escapejs }}';
+    const defaultPickupDisplay = '{{ selection_display.pickup|default:""|escapejs }}';
+    const defaultReturnDisplay = '{{ selection_display.return|default:""|escapejs }}';
 
     return {
         submitting: false,
-        purposeValue: '{{ form.purpose.value|default:""|escapejs }}',
+        purposeValue: initialPurpose,
+        roomVenueValue: initialVenue,
         selectedCategory: initialCat,
         selectedType: initialType,
+        pickupVal: initialPickup,
+        returnVal: initialReturn,
+        initialCat: initialCat,
+        initialType: initialType,
+        initialPickup: initialPickup,
+        initialReturn: initialReturn,
         categoryTypesMap: categoryTypesMap,
-        showOptional: {% if form.course_year_section.value or form.room_venue.value or form.equipment_type.value or form.course_year_section.errors or form.room_venue.errors or form.equipment_type.errors %}true{% else %}false{% endif %},
+        showOptional: {% if form.course_year_section.value or form.equipment_type.value or form.course_year_section.errors or form.equipment_type.errors %}true{% else %}false{% endif %},
+
+        get hasChanged() {
+            return Boolean(
+                (this.initialCat && String(this.selectedCategory) !== String(this.initialCat)) ||
+                (this.initialType && String(this.selectedType) !== String(this.initialType)) ||
+                (this.initialPickup && String(this.pickupVal) !== String(this.initialPickup)) ||
+                (this.initialReturn && String(this.returnVal) !== String(this.initialReturn))
+            );
+        },
 
         get currentTypes() {
             return this.categoryTypesMap[String(this.selectedCategory)] || [];
+        },
+
+        get displayEquipmentName() {
+            if (this.selectedType) {
+                const found = this.currentTypes.find(t => String(t.id) === String(this.selectedType));
+                if (found) return found.name;
+            }
+            const catSelect = document.getElementById('id_category');
+            if (catSelect && catSelect.selectedIndex > 0) {
+                return catSelect.options[catSelect.selectedIndex].text;
+            }
+            return defaultTypeName || 'Equipment selected in catalog';
+        },
+
+        get displayCategoryName() {
+            const catSelect = document.getElementById('id_category');
+            if (catSelect && catSelect.selectedIndex > 0) {
+                return catSelect.options[catSelect.selectedIndex].text;
+            }
+            return defaultCategoryName || 'Instructional Equipment';
+        },
+
+        formatDateTime(val) {
+            if (!val) return '';
+            try {
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return val;
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' +
+                       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            } catch(e) {
+                return val;
+            }
+        },
+
+        get displayPickup() {
+            if (this.hasChanged && this.pickupVal) {
+                return this.formatDateTime(this.pickupVal);
+            }
+            return defaultPickupDisplay || (this.pickupVal ? this.formatDateTime(this.pickupVal) : 'Selected in schedule');
+        },
+
+        get displayReturn() {
+            if (this.hasChanged && this.returnVal) {
+                return this.formatDateTime(this.returnVal);
+            }
+            return defaultReturnDisplay || (this.returnVal ? this.formatDateTime(this.returnVal) : 'Selected in schedule');
+        },
+
+        get displayDuration() {
+            if (this.pickupVal && this.returnVal) {
+                try {
+                    const start = new Date(this.pickupVal);
+                    const end = new Date(this.returnVal);
+                    const diffHrs = (end - start) / (1000 * 60 * 60);
+                    if (diffHrs > 0) {
+                        return (Math.round(diffHrs * 10) / 10) + ' hrs';
+                    }
+                } catch(e) {}
+            }
+            return '{% if selection_display.duration_hours %}{{ selection_display.duration_hours }} hr{{ selection_display.duration_hours|pluralize }}{% else %}Scheduled{% endif %}';
         },
 
         onCategoryChange() {
@@ -369,6 +518,10 @@ function reservationForm() {
             }
             this.syncDropdownOptions();
         },
+
+        onTypeChange() {},
+
+        onScheduleChange() {},
 
         syncDropdownOptions() {
             const select = document.getElementById('id_equipment_type_ref');
