@@ -72,3 +72,8 @@ setup_fictional_test_data.py
 scripts/capture_sidebar_qa.py
 
 
+docs/visual-qa/integration/
+docs/visual-qa/student_ux_refinement/
+docs/visual-qa/step1/
+docs/visual-qa/step2/
+SAMPLE_ACCOUNTS.md
