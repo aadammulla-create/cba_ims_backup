@@ -37,11 +37,12 @@ The CBA Asset & Inventory Management System (CBA IMS) previously underwent paral
 Follow this exact step-by-step procedure to replicate the development environment on any secondary machine.
 
 ### Step 2.1 — Clone the Canonical Repository
-Open PowerShell and clone the private backup repository:
+Open PowerShell and clone the private repository into your preferred workspace directory:
 ```powershell
-Set-Location "C:\Users\PERSONAL\Desktop"
-git clone https://github.com/echo10000/cba_ims_backup.git cba_ims_develop
-Set-Location "cba_ims_develop"
+# Navigate to your preferred workspace root (e.g. $HOME\Desktop, $HOME\Projects, or C:\Projects):
+Set-Location "$HOME\Desktop"
+git clone https://github.com/echo10000/cba_ims_backup.git cba_ims
+Set-Location "cba_ims"
 git checkout develop
 ```
 
@@ -118,7 +119,7 @@ To prevent workspace conflicts, split histories, or lost commits across devices,
 2. Pull the latest commits from the private canonical repository:
    ```powershell
    git checkout develop
-   git pull --rebase private_backup develop
+   git pull --ff-only origin develop
    ```
 
 ### When Making Changes:
@@ -137,10 +138,10 @@ To prevent workspace conflicts, split histories, or lost commits across devices,
 ### When Finishing Work on a Machine:
 1. Never leave unpushed commits when switching devices:
    ```powershell
-   git push private_backup develop
+   git push origin develop
    ```
-2. Verify with `git status` that your branch is up to date with `private_backup/develop`.
-3. If uncommitted work cannot be pushed yet, create a local Git bundle or patch file under `C:\Users\PERSONAL\Desktop\CBA_IMS_Backups\` as an emergency safety net.
+2. Verify with `git status` that your branch is up to date with `origin/develop`.
+3. If uncommitted work cannot be pushed yet, create a local Git bundle or patch file in a designated backup folder outside the repository (e.g., `$HOME\Desktop\CBA_IMS_Backups\` or a secure flash drive) as an emergency safety net.
 
 ---
 
