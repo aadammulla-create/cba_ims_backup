@@ -446,6 +446,46 @@
   min-width: 0;
 }
 
+.student-ui .cba-featured-projector-card {
+  border: 1px solid #cbd5e1;
+  border-top: 3px solid var(--student-blue) !important;
+  border-radius: 14px;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.student-ui .cba-featured-image-box {
+  min-width: 0;
+}
+
+.student-ui .cba-unavailable-disclosure {
+  border: 1px solid var(--student-border);
+  border-radius: 12px;
+  background: #ffffff;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.student-ui .cba-unavailable-disclosure summary {
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px;
+  transition: background-color 0.15s ease;
+}
+
+.student-ui .cba-unavailable-disclosure summary:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.student-ui .cba-unavailable-disclosure[open] summary {
+  border-bottom: 1px solid var(--student-border) !important;
+}
+
+.student-ui .cba-unavailable-disclosure__body {
+  padding: 16px;
+  min-width: 0;
+}
+
 .student-ui .selection-card {
   position: sticky;
   top: 84px;
@@ -516,6 +556,13 @@
     min-height: 44px;
   }
   .student-ui .cba-selection-editor__body {
+    padding: 12px;
+  }
+  .student-ui .cba-featured-projector-card .btn {
+    width: 100%;
+    min-height: 44px;
+  }
+  .student-ui .cba-unavailable-disclosure__body {
     padding: 12px;
   }
 }

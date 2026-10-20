@@ -19,7 +19,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     
     <!-- Custom CSS (DESIGN.md v2.0 Design System - cache busted) -->
-    <link rel="stylesheet" href="{% static 'css/custom.css' %}?v=3.1">
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}?v=3.3">
 
     <!-- Core Frontend Interactivity Libraries (Vendored locally) -->
     <script src="{% static 'vendor/htmx/htmx.min.js' %}"></script>
@@ -28,420 +28,17 @@
     {% block extra_css %}{% endblock %}
 
     <style>
-        /* Prevent Alpine flash of unstyled content */
+        /* Minimal FOUC guard for Alpine before custom.css loads */
         [x-cloak] { display: none !important; }
-
-        :root {
-            --sidebar-width: 240px;
-            --sidebar-bg: #f8fafc;
-            --sidebar-border: #e2e8f0;
-            --sidebar-text: #475569;
-            --sidebar-text-hover: #0f172a;
-            --sidebar-active-bg: #eff6ff;
-            --sidebar-active-text: #1d4ed8;
-            --topbar-height: 54px;
-            --cba-canvas-bg: #f8fafc;
-            --cba-surface-card: #ffffff;
-            --cba-surface-subtle: #f1f5f9;
-            --cba-surface-hover: #f8fafc;
-            --cba-primary: #1d4ed8;
-            --cba-primary-hover: #1e40af;
-            --cba-primary-light: #eff6ff;
-            --cba-border-subtle: #e2e8f0;
-            --cba-border-medium: #cbd5e1;
-            --cba-border-focus: #2563eb;
-            --cba-text-primary: #0f172a;
-            --cba-text-secondary: #475569;
-            --cba-text-muted: #64748b;
-        }
-
-        body {
-            background-color: var(--cba-canvas-bg);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            overflow-x: hidden;
-            color: var(--cba-text-primary);
-            font-size: 0.875rem;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        /* Desktop Fixed Light Sidebar */
-        #desktop-sidebar {
-            width: var(--sidebar-width);
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            background: var(--sidebar-bg);
-            color: var(--cba-text-primary);
-            z-index: 1030;
-            overflow-y: auto;
-            overflow-x: hidden;
-            border-right: 1px solid var(--sidebar-border);
-        }
-        #desktop-sidebar::-webkit-scrollbar { width: 4px; }
-        #desktop-sidebar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
-        #desktop-sidebar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        #desktop-sidebar::-webkit-scrollbar-track { background: transparent; }
-
-        /* Desktop main content offset */
-        @media (min-width: 992px) {
-            #main-content {
-                margin-left: var(--sidebar-width);
-            }
-        }
-
-        /* Modern Workspace Sidebar Brand */
-        .sidebar-brand {
-            padding: 0 16px;
-            height: var(--topbar-height);
-            background: #ffffff;
-            border-bottom: 1px solid var(--sidebar-border);
-            color: var(--cba-text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .sidebar-brand:hover {
-            color: var(--cba-text-primary);
-            text-decoration: none;
-        }
-        .sidebar-brand-mark {
-            width: 30px;
-            height: 30px;
-            background: var(--cba-primary);
-            border: 1px solid #1e40af;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #ffffff;
-            font-size: 0.95rem;
-            flex-shrink: 0;
-        }
-        .sidebar-brand-title {
-            font-weight: 700;
-            font-size: 1.05rem;
-            letter-spacing: -0.015em;
-            color: var(--cba-text-primary);
-            line-height: 1.2;
-        }
-        .sidebar-brand-subtitle {
-            font-size: 0.6875rem;
-            color: var(--cba-text-muted);
-            font-weight: 500;
-            letter-spacing: 0.02em;
-            line-height: 1.2;
-        }
-
-        /* Sidebar Navigation Items */
-        .sidebar-nav {
-            padding: 8px 8px 28px;
-        }
-        .sidebar-nav .nav-section {
-            font-size: 0.6875rem;
-            text-transform: uppercase;
-            color: var(--cba-text-muted);
-            font-weight: 700;
-            padding: 10px 10px 4px;
-            letter-spacing: 0.05em;
-        }
-        .sidebar-section-divider {
-            height: 1px;
-            background-color: var(--sidebar-border);
-            margin: 10px 6px;
-        }
-        .sidebar-nav .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 6px 10px;
-            color: var(--sidebar-text);
-            text-decoration: none;
-            font-size: 0.84rem;
-            font-weight: 500;
-            transition: background-color 0.12s ease, color 0.12s ease;
-            border-radius: 6px;
-            min-height: 34px;
-            gap: 8px;
-            border-left: 3px solid transparent;
-        }
-        .sidebar-nav .nav-link:hover {
-            color: var(--sidebar-text-hover);
-            background: var(--cba-surface-subtle);
-        }
-        .sidebar-nav .nav-link.active {
-            color: var(--sidebar-active-text);
-            font-weight: 600;
-            background: var(--sidebar-active-bg);
-            border-left-color: var(--sidebar-active-text);
-        }
-        .sidebar-nav .nav-link:focus-visible,
-        .sidebar-group > summary:focus-visible {
-            outline: 2px solid var(--cba-primary);
-            outline-offset: 1px;
-        }
-        .sidebar-nav .nav-link i {
-            width: 18px;
-            margin-right: 0;
-            text-align: center;
-            font-size: 0.95rem;
-            color: var(--cba-text-muted);
-            flex-shrink: 0;
-        }
-        .sidebar-nav .nav-link:hover i {
-            color: var(--sidebar-text-hover);
-        }
-        .sidebar-nav .nav-link.active i {
-            color: var(--sidebar-active-text);
-        }
-
-        /* Secondary Collapsible Groups (Native Accessible details/summary) */
-        .sidebar-group {
-            margin-bottom: 2px;
-        }
-        .sidebar-group > summary {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 6px 10px;
-            color: var(--sidebar-text);
-            font-size: 0.82rem;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            user-select: none;
-            min-height: 34px;
-            list-style: none;
-            transition: background-color 0.12s ease, color 0.12s ease;
-        }
-        .sidebar-group > summary::-webkit-details-marker {
-            display: none;
-        }
-        .sidebar-group > summary:hover {
-            color: var(--sidebar-text-hover);
-            background-color: var(--cba-surface-subtle);
-        }
-        .sidebar-group-label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .sidebar-group-label i {
-            width: 18px;
-            text-align: center;
-            font-size: 0.95rem;
-            color: var(--cba-text-muted);
-            flex-shrink: 0;
-        }
-        .sidebar-group > summary:hover .sidebar-group-label i {
-            color: var(--sidebar-text-hover);
-        }
-        .sidebar-group.has-active > summary {
-            color: var(--cba-text-primary);
-        }
-        .sidebar-group.has-active > summary .sidebar-group-label i {
-            color: var(--sidebar-active-text);
-        }
-        .sidebar-group .group-chevron {
-            font-size: 0.72rem;
-            color: var(--cba-text-muted);
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            flex-shrink: 0;
-        }
-        .sidebar-group[open] > summary .group-chevron {
-            transform: rotate(90deg);
-        }
-        .sidebar-group-items {
-            padding-left: 8px;
-            margin-top: 2px;
-            margin-bottom: 6px;
-            border-left: 2px solid var(--sidebar-border);
-            margin-left: 18px;
-        }
-        .sidebar-group-items .nav-link {
-            font-size: 0.8125rem;
-            min-height: 32px;
-            padding: 5px 8px;
-            gap: 7px;
-        }
-        .sidebar-group-items .nav-link i {
-            font-size: 0.88rem;
-            width: 16px;
-        }
-
-        /* Offcanvas Light Theme */
-        .offcanvas.sidebar-offcanvas {
-            background: var(--sidebar-bg);
-            color: var(--cba-text-primary);
-            max-width: 270px;
-            border-right: 1px solid var(--sidebar-border);
-        }
-        .offcanvas.sidebar-offcanvas .offcanvas-header {
-            height: var(--topbar-height);
-            padding: 0 16px;
-            background: #ffffff;
-            border-bottom: 1px solid var(--sidebar-border);
-        }
-        .offcanvas.sidebar-offcanvas .btn-close {
-            filter: none;
-            opacity: 0.6;
-            padding: 0.5rem;
-        }
-        .offcanvas.sidebar-offcanvas .btn-close:hover {
-            opacity: 1;
-        }
-
-        /* Top Navbar */
-        .navbar-top {
-            background: #ffffff;
-            border-bottom: 1px solid var(--cba-border-subtle);
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-            min-height: var(--topbar-height);
-            z-index: 1020;
-            padding: 0 1.25rem;
-        }
-        .topbar-menu-btn {
-            width: 36px;
-            height: 36px;
-            min-height: 36px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            border: 1px solid var(--cba-border-medium);
-            border-radius: 6px;
-            background: #ffffff;
-            color: var(--cba-text-secondary);
-            transition: all 0.15s ease;
-        }
-        .topbar-menu-btn:hover {
-            background: var(--cba-surface-subtle);
-            color: var(--cba-text-primary);
-            border-color: var(--cba-border-medium);
-        }
-        .topbar-badge {
-            font-size: 0.6875rem;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            padding: 2px 7px;
-            border-radius: 4px;
-            background-color: var(--cba-surface-subtle);
-            color: var(--cba-text-secondary);
-            border: 1px solid var(--cba-border-subtle);
-        }
-
-        /* Typography Hierarchy (DESIGN.md v2.0) */
-        h1, .h1 {
-            font-size: 1.375rem; /* 22px */
-            font-weight: 700;
-            line-height: 1.3;
-            letter-spacing: -0.015em;
-            color: var(--cba-text-primary);
-        }
-        h2, .h2 {
-            font-size: 1.1875rem; /* 19px */
-            font-weight: 600;
-            line-height: 1.35;
-            letter-spacing: -0.01em;
-            color: var(--cba-text-primary);
-        }
-        h3, .h3 {
-            font-size: 1.0625rem; /* 17px */
-            font-weight: 600;
-            line-height: 1.4;
-            color: var(--cba-text-primary);
-        }
-        h4, .h4 {
-            font-size: 0.95rem;
-            font-weight: 600;
-            line-height: 1.4;
-            color: var(--cba-text-primary);
-        }
-
-        /* Main Workspace Content Area */
-        .main-container {
-            padding: 20px 24px;
-            max-width: 100%;
-            min-height: calc(100vh - var(--topbar-height) - 52px);
-        }
-
-        /* Card defaults */
-        .card {
-            border: 1px solid var(--cba-border-subtle);
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-            border-radius: 8px;
-            background-color: #ffffff;
-        }
-
-        /* Mobile adjustments (<768px) */
-        @media (max-width: 767.98px) {
-            .main-container { padding: 12px; }
-            .topbar-menu-btn {
-                width: 44px;
-                height: 44px;
-                min-height: 44px;
-            }
-            .sidebar-nav .nav-link,
-            .sidebar-group > summary {
-                min-height: 44px;
-                padding: 10px 12px;
-                font-size: 0.9rem;
-            }
-            .sidebar-group-items .nav-link {
-                min-height: 40px;
-                padding: 8px 10px;
-                font-size: 0.86rem;
-            }
-            .form-control, .form-select {
-                font-size: 16px !important;
-                min-height: 44px;
-            }
-            .btn {
-                min-height: 44px;
-                padding: 0.5rem 1rem;
-            }
-            .btn-sm {
-                min-height: 38px;
-                padding: 0.375rem 0.75rem;
-            }
-            .table { font-size: 0.85rem; }
-        }
-
-        /* Tablet adjustments (768px - 991.98px) */
-        @media (min-width: 768px) and (max-width: 991.98px) {
-            .main-container { padding: 16px; }
-            .topbar-menu-btn {
-                width: 40px;
-                height: 40px;
-                min-height: 40px;
-            }
-            .sidebar-nav .nav-link,
-            .sidebar-group > summary {
-                min-height: 40px;
-                padding: 8px 12px;
-            }
-            .sidebar-group-items .nav-link {
-                min-height: 36px;
-                padding: 6px 10px;
-            }
-        }
-
-        /* Print */
-        @media print {
-            #desktop-sidebar, .navbar-top, .offcanvas, .btn, .pagination, footer { display: none !important; }
-            #main-content { margin-left: 0 !important; }
-            .main-container { padding: 0 !important; }
-        }
     </style>
 </head>
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
+    <!-- Accessible Skip Link (WCAG 2.4.1 Bypass Blocks) -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
     <!-- Desktop Sidebar (hidden on mobile/tablet) -->
-    <nav id="desktop-sidebar" class="d-none d-lg-block">
+    <nav id="desktop-sidebar" class="d-none d-lg-block" aria-label="Desktop primary navigation">
         {% include 'includes/sidebar_nav.html' %}
     </nav>
 
@@ -453,11 +50,11 @@
                     <i class="bi bi-grid-3x3-gap-fill text-white"></i>
                 </div>
                 <div class="d-flex flex-column lh-1">
-                    <span class="sidebar-brand-title">CBA IMS</span>
+                    <span class="sidebar-brand-title" id="sidebarMenuLabel">CBA IMS</span>
                     <span class="sidebar-brand-subtitle">College of Business Administration</span>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close navigation menu"></button>
         </div>
         <div class="offcanvas-body p-0">
             {% include 'includes/sidebar_nav.html' %}
@@ -465,7 +62,7 @@
     </div>
 
     <!-- Main Content Area -->
-    <div id="main-content">
+    <div id="main-content" tabindex="-1">
         
         <!-- Modern Workspace Top Navbar -->
         <header class="navbar navbar-top sticky-top px-3 d-flex align-items-center justify-content-between">
@@ -476,7 +73,7 @@
                 </button>
                 <div class="d-flex align-items-center gap-2">
                     <span class="topbar-badge font-mono d-none d-sm-inline-block">NORSU CBA</span>
-                    <h1 class="h6 mb-0 text-truncate fw-bold text-dark">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <span class="topbar-page-title h6 mb-0 text-truncate fw-bold text-dark">{% block page_title %}Dashboard{% endblock %}</span>
                 </div>
             </div>
 
@@ -523,26 +120,6 @@
     <!-- Custom JS -->
     <script src="{% static 'js/custom.js' %}?v=3.1"></script>
     
-    <!-- Accessible auto-expansion for active sidebar groups -->
-    <script>
-        (function() {
-            function syncActiveSidebarGroups() {
-                document.querySelectorAll('.sidebar-group').forEach(function(group) {
-                    if (group.querySelector('.nav-link.active')) {
-                        group.setAttribute('open', '');
-                        group.classList.add('has-active');
-                    }
-                });
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', syncActiveSidebarGroups);
-            } else {
-                syncActiveSidebarGroups();
-            }
-            document.addEventListener('htmx:afterSettle', syncActiveSidebarGroups);
-        })();
-    </script>
-
     {% block extra_js %}{% endblock %}
 
 </body>

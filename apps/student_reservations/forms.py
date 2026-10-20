@@ -304,6 +304,7 @@ class CustodianReleaseForm(forms.Form):
     condition_at_release = forms.ChoiceField(
         choices=Asset.Condition.choices,
         required=True,
+        initial=Asset.Condition.GOOD,
         help_text="Physical condition snapshot upon equipment release."
     )
     id_deposited = forms.BooleanField(
@@ -315,6 +316,12 @@ class CustodianReleaseForm(forms.Form):
         widget=forms.Textarea(attrs={'rows': 2}),
         required=False
     )
+
+    def clean_condition_at_release(self):
+        cond = self.cleaned_data.get('condition_at_release')
+        if cond == Asset.Condition.UNSERVICEABLE:
+            raise ValidationError("Cannot release equipment in UNSERVICEABLE condition.")
+        return cond
 
 
 class CustodianOfficeReturnForm(forms.Form):

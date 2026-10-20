@@ -16,7 +16,7 @@
     </div>
 </div>
 
-{% if not catalog_cards %}
+{% if not featured_projector and not secondary_available_cards and not unavailable_cards and not catalog_cards %}
 <div class="bg-white p-5 rounded border border-light-subtle text-center text-muted">
     <i class="bi bi-inbox fs-1 text-secondary mb-2 d-block"></i>
     <h5 class="fw-bold text-dark">No Equipment Categories Available</h5>
@@ -24,32 +24,166 @@
 </div>
 {% else %}
 
-<!-- 1. AVAILABLE EQUIPMENT (PRIORITIZED FIRST) -->
-<div class="row g-3 mb-2">
-    {% for item in catalog_cards %}
-        {% if item.available_units > 0 and not item.is_zero_stock %}
+<!-- 1. FEATURED PRIMARY EQUIPMENT: PROJECTORS FIRST -->
+{% if featured_projector %}
+<div class="cba-featured-projector-section mb-4">
+    <div class="card border shadow-xs cba-featured-projector-card" style="border-radius: 14px; overflow: hidden; border-color: #cbd5e1; border-top: 3px solid #1d4ed8; background: #ffffff;">
+        <div class="card-body p-3 p-md-4">
+            <div class="row align-items-center g-3 g-md-4">
+                <!-- Large Projector Thumbnail / Illustration -->
+                <div class="col-12 col-md-4 col-lg-3 text-center text-md-start">
+                    <div class="cba-featured-image-box d-flex align-items-center justify-content-center mx-auto mx-md-0 p-3 rounded border bg-light"
+                         style="max-width: 200px; min-height: 140px;">
+                        <img src="{{ featured_projector.illustration_url }}"
+                             alt="{{ featured_projector.category.name }}"
+                             class="img-fluid"
+                             style="max-height: 100px; width: auto; object-fit: contain;"
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="align-items-center justify-content-center w-100 h-100 rounded"
+                             style="display: none; background: #eff6ff; color: #1d4ed8; min-height: 100px;">
+                            <i class="bi bi-projector fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Featured Projector Information -->
+                <div class="col-12 col-md-8 col-lg-9">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <!-- Header Row: Category Badge + Title + Availability Pill -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                <div>
+                                    <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle font-sans mb-1" style="font-size: 0.675rem; letter-spacing: 0.04em; text-transform: uppercase;">
+                                        <i class="bi bi-star-fill text-primary me-1"></i> Primary Instructional Equipment
+                                    </span>
+                                    <h2 class="h4 fw-bold text-dark mb-0">{{ featured_projector.category.name }}</h2>
+                                    {% if featured_projector.primary_type %}
+                                        <div class="text-secondary fw-semibold small mt-0.5">
+                                            Type: <span class="text-dark">{{ featured_projector.primary_type.name }}</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="text-start text-md-end">
+                                    {% if featured_projector.available_units > 0 %}
+                                        <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-sans px-2.5 py-1.5 fs-6">
+                                            <i class="bi bi-check-circle-fill me-1 text-success"></i>{{ featured_projector.available_units }} / {{ featured_projector.total_units }} Available
+                                        </span>
+                                    {% elif featured_projector.is_fully_booked %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-sans px-2.5 py-1.5 fs-6">
+                                            <i class="bi bi-clock-history me-1 text-warning"></i>0 / {{ featured_projector.total_units }} Available (Fully Booked)
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-light text-secondary border font-sans px-2.5 py-1.5 fs-6">
+                                            Not currently available
+                                        </span>
+                                    {% endif %}
+                                    <div class="text-muted small mt-1" style="font-size: 0.725rem;">
+                                        {% if featured_projector.available_units > 0 %}
+                                            Available for your selected schedule
+                                        {% elif featured_projector.is_fully_booked %}
+                                            Fully booked for this timeslot
+                                        {% else %}
+                                            Not currently reservable
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p class="text-secondary small mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+                                {{ featured_projector.category.description|default:"High-demand classroom and presentation projectors for CBA academic activities, lectures, and thesis defense." }}
+                            </p>
+
+                            {% if featured_projector.has_multiple_types %}
+                            <!-- If multiple types exist under Projectors, list each with its own Reserve button -->
+                            <div class="d-flex flex-column gap-2 mb-3">
+                                {% for et in featured_projector.equipment_types %}
+                                <div class="cba-choice-row d-flex align-items-center justify-content-between p-2.5 rounded bg-light border border-light-subtle">
+                                    <div class="d-flex align-items-center gap-2 min-w-0">
+                                        <strong class="d-block text-dark text-truncate small">{{ et.name }}</strong>
+                                        {% if et.available_units > 0 %}
+                                            <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-sans" style="font-size: 0.7rem;">{{ et.available_units }} Avail</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-muted border font-sans" style="font-size: 0.7rem;">Booked</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        {% if et.available_units > 0 %}
+                                            <a href="{% url 'student_reservations:public_request' %}?category={{ featured_projector.category.id }}&type={{ et.id }}&pickup={{ pickup_raw|urlencode }}&return={{ return_raw|urlencode }}"
+                                               class="btn btn-sm btn-primary-cba px-3 py-1 fw-semibold text-nowrap" style="min-height: 38px; display: inline-flex; align-items: center;">
+                                                Reserve Projector &rarr;
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Action row when single type or category-level -->
+                        {% if not featured_projector.has_multiple_types %}
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 pt-2 border-top border-light-subtle">
+                            <div class="text-muted small" style="font-size: 0.775rem;">
+                                <i class="bi bi-shield-check text-success me-1"></i> Original School ID required upon pickup.
+                            </div>
+
+                            {% if featured_projector.available_units > 0 %}
+                                <a href="{% url 'student_reservations:public_request' %}?category={{ featured_projector.category.id }}{% if featured_projector.primary_type %}&type={{ featured_projector.primary_type.id }}{% endif %}&pickup={{ pickup_raw|urlencode }}&return={{ return_raw|urlencode }}"
+                                   class="btn btn-primary-cba px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center text-nowrap"
+                                   style="min-height: 44px;">
+                                    Reserve Projector &rarr;
+                                </a>
+                            {% else %}
+                                <span class="badge bg-light text-muted border py-2 px-3 text-nowrap" style="font-size: 0.825rem;">
+                                    <i class="bi bi-x-circle me-1"></i> Unavailable for this schedule
+                                </span>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- 2. SECONDARY AVAILABLE EQUIPMENT ("Other available equipment") -->
+{% if secondary_available_cards %}
+<div class="cba-secondary-equipment-section mb-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="h5 fw-bold text-dark mb-0">Other available equipment</h3>
+        <span class="text-muted small" style="font-size: 0.75rem;">
+            {{ secondary_available_cards|length }} available categor{{ secondary_available_cards|length|pluralize:"y,ies" }}
+        </span>
+    </div>
+
+    <div class="row g-3">
+        {% for item in secondary_available_cards %}
         <div class="col-12 col-md-6">
-            <div class="card h-100 border shadow-xs" style="border-radius: 12px; overflow: hidden;">
+            <div class="card h-100 border shadow-xs bg-white" style="border-radius: 12px; overflow: hidden;">
                 <div class="card-body p-3 p-md-3.5 d-flex flex-column justify-content-between">
                     <div>
-                        <!-- Category Header with Real Equipment Illustration & Availability Pill -->
-                        <div class="d-flex align-items-start gap-3 mb-3">
+                        <!-- Category Header -->
+                        <div class="d-flex align-items-start gap-3 mb-2.5">
                             <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0 p-1 border bg-white"
-                                 style="width: 56px; height: 56px;">
+                                 style="width: 52px; height: 52px;">
                                 <img src="{{ item.illustration_url }}"
                                      alt="{{ item.category.name }}"
                                      class="img-fluid rounded"
-                                     style="max-height: 48px; object-fit: contain;"
+                                     style="max-height: 44px; object-fit: contain;"
                                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                 <div class="align-items-center justify-content-center w-100 h-100 rounded"
                                      style="display: none; background: #eff6ff; color: #1d4ed8;">
-                                    <i class="{{ item.icon|default:'bi bi-projector' }} fs-4"></i>
+                                    <i class="{{ item.icon|default:'bi bi-box-seam' }} fs-4"></i>
                                 </div>
                             </div>
 
                             <div class="flex-grow-1 min-w-0">
                                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-1.5 mb-1">
-                                    <h3 class="h6 fw-bold text-dark mb-0 text-truncate" title="{{ item.category.name }}">{{ item.category.name }}</h3>
+                                    <h4 class="h6 fw-bold text-dark mb-0 text-truncate" title="{{ item.category.name }}">{{ item.category.name }}</h4>
                                     <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-sans" style="font-size: 0.725rem;">
                                         <i class="bi bi-check-circle-fill me-1"></i>{{ item.available_units }} / {{ item.total_units }} Available
                                     </span>
@@ -116,7 +250,7 @@
                     {% if not item.equipment_types %}
                     <div class="mt-2">
                         <a href="{% url 'student_reservations:public_request' %}?category={{ item.category.id }}&pickup={{ pickup_raw|urlencode }}&return={{ return_raw|urlencode }}"
-                           class="btn btn-primary-cba w-100 py-2 fw-semibold">
+                           class="btn btn-primary-cba w-100 py-2 fw-semibold" style="min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">
                             Reserve {{ item.category.name }} &rarr;
                         </a>
                     </div>
@@ -124,110 +258,119 @@
                 </div>
             </div>
         </div>
-        {% endif %}
-    {% endfor %}
-</div>
-
-<!-- 2. CURRENTLY UNAVAILABLE EQUIPMENT (SECONDARY SECTION) -->
-<div class="unavailable-equipment-section mt-4 pt-3 border-top">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h4 class="h6 text-secondary fw-semibold mb-0 d-flex align-items-center gap-1.5">
-            <i class="bi bi-slash-circle text-muted"></i> Unavailable Equipment
-        </h4>
-        <span class="text-muted small" style="font-size: 0.75rem;">0 available for this schedule</span>
-    </div>
-    <div class="row g-3">
-        {% for item in catalog_cards %}
-            {% if item.is_zero_stock or item.is_fully_booked %}
-            <div class="col-12 col-md-6">
-                <div class="card h-100 border shadow-xs bg-white" style="border-radius: 12px; overflow: hidden; opacity: 0.85;">
-                    <div class="card-body p-3 p-md-3.5 d-flex flex-column justify-content-between">
-                        <div>
-                            <!-- Category Header -->
-                            <div class="d-flex align-items-start gap-3 mb-3">
-                                <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0 p-1 border bg-light"
-                                     style="width: 56px; height: 56px;">
-                                    <img src="{{ item.illustration_url }}"
-                                         alt="{{ item.category.name }}"
-                                         class="img-fluid rounded"
-                                         style="max-height: 48px; object-fit: contain; filter: grayscale(80%);"
-                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                    <div class="align-items-center justify-content-center w-100 h-100 rounded"
-                                         style="display: none; background: #f1f5f9; color: #64748b;">
-                                        <i class="{{ item.icon|default:'bi bi-box-seam' }} fs-4"></i>
-                                    </div>
-                                </div>
-
-                                <div class="flex-grow-1 min-w-0">
-                                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-1.5 mb-1">
-                                        <h3 class="h6 fw-bold text-secondary mb-0 text-truncate" title="{{ item.category.name }}">{{ item.category.name }}</h3>
-                                        {% if item.is_zero_stock %}
-                                            <span class="badge bg-light text-secondary border font-sans" style="font-size: 0.725rem;">
-                                                Not currently available
-                                            </span>
-                                        {% elif item.is_fully_booked %}
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-sans" style="font-size: 0.725rem;">
-                                                <i class="bi bi-clock-history me-1"></i>Fully Booked
-                                            </span>
-                                        {% endif %}
-                                    </div>
-                                    <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.675rem;">
-                                        {{ item.total_units }} Unit{{ item.total_units|pluralize }} Tracked
-                                    </span>
-                                </div>
-                            </div>
-
-                            <p class="text-secondary small mb-3" style="font-size: 0.825rem; line-height: 1.45;">
-                                {{ item.category.description|default:"Standard instructional equipment managed by the CBA Property Office." }}
-                            </p>
-
-                            {% if item.equipment_types %}
-                            <div class="d-flex flex-column gap-2 mb-2">
-                                {% for et in item.equipment_types %}
-                                <div class="cba-choice-row d-flex align-items-center justify-content-between p-2.5 rounded bg-light border border-light-subtle">
-                                    <div class="d-flex align-items-center gap-2.5 min-w-0">
-                                        <div class="min-w-0">
-                                            <strong class="d-block text-secondary text-truncate" style="font-size: 0.85rem;">{{ et.name }}</strong>
-                                            <small class="text-muted" style="font-size: 0.75rem;">
-                                                <span class="text-muted"><i class="bi bi-x-circle me-1"></i>Not available for this schedule</span>
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="flex-shrink-0 ms-2">
-                                        <span class="badge bg-light text-muted border py-1.5 px-2.5 text-nowrap" style="font-size: 0.75rem;">
-                                            Not available
-                                        </span>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                            {% else %}
-                            <div class="bg-light p-2.5 rounded border border-light-subtle mb-3">
-                                <div class="text-muted small" style="font-size: 0.775rem;">
-                                    {{ item.models_preview }}
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="mt-2">
-                            {% if item.is_zero_stock %}
-                                <button type="button" class="btn btn-sm btn-light border text-muted w-100 py-2 disabled" disabled aria-disabled="true">
-                                    <i class="bi bi-slash-circle me-1"></i> Unavailable
-                                </button>
-                            {% elif item.is_fully_booked %}
-                                <button type="button" class="btn btn-sm btn-outline-secondary w-100 py-2" onclick="document.getElementById('pickup-input').focus();">
-                                    <i class="bi bi-calendar-x me-1"></i> Fully Booked (Change Time)
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
         {% endfor %}
     </div>
 </div>
+{% endif %}
+
+
+<!-- 3. UNAVAILABLE EQUIPMENT (COLLAPSED DISCLOSURE) -->
+{% if unavailable_cards %}
+<div class="cba-unavailable-equipment-section mt-4 pt-3 border-top border-light-subtle">
+    <details class="cba-unavailable-disclosure" id="unavailable-equipment-disclosure">
+        <summary class="cba-unavailable-disclosure__summary d-flex align-items-center justify-content-between p-3 rounded border bg-light">
+            <span class="d-flex align-items-center gap-2 fw-semibold text-secondary small">
+                <i class="bi bi-slash-circle text-muted"></i>
+                <span>View unavailable equipment</span>
+                <span class="badge bg-white text-secondary border font-mono" style="font-size: 0.725rem;">
+                    {{ unavailable_cards|length }}
+                </span>
+            </span>
+            <span class="text-muted small"><i class="bi bi-chevron-down"></i></span>
+        </summary>
+        <div class="cba-unavailable-disclosure__body pt-3">
+            <p class="text-muted small mb-3" style="font-size: 0.8rem;">
+                The following categories currently have zero units registered or are fully booked for your selected time slot.
+            </p>
+            <div class="row g-3">
+                {% for item in unavailable_cards %}
+                <div class="col-12 col-md-6">
+                    <div class="card h-100 border shadow-xs bg-white" style="border-radius: 12px; overflow: hidden; opacity: 0.85;">
+                        <div class="card-body p-3 d-flex flex-column justify-content-between">
+                            <div>
+                                <!-- Category Header -->
+                                <div class="d-flex align-items-start gap-3 mb-2.5">
+                                    <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0 p-1 border bg-light"
+                                         style="width: 48px; height: 48px;">
+                                        <img src="{{ item.illustration_url }}"
+                                             alt="{{ item.category.name }}"
+                                             class="img-fluid rounded"
+                                             style="max-height: 40px; object-fit: contain; filter: grayscale(80%);"
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="align-items-center justify-content-center w-100 h-100 rounded"
+                                             style="display: none; background: #f1f5f9; color: #64748b;">
+                                            <i class="{{ item.icon|default:'bi bi-box-seam' }} fs-4"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-1.5 mb-1">
+                                            <h4 class="h6 fw-bold text-secondary mb-0 text-truncate" title="{{ item.category.name }}">{{ item.category.name }}</h4>
+                                            {% if item.is_zero_stock %}
+                                                <span class="badge bg-light text-secondary border font-sans" style="font-size: 0.7rem;">
+                                                    Not currently available
+                                                </span>
+                                            {% elif item.is_fully_booked %}
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle font-sans" style="font-size: 0.7rem;">
+                                                    <i class="bi bi-clock-history me-1"></i>Fully Booked
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.65rem;">
+                                            {{ item.total_units }} Unit{{ item.total_units|pluralize }} Tracked
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p class="text-secondary small mb-2.5" style="font-size: 0.8rem; line-height: 1.4;">
+                                    {{ item.category.description|default:"Standard instructional equipment managed by the CBA Property Office." }}
+                                </p>
+
+                                {% if item.equipment_types %}
+                                <div class="d-flex flex-column gap-1.5 mb-2">
+                                    {% for et in item.equipment_types %}
+                                    <div class="cba-choice-row d-flex align-items-center justify-content-between p-2 rounded bg-light border border-light-subtle">
+                                        <div class="min-w-0">
+                                            <strong class="d-block text-secondary text-truncate" style="font-size: 0.8rem;">{{ et.name }}</strong>
+                                            <small class="text-muted" style="font-size: 0.7rem;">
+                                                Not available for this schedule
+                                            </small>
+                                        </div>
+                                        <span class="badge bg-light text-muted border py-1 px-2 text-nowrap" style="font-size: 0.7rem;">
+                                            Unavailable
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="bg-light p-2 rounded border border-light-subtle mb-2">
+                                    <div class="text-muted small" style="font-size: 0.75rem;">
+                                        {{ item.models_preview }}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mt-2">
+                                {% if item.is_zero_stock %}
+                                    <button type="button" class="btn btn-sm btn-light border text-muted w-100 py-1.5 disabled" disabled aria-disabled="true" style="min-height: 38px;">
+                                        <i class="bi bi-slash-circle me-1"></i> Unavailable
+                                    </button>
+                                {% elif item.is_fully_booked %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary w-100 py-1.5" onclick="document.getElementById('pickup-input').focus();" style="min-height: 38px;">
+                                        <i class="bi bi-calendar-x me-1"></i> Fully Booked (Change Time)
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </details>
+</div>
+{% endif %}
 
 {% endif %}
 {% endif %}

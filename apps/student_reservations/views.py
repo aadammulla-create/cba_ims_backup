@@ -152,6 +152,46 @@ def _build_catalog_cards(categories, pickup_dt, return_dt):
     return catalog_cards
 
 
+def _is_projector_card(card):
+    cat = card.get('category')
+    name = (cat.name or '').lower() if cat else ''
+    code = (cat.code or '').upper() if cat else ''
+    if 'projector' in name or code in ('PRJ', 'PROJ'):
+        return True
+    for eq_type in card.get('equipment_types', []):
+        if 'projector' in eq_type.get('name', '').lower():
+            return True
+    return False
+
+
+def _partition_catalog_cards(catalog_cards):
+    """
+    Partitions catalog items into:
+    1. featured_projector: The primary Projectors category (prominent full-width card).
+    2. secondary_available_cards: Other available equipment categories (e.g. microphones).
+    3. unavailable_cards: Fully booked or zero-stock equipment categories (placed in disclosure).
+    """
+    featured_projector = None
+    secondary_available_cards = []
+    unavailable_cards = []
+
+    for card in catalog_cards:
+        if _is_projector_card(card) and featured_projector is None:
+            eq_types = card.get('equipment_types', [])
+            avail_types = [t for t in eq_types if t.get('is_available')]
+            card['primary_type'] = avail_types[0] if avail_types else (eq_types[0] if eq_types else None)
+            card['has_multiple_types'] = len(eq_types) > 1
+            featured_projector = card
+            continue
+
+        if card.get('available_units', 0) > 0 and not card.get('is_zero_stock', False):
+            secondary_available_cards.append(card)
+        else:
+            unavailable_cards.append(card)
+
+    return featured_projector, secondary_available_cards, unavailable_cards
+
+
 # ==============================================================================
 # PUBLIC STUDENT VIEWS — NO LOGIN REQUIRED
 # ==============================================================================
@@ -170,6 +210,9 @@ class StudentCatalogView(View):
         default_return_str = default_return.strftime('%Y-%m-%dT%H:%M')
 
         catalog_cards = _build_catalog_cards(categories, default_pickup, default_return)
+        featured_projector, secondary_available_cards, unavailable_cards = _partition_catalog_cards(catalog_cards)
+        if featured_projector:
+            catalog_cards = [featured_projector] + secondary_available_cards + unavailable_cards
         duration_hours = round((default_return - default_pickup).total_seconds() / 3600, 1)
 
         # Backwards-compatible availability_data list
@@ -186,6 +229,9 @@ class StudentCatalogView(View):
         context = {
             'categories': categories,
             'catalog_cards': catalog_cards,
+            'featured_projector': featured_projector,
+            'secondary_available_cards': secondary_available_cards,
+            'unavailable_cards': unavailable_cards,
             'default_pickup': default_pickup_str,
             'default_return': default_return_str,
             'pickup_display': default_pickup.strftime('%b %d, %Y — %I:%M %p'),
@@ -239,6 +285,9 @@ class CheckAvailabilityView(View):
 
         categories = services.get_reservable_categories()
         catalog_cards = _build_catalog_cards(categories, pickup, return_dt)
+        featured_projector, secondary_available_cards, unavailable_cards = _partition_catalog_cards(catalog_cards)
+        if featured_projector:
+            catalog_cards = [featured_projector] + secondary_available_cards + unavailable_cards
         duration_hours = round((return_dt - pickup).total_seconds() / 3600, 1)
 
         availability_data = [
@@ -259,6 +308,9 @@ class CheckAvailabilityView(View):
             'return_raw': return_str,
             'duration_hours': duration_hours,
             'catalog_cards': catalog_cards,
+            'featured_projector': featured_projector,
+            'secondary_available_cards': secondary_available_cards,
+            'unavailable_cards': unavailable_cards,
             'availability_data': availability_data,
         }
         return render(request, 'student_reservations/partials/_availability_result.html', context)
@@ -826,12 +878,20 @@ class CustodianReservationDetailView(CustodianRequiredMixin, DetailView):
                         remarks=remarks,
                         request=request
                     )
-                    messages.success(request, f"Equipment for reservation #{res.pk} marked as RELEASED to student.")
+                    if getattr(res, 'is_projector', False):
+                        msg = f"Projector allocated for reservation #{res.pk} marked as RELEASED to student."
+                    else:
+                        msg = f"Equipment for reservation #{res.pk} marked as RELEASED to student."
+                    messages.success(request, msg)
                     return redirect('student_reservations:custodian_detail', pk=res.pk)
                 else:
                     context = self.get_context_data()
                     context['release_form'] = form
-                    messages.error(request, "Failed to release: student ID must be deposited.")
+                    first_err = form.errors.as_data()
+                    if 'id_deposited' in first_err:
+                        messages.error(request, "Failed to release: student ID must be deposited.")
+                    else:
+                        messages.error(request, "Failed to release: please correct the release form errors.")
                     return self.render_to_response(context)
 
             elif action == 'return_office':

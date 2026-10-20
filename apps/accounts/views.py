@@ -54,6 +54,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # Initialize safe default context
         context.update({
             'is_custodian': is_custodian,
+            'is_faculty': is_faculty,
+            'is_chair': is_chair,
             # A. Asset Overview
             'total_assets': 0,
             'available_assets': 0,
@@ -455,6 +457,15 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     disposal_qs = disposal_qs.filter(asset__department=chair_dept)
                 context['pending_disposals_count'] = disposal_qs.count()
 
+            # Total attention count across operational queues
+            context['total_attention_count'] = (
+                context.get('guard_returns_count', 0) +
+                context.get('overdue_loans_count', 0) +
+                context.get('pending_reservations_count', 0) +
+                context.get('open_maintenance_count', 0) +
+                context.get('low_stock_supplies_count', 0)
+            )
+
             # ---------------------------------------------------------
             # C. RECENT ACTIVITY (Raw audit log strictly restricted to Administrators)
             # ---------------------------------------------------------
@@ -476,6 +487,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 )
                 context['category_chart_labels'] = [c['category__name'] or 'Uncategorized' for c in cat_counts]
                 context['category_chart_data'] = [c['count'] for c in cat_counts]
+                context['category_counts'] = [{'name': c['category__name'] or 'Uncategorized', 'count': c['count']} for c in cat_counts]
 
                 # 2. Assets by Condition
                 cond_counts = (
@@ -492,6 +504,26 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     cond_dict.get(Asset.Condition.POOR, 0),
                     cond_dict.get(Asset.Condition.UNSERVICEABLE, 0),
                 ]
+
+                # Condition breakdown with percentages for progress bars
+                condition_breakdown = []
+                total_cond_assets = sum(cond_dict.values())
+                for cond_label, cond_key, color_cls in [
+                    ('Good', Asset.Condition.GOOD, ''),
+                    ('Fair', Asset.Condition.FAIR, 'amber'),
+                    ('Poor', Asset.Condition.POOR, 'amber'),
+                    ('Unserviceable', Asset.Condition.UNSERVICEABLE, 'red'),
+                ]:
+                    cnt = cond_dict.get(cond_key, 0)
+                    if cnt > 0 or cond_key in [Asset.Condition.GOOD, Asset.Condition.FAIR, Asset.Condition.UNSERVICEABLE]:
+                        pct = round((cnt / total_cond_assets * 100), 1) if total_cond_assets > 0 else 0
+                        condition_breakdown.append({
+                            'label': cond_label,
+                            'count': cnt,
+                            'pct': pct,
+                            'color_class': color_cls,
+                        })
+                context['condition_breakdown'] = condition_breakdown
 
                 # 3. Department or Location Distribution
                 if not chair_dept:
@@ -514,6 +546,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     context['department_chart_labels'] = [l['current_location__name'] or 'Unassigned' for l in loc_counts]
                     context['department_chart_data'] = [l['count'] for l in loc_counts]
                     context['department_chart_title'] = f"Assets by Location ({chair_dept.name})"
+            else:
+                context['category_counts'] = []
+                context['condition_breakdown'] = []
+                context['department_chart_labels'] = []
+                context['department_chart_data'] = []
 
             # ---------------------------------------------------------
             # MASTER DIRECTORY METRICS

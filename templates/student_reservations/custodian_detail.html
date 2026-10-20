@@ -179,6 +179,24 @@
                             <span class="font-mono">{{ reservation.pickup_deadline|date:"M d, Y h:i A" }}</span>
                         </div>
                         {% endif %}
+                        {% if reservation.released_at %}
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Handover Completed</label>
+                            <span class="fw-semibold text-success font-mono">{{ reservation.released_at|date:"M d, Y h:i A" }}</span>
+                        </div>
+                        {% endif %}
+                        {% if reservation.released_by %}
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Released By Staff</label>
+                            <span class="text-dark">{{ reservation.released_by.get_full_name|default:reservation.released_by.username }}</span>
+                        </div>
+                        {% endif %}
+                        {% if reservation.condition_at_release %}
+                        <div class="col-12 col-sm-6">
+                            <label class="text-secondary d-block">Condition at Release</label>
+                            <span class="badge bg-light text-secondary border font-sans">{{ reservation.get_condition_at_release_display }}</span>
+                        </div>
+                        {% endif %}
                         {% if reservation.remarks %}
                         <div class="col-12">
                             <label class="text-secondary d-block">Internal Custodian Remarks</label>
@@ -311,51 +329,119 @@
             {% elif reservation.status == 'APPROVED' %}
             <!-- Release Form Card -->
             <div class="card shadow-xs border-success-subtle">
-                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">
-                    <i class="bi bi-box-arrow-up-right text-success"></i>
-                    <h2 class="h6 fw-bold text-dark mb-0">Release Equipment Handover</h2>
+                <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-box-arrow-up-right text-success"></i>
+                        <h2 class="h6 fw-bold text-dark mb-0">
+                            {% if reservation.is_projector %}Release Projector Handover{% else %}Release Equipment Handover{% endif %}
+                        </h2>
+                    </div>
+                    <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle font-sans" style="font-size: 0.725rem;">
+                        <i class="bi bi-check-circle me-1"></i> Ready for Release
+                    </span>
                 </div>
                 <div class="card-body p-3">
-                    <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}">
+                    <!-- Clearly display the assigned projector / equipment -->
+                    {% if reservation.asset %}
+                    <div class="p-2.5 rounded bg-light border border-light-subtle mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-secondary small fw-semibold">
+                                {% if reservation.is_projector %}Assigned Projector{% else %}Assigned Equipment{% endif %}
+                            </span>
+                            <span class="badge bg-white text-primary border border-primary-subtle font-mono">{{ reservation.asset.asset_code }}</span>
+                        </div>
+                        <div class="fw-bold text-dark fs-6">{{ reservation.asset.item_name }}</div>
+                        <div class="text-secondary small mt-0.5">
+                            <span>Brand: <strong>{{ reservation.asset.brand.name|default:"Standard" }}</strong></span> &bull;
+                            <span>Model: <strong>{{ reservation.asset.model|default:"Standard" }}</strong></span>
+                            {% if reservation.asset.serial_number %}
+                            &bull; <span>Serial: <code class="text-dark">{{ reservation.asset.serial_number }}</code></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Concise pickup verification checklist -->
+                    <div class="mb-3 p-2.5 rounded border border-light-subtle bg-white">
+                        <div class="fw-semibold small text-secondary mb-1.5 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-clipboard-check text-primary"></i> Pickup Verification Checklist
+                        </div>
+                        <ul class="list-unstyled mb-0 small text-secondary d-flex flex-column gap-1">
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check2 text-success flex-shrink-0"></i>
+                                <span>Verify student identity matches reservation record</span>
+                            </li>
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check2 text-success flex-shrink-0"></i>
+                                <span>Verify physical unit condition &amp; power/connection cables</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <form method="post" action="{% url 'student_reservations:custodian_detail' pk=reservation.pk %}" onsubmit="if (this.dataset.submitting) { return false; } this.dataset.submitting = 'true'; const btn = document.getElementById('btn-confirm-release'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class=\'spinner-border spinner-border-sm me-1\' role=\'status\' aria-hidden=\'true\'></span> Releasing...'; } return true;">
                         {% csrf_token %}
                         <input type="hidden" name="action" value="release">
 
+                        <!-- Condition snapshot with Good condition default -->
                         <div class="mb-3">
                             <label for="id_condition_at_release" class="form-label small text-secondary mb-1">
                                 Condition at Handover <span class="text-danger">*</span>
                             </label>
                             <select name="condition_at_release" id="id_condition_at_release" class="form-select form-select-sm" required>
-                                <option value="GOOD" selected>Good Condition</option>
-                                <option value="FAIR">Fair Condition</option>
-                                <option value="EXCELLENT">Excellent / Like New</option>
+                                <option value="GOOD" {% if not reservation.asset or reservation.asset.condition == 'GOOD' %}selected{% endif %}>Good Condition</option>
+                                <option value="NEW" {% if reservation.asset and reservation.asset.condition == 'NEW' %}selected{% endif %}>New / Like New</option>
+                                <option value="FAIR" {% if reservation.asset and reservation.asset.condition == 'FAIR' %}selected{% endif %}>Fair Condition</option>
+                                <option value="POOR" {% if reservation.asset and reservation.asset.condition == 'POOR' %}selected{% endif %}>Poor Condition</option>
                             </select>
-                        </div>
-
-                        <div class="form-check mb-3 p-2.5 rounded border border-primary-subtle bg-light small">
-                            <input class="form-check-input ms-0 me-2" type="checkbox" name="id_deposited" id="id_id_deposited" value="true" checked required>
-                            <label class="form-check-label fw-semibold text-dark" for="id_id_deposited">
-                                Student School ID Verified &amp; Deposited at CBA Office
-                            </label>
                             <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
-                                Mandatory physical custody check before handing over equipment.
+                                Visual default reflects verified operational condition.
                             </small>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="id_release_remarks" class="form-label small text-secondary mb-1">
-                                Release Notes (Optional)
+                        <!-- Mandatory School ID custody handling -->
+                        <div class="form-check mb-3 p-2.5 rounded border border-primary-subtle bg-primary-subtle bg-opacity-10 small">
+                            <input class="form-check-input ms-0 me-2" type="checkbox" name="id_deposited" id="id_id_deposited" value="true" checked required>
+                            <label class="form-check-label fw-semibold text-dark" for="id_id_deposited">
+                                Student School ID Verified &amp; Deposited at CBA Office <span class="text-danger">*</span>
                             </label>
-                            <input type="text" name="remarks" id="id_release_remarks" class="form-control form-control-sm" placeholder="e.g. Included HDMI cable and power brick">
+                            <small class="text-muted d-block mt-0.5" style="font-size: 0.725rem;">
+                                Mandatory physical custody requirement. Physical ID remains at Property Office until equipment return.
+                            </small>
                         </div>
 
-                        <button type="submit" class="btn btn-sm btn-success w-100 py-2">
-                            <i class="bi bi-check2-circle me-1"></i> Confirm Handover &amp; Release
+                        <!-- Optional release notes behind expandable section -->
+                        <details class="mb-3 text-secondary small">
+                            <summary class="cursor-pointer text-decoration-none fw-medium text-secondary user-select-none" style="cursor: pointer;">
+                                <i class="bi bi-chat-left-text me-1"></i> Add optional release notes
+                            </summary>
+                            <div class="mt-2">
+                                <label for="id_release_remarks" class="form-label small text-secondary mb-1">
+                                    Release Notes (Optional)
+                                </label>
+                                <input type="text" name="remarks" id="id_release_remarks" class="form-control form-control-sm" placeholder="e.g. Included HDMI cable, remote, and power brick">
+                            </div>
+                        </details>
+
+                        <!-- Primary action with projector-specific wording & generic fallback -->
+                        <button type="submit" id="btn-confirm-release" class="btn btn-sm btn-success w-100 py-2 fw-medium">
+                            {% if reservation.is_projector %}
+                                <i class="bi bi-check2-circle me-1"></i> Confirm &amp; Release Projector
+                            {% else %}
+                                <i class="bi bi-check2-circle me-1"></i> Confirm &amp; Release Equipment
+                            {% endif %}
                         </button>
                     </form>
                 </div>
             </div>
 
             {% elif reservation.status == 'RELEASED' or reservation.status == 'OVERDUE' %}
+            <div class="alert alert-success d-flex align-items-center gap-2 mb-3 py-2 px-3 small border border-success-subtle shadow-xs">
+                <i class="bi bi-check-circle-fill text-success flex-shrink-0 fs-5"></i>
+                <div>
+                    <strong class="d-block text-dark">Equipment Successfully Released</strong>
+                    <span class="text-secondary">Physical equipment is in student custody. School ID is deposited at Property Office.</span>
+                </div>
+            </div>
             <!-- Return Recording Card -->
             <div class="card shadow-xs">
                 <div class="card-header py-2.5 px-3 bg-white border-bottom border-light-subtle d-flex align-items-center gap-2">

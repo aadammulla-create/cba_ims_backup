@@ -345,3 +345,20 @@ class StudentReservation(models.Model):
     def is_id_in_custody(self):
         """Returns True if the student's ID has been deposited and not yet collected."""
         return self.id_deposit_verified and self.id_collected_at is None
+
+    @property
+    def is_projector(self):
+        """Returns True if this reservation involves a projector."""
+        if self.category:
+            name = (self.category.name or '').lower()
+            code = (self.category.code or '').upper()
+            if 'projector' in name or code in ('PRJ', 'PROJ'):
+                return True
+        if self.equipment_type_ref and 'projector' in (self.equipment_type_ref.name or '').lower():
+            return True
+        if self.equipment_type and 'projector' in self.equipment_type.lower():
+            return True
+        if self.asset:
+            if 'projector' in (self.asset.item_name or '').lower() or (self.asset.asset_code or '').startswith('CBA-PRJ'):
+                return True
+        return False

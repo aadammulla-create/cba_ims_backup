@@ -195,7 +195,8 @@ class StudentReservationLifecycleTestCase(StudentReservationBaseTestCase):
         released_res = student_services.release_equipment(
             reservation=res,
             released_by=self.custodian_user,
-            condition_at_release=Asset.Condition.GOOD
+            condition_at_release=Asset.Condition.GOOD,
+            id_deposited=True
         )
 
         self.assertEqual(released_res.status, StudentReservation.Status.RELEASED)
@@ -220,7 +221,7 @@ class StudentReservationLifecycleTestCase(StudentReservationBaseTestCase):
             purpose='Presentation'
         )
         student_services.approve_reservation(res, self.proj_1, self.custodian_user)
-        student_services.release_equipment(res, self.custodian_user)
+        student_services.release_equipment(res, self.custodian_user, id_deposited=True)
 
         returned_res = student_services.return_equipment_to_office(
             reservation=res,
@@ -252,7 +253,7 @@ class StudentReservationLifecycleTestCase(StudentReservationBaseTestCase):
             purpose='Presentation'
         )
         student_services.approve_reservation(res, self.proj_1, self.custodian_user)
-        student_services.release_equipment(res, self.custodian_user)
+        student_services.release_equipment(res, self.custodian_user, id_deposited=True)
 
         student_services.return_equipment_to_office(
             reservation=res,
@@ -607,7 +608,7 @@ class NoShowAndGracePeriodTestCase(StudentReservationBaseTestCase):
         )
 
         with self.assertRaises(ValidationError) as ctx:
-            student_services.release_equipment(res, self.custodian_user)
+            student_services.release_equipment(res, self.custodian_user, id_deposited=True)
         err = str(ctx.exception)
         self.assertTrue("Pickup grace period expired" in err or "No Show" in err)
 
@@ -628,7 +629,7 @@ class GuardReturnWorkflowTestCase(StudentReservationBaseTestCase):
             self.cat_av, self.t_start, self.t_end, 'Evening Study'
         )
         student_services.approve_reservation(res, self.proj_1, self.custodian_user)
-        student_services.release_equipment(res, self.custodian_user)
+        student_services.release_equipment(res, self.custodian_user, id_deposited=True)
 
         # Simulate elapsed time so handover occurred earlier today
         released_time = self.now - timedelta(hours=3)
@@ -828,7 +829,7 @@ class InvalidStatusTransitionsTestCase(StudentReservationBaseTestCase):
             self.cat_av, self.t_start, self.t_end, 'Event'
         )
         with self.assertRaises(ValidationError):
-            student_services.release_equipment(res, self.custodian_user)
+            student_services.release_equipment(res, self.custodian_user, id_deposited=True)
 
     def test_cannot_return_unreleased_reservation(self):
         """A reservation must be in RELEASED status before it can be returned."""
@@ -850,7 +851,7 @@ class InvalidStatusTransitionsTestCase(StudentReservationBaseTestCase):
             self.cat_av, self.t_start, self.t_end, 'Event'
         )
         student_services.approve_reservation(res, self.proj_1, self.custodian_user)
-        student_services.release_equipment(res, self.custodian_user)
+        student_services.release_equipment(res, self.custodian_user, id_deposited=True)
         student_services.return_equipment_to_office(res, self.custodian_user, Asset.Condition.GOOD)
 
         with self.assertRaises(ValidationError):
@@ -1819,6 +1820,431 @@ class StudentReservationCombinedUXRefinementTestCase(TestCase):
         self.assertContains(resp, f'type={self.eq_type.id}')
         # Should not have duplicate category-wide button when equipment types are present
         self.assertNotContains(resp, f'Reserve {self.cat.name} &rarr;')
+
+
+class StudentCatalogProjectorsPrimaryTestCase(TestCase):
+    """
+    Focused verification for Projectors as the Primary Student Equipment:
+    1. Projectors category displayed first as featured full-width card when available.
+    2. Primary CTA 'Reserve Projector' with correct carryover links.
+    3. Secondary available equipment displayed under 'Other available equipment'.
+    4. Unavailable or zero-stock equipment displayed under 'View unavailable equipment' disclosure.
+    5. Graceful fallback when projectors are unavailable (no Reserve button) or missing.
+    """
+    def setUp(self):
+        super().setUp()
+        self.client = Client()
+        self.dept = Department.objects.create(name='Business Administration', code='BA', is_active=True)
+        self.brand = Brand.objects.create(name='Epson', is_active=True)
+
+        # 1. Primary: Projectors
+        self.cat_proj = AssetCategory.objects.create(name='Projectors', code='PRJ', is_active=True, is_reservable=True)
+        self.type_proj = EquipmentType.objects.create(category=self.cat_proj, name='Classroom LCD Projector', is_active=True)
+        self.asset_proj = Asset.objects.create(
+            asset_code='PRJ-TEST-01', item_name='Epson LCD Projector 1',
+            category=self.cat_proj, equipment_type=self.type_proj, brand=self.brand,
+            department=self.dept, status=Asset.Status.AVAILABLE, condition=Asset.Condition.GOOD, is_reservable=True
+        )
+
+        # 2. Secondary available: Audio-Visual (Microphones)
+        self.cat_av = AssetCategory.objects.create(name='Audio-Visual Equipment', code='AV', is_active=True, is_reservable=True)
+        self.type_mic = EquipmentType.objects.create(category=self.cat_av, name='Wireless Microphone Set', is_active=True)
+        self.asset_mic = Asset.objects.create(
+            asset_code='MIC-TEST-01', item_name='Shure Wireless Mic',
+            category=self.cat_av, equipment_type=self.type_mic, brand=self.brand,
+            department=self.dept, status=Asset.Status.AVAILABLE, condition=Asset.Condition.GOOD, is_reservable=True
+        )
+
+        # 3. Unavailable / Zero-stock: Appliances
+        self.cat_app = AssetCategory.objects.create(name='Appliances', code='AP', is_active=True, is_reservable=True)
+
+        self.pickup_dt = timezone.localtime() + timedelta(hours=2)
+        self.return_dt = timezone.localtime() + timedelta(hours=5)
+        self.pickup_str = self.pickup_dt.strftime('%Y-%m-%dT%H:%M')
+        self.return_str = self.return_dt.strftime('%Y-%m-%dT%H:%M')
+
+    def test_projector_featured_first_and_secondary_under_other_available(self):
+        """Projector is featured first with prominent card; other available equipment is placed under 'Other available equipment'."""
+        url = f'/student-reservations/check-availability/?pickup={self.pickup_str}&return={self.return_str}'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        content = resp.content.decode('utf-8')
+
+        # 1. Featured card presence & Primary CTA
+        self.assertContains(resp, 'Primary Instructional Equipment')
+        self.assertContains(resp, 'Projectors')
+        self.assertContains(resp, 'Classroom LCD Projector')
+        self.assertContains(resp, 'Reserve Projector')
+        # URL parameters carryover
+        expected_proj_link = f'category={self.cat_proj.id}&amp;type={self.type_proj.id}&amp;pickup={self.pickup_str}'
+        self.assertIn(f'category={self.cat_proj.id}&type={self.type_proj.id}', content)
+
+        # 2. Secondary available section
+        self.assertContains(resp, 'Other available equipment')
+        self.assertContains(resp, 'Audio-Visual Equipment')
+        self.assertContains(resp, 'Wireless Microphone Set')
+
+        # Ordering check: Projectors appears BEFORE 'Other available equipment'
+        proj_idx = content.find('Projectors')
+        other_idx = content.find('Other available equipment')
+        self.assertNotEqual(proj_idx, -1)
+        self.assertNotEqual(other_idx, -1)
+        self.assertLess(proj_idx, other_idx, "Projectors must appear before 'Other available equipment'")
+
+        # 3. Unavailable disclosure
+        self.assertContains(resp, 'View unavailable equipment')
+        self.assertContains(resp, 'Appliances')
+        self.assertContains(resp, 'Not currently available')
+
+        # Disclosure appears after secondary equipment
+        unavail_idx = content.find('View unavailable equipment')
+        self.assertNotEqual(unavail_idx, -1)
+        self.assertLess(other_idx, unavail_idx, "'Other available equipment' must appear before unavailable disclosure")
+
+    def test_initial_catalog_page_features_projector(self):
+        """Initial catalog page load without query parameters also features projectors first."""
+        resp = self.client.get('/student-reservations/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Primary Instructional Equipment')
+        self.assertContains(resp, 'Reserve Projector')
+        self.assertContains(resp, 'Other available equipment')
+        self.assertContains(resp, 'View unavailable equipment')
+
+    def test_projector_unavailable_hides_reserve_button(self):
+        """When projectors are unavailable, featured card displays status but does not display Reserve button."""
+        # Book the only projector
+        self.asset_proj.status = Asset.Status.MAINTENANCE
+        self.asset_proj.save()
+
+        url = f'/student-reservations/check-availability/?pickup={self.pickup_str}&return={self.return_str}'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+
+        # Still shows Projectors as featured category
+        self.assertContains(resp, 'Projectors')
+        self.assertContains(resp, 'Unavailable for this schedule')
+        # Does NOT have Reserve button for projectors
+        self.assertNotContains(resp, 'Reserve Projector')
+
+    def test_projector_missing_graceful_fallback(self):
+        """When no projector category exists, page renders other equipment gracefully without errors."""
+        self.cat_proj.is_reservable = False
+        self.cat_proj.save()
+
+        resp = self.client.get('/student-reservations/')
+        self.assertEqual(resp.status_code, 200)
+        # Should not crash and should render remaining available equipment
+        self.assertContains(resp, 'Audio-Visual Equipment')
+        self.assertContains(resp, 'Wireless Microphone Set')
+        self.assertNotContains(resp, 'Reserve Projector')
+
+
+class ProjectorReleaseRegressionAndHandoverTestCase(StudentReservationBaseTestCase):
+    """
+    Focused regression and verification test suite for projector release and simplified handover UI:
+    - Verifies release of approved reservation with allocated projector.
+    - Permanent regression coverage for TypeError: release_equipment() got unexpected kwarg 'id_deposited'.
+    - Enforces physical school ID verification and custody rules (service & view).
+    - Verifies accurate physical asset status transition (AVAILABLE -> BORROWED).
+    - Preserves condition snapshot and optional release notes.
+    - Rejects unauthorized users.
+    - Safely rejects duplicate release attempts without state corruption.
+    - Confirms audit trail logging.
+    - Confirms UI renders projector-specific vs generic wording and verification checklist.
+    - Confirms Released status display after successful handover.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.t_start = timezone.now() + timedelta(hours=1)
+        self.t_end = self.t_start + timedelta(hours=2)
+
+        # Create specific projector equipment type and attach to self.proj_1
+        self.type_projector = EquipmentType.objects.create(
+            category=self.cat_av,
+            name='Multimedia LCD Projector',
+            is_active=True
+        )
+        self.proj_1.equipment_type = self.type_projector
+        self.proj_1.save()
+
+        # Audio equipment type for generic wording comparison
+        self.type_mic = EquipmentType.objects.create(
+            category=self.cat_av,
+            name='Wireless Microphone',
+            is_active=True
+        )
+        self.asset_mic = Asset.objects.create(
+            item_name='Wireless Handheld Microphone',
+            category=self.cat_av,
+            department=self.dept_cba,
+            equipment_type=self.type_mic,
+            status=Asset.Status.AVAILABLE,
+            condition=Asset.Condition.GOOD
+        )
+
+    def _create_approved_reservation(self, is_projector=True):
+        eq_type = self.type_projector if is_projector else self.type_mic
+        asset = self.proj_1 if is_projector else self.asset_mic
+        res = student_services.submit_reservation(
+            student_id='2024-55001',
+            student_name='Juan Dela Cruz',
+            course_year_section='BSBA 3-A',
+            email='juan@student.cba.edu',
+            contact_number='09171112233',
+            category=self.cat_av,
+            requested_pickup=self.t_start,
+            requested_return=self.t_end,
+            purpose='Instructional Presentation',
+            equipment_type_ref=eq_type
+        )
+        approved = student_services.approve_reservation(
+            reservation=res,
+            asset=asset,
+            reviewed_by=self.custodian_user,
+            grace_period_minutes=20
+        )
+        return approved
+
+    def test_approved_projector_reservation_released_via_view_regression(self):
+        """
+        Regression test: Submitting POST release on approved projector reservation
+        must not raise TypeError (release_equipment unexpected kwarg 'id_deposited')
+        and must transition reservation to RELEASED and asset to BORROWED.
+        """
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        post_data = {
+            'action': 'release',
+            'condition_at_release': 'GOOD',
+            'id_deposited': 'true',
+            'remarks': 'Included HDMI cable, power adapter, and remote control',
+        }
+        resp = self.client.post(url, post_data, follow=True)
+        self.assertEqual(resp.status_code, 200)
+
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.RELEASED)
+        self.assertEqual(res.asset, self.proj_1)
+        self.assertEqual(res.released_by, self.custodian_user)
+        self.assertIsNotNone(res.released_at)
+        self.assertEqual(res.condition_at_release, Asset.Condition.GOOD)
+        self.assertIn('Included HDMI cable', res.remarks)
+
+        # School ID custody verified
+        self.assertTrue(res.id_deposit_verified)
+        self.assertIsNotNone(res.id_deposited_at)
+        self.assertTrue(res.is_id_in_custody)
+
+        # Asset status updated
+        self.proj_1.refresh_from_db()
+        self.assertEqual(self.proj_1.status, Asset.Status.BORROWED)
+
+        # Success message displayed
+        self.assertContains(resp, f"Projector allocated for reservation #{res.pk} marked as RELEASED")
+
+    def test_service_release_equipment_accepts_id_deposited_kwarg(self):
+        """Service release_equipment accepts id_deposited as a kwarg without TypeError."""
+        res = self._create_approved_reservation(is_projector=True)
+        released = student_services.release_equipment(
+            reservation=res,
+            released_by=self.custodian_user,
+            condition_at_release=Asset.Condition.GOOD,
+            id_deposited=True,
+            remarks='Service test note'
+        )
+        self.assertEqual(released.status, StudentReservation.Status.RELEASED)
+        self.assertTrue(released.id_deposit_verified)
+
+    def test_service_release_equipment_rejects_missing_id_deposit(self):
+        """Service release_equipment raises ValidationError if id_deposited is False."""
+        res = self._create_approved_reservation(is_projector=True)
+        with self.assertRaises(ValidationError) as ctx:
+            student_services.release_equipment(
+                reservation=res,
+                released_by=self.custodian_user,
+                condition_at_release=Asset.Condition.GOOD,
+                id_deposited=False
+            )
+        self.assertIn("Student's physical school ID must be verified and deposited", str(ctx.exception))
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+        self.proj_1.refresh_from_db()
+        self.assertEqual(self.proj_1.status, Asset.Status.AVAILABLE)
+
+    def test_service_release_equipment_rejects_omitted_id_deposited(self):
+        """Service release_equipment raises ValidationError fail-closed when id_deposited argument is omitted."""
+        res = self._create_approved_reservation(is_projector=True)
+        with self.assertRaises(ValidationError) as ctx:
+            student_services.release_equipment(
+                reservation=res,
+                released_by=self.custodian_user,
+                condition_at_release=Asset.Condition.GOOD
+                # id_deposited is deliberately omitted to test fail-closed default
+            )
+        self.assertIn("Student's physical school ID must be verified and deposited", str(ctx.exception))
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+        self.proj_1.refresh_from_db()
+        self.assertEqual(self.proj_1.status, Asset.Status.AVAILABLE)
+
+    def test_view_release_equipment_rejects_missing_id_deposit(self):
+        """View release action rejects submission when school ID deposit is unchecked."""
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        # Post without id_deposited checkbox
+        resp = self.client.post(url, {
+            'action': 'release',
+            'condition_at_release': 'GOOD',
+            'remarks': 'Testing missing ID'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Failed to release: student ID must be deposited.")
+
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+        self.proj_1.refresh_from_db()
+        self.assertEqual(self.proj_1.status, Asset.Status.AVAILABLE)
+
+    def test_view_release_equipment_rejects_unserviceable_condition(self):
+        """View release action rejects submission when condition at release is UNSERVICEABLE."""
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        resp = self.client.post(url, {
+            'action': 'release',
+            'condition_at_release': 'UNSERVICEABLE',
+            'id_deposited': 'true',
+            'remarks': 'Testing unserviceable condition'
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Failed to release: please correct the release form errors.")
+
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+        self.proj_1.refresh_from_db()
+        self.assertEqual(self.proj_1.status, Asset.Status.AVAILABLE)
+
+    def test_unauthorized_user_cannot_release_equipment(self):
+        """Non-custodian users cannot release equipment via the detail view."""
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.faculty_user)
+
+        resp = self.client.post(url, {
+            'action': 'release',
+            'condition_at_release': 'GOOD',
+            'id_deposited': 'true'
+        })
+        # Dispatched mixin raises PermissionDenied (403)
+        self.assertEqual(resp.status_code, 403)
+
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.APPROVED)
+
+    def test_duplicate_release_attempt_safely_rejected(self):
+        """Duplicate release attempts are rejected safely without state corruption."""
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        # First release succeeds
+        resp1 = self.client.post(url, {
+            'action': 'release',
+            'condition_at_release': 'GOOD',
+            'id_deposited': 'true'
+        }, follow=True)
+        self.assertEqual(resp1.status_code, 200)
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.RELEASED)
+
+        # Second release attempt on already released reservation
+        resp2 = self.client.post(url, {
+            'action': 'release',
+            'condition_at_release': 'GOOD',
+            'id_deposited': 'true'
+        }, follow=True)
+        self.assertEqual(resp2.status_code, 200)
+        self.assertContains(resp2, "Equipment must be in APPROVED status before release")
+
+        # Reservation remains in consistent RELEASED state
+        res.refresh_from_db()
+        self.assertEqual(res.status, StudentReservation.Status.RELEASED)
+
+    def test_audit_log_recorded_on_release(self):
+        """Audit trail accurately records release event with asset code and custody status."""
+        from apps.audit.models import AuditLog
+        res = self._create_approved_reservation(is_projector=True)
+        student_services.release_equipment(
+            reservation=res,
+            released_by=self.custodian_user,
+            condition_at_release=Asset.Condition.GOOD,
+            id_deposited=True,
+            remarks='Audit test'
+        )
+        logs = AuditLog.objects.filter(
+            model_name='StudentReservation',
+            object_id=str(res.pk),
+            action='STUDENT_RESERVATION_RELEASED'
+        )
+        self.assertTrue(logs.exists())
+        log = logs.first()
+        self.assertEqual(log.user, self.custodian_user)
+        self.assertEqual(log.changes.get('asset_code'), self.proj_1.asset_code)
+        self.assertEqual(log.changes.get('condition_at_release'), Asset.Condition.GOOD)
+        self.assertTrue(log.changes.get('id_deposited'))
+
+    def test_ui_renders_projector_specific_wording_and_checklist(self):
+        """GET detail view renders 'Confirm & Release Projector' and checklist for projectors."""
+        res = self._create_approved_reservation(is_projector=True)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Confirm &amp; Release Projector')
+        self.assertContains(resp, 'Release Projector Handover')
+        self.assertContains(resp, 'Pickup Verification Checklist')
+        self.assertContains(resp, 'Assigned Projector')
+        self.assertContains(resp, self.proj_1.asset_code)
+        self.assertContains(resp, 'Add optional release notes')
+
+    def test_ui_renders_generic_wording_for_non_projectors(self):
+        """GET detail view renders 'Confirm & Release Equipment' for non-projectors."""
+        res = self._create_approved_reservation(is_projector=False)
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Confirm &amp; Release Equipment')
+        self.assertContains(resp, 'Release Equipment Handover')
+        self.assertNotContains(resp, 'Confirm &amp; Release Projector')
+
+    def test_ui_renders_released_status_after_successful_handover(self):
+        """After release, detail view displays Released status badge and custody handover details."""
+        res = self._create_approved_reservation(is_projector=True)
+        student_services.release_equipment(
+            reservation=res,
+            released_by=self.custodian_user,
+            condition_at_release=Asset.Condition.GOOD,
+            id_deposited=True
+        )
+        url = reverse('student_reservations:custodian_detail', kwargs={'pk': res.pk})
+        self.client.force_login(self.custodian_user)
+
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'RELEASED &bull; IN USE')
+        self.assertContains(resp, 'Equipment Successfully Released')
+        self.assertContains(resp, 'Handover Completed')
+        self.assertContains(resp, 'Released By Staff')
 
 
 # Demonstration Data Seed Management Command Tests

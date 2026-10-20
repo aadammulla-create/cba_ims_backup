@@ -655,18 +655,33 @@ def record_no_show(reservation, recorded_by=None, reason='', request=None):
     return locked_res
 
 
-def release_equipment(reservation, released_by, condition_at_release=None, remarks='', request=None):
+def release_equipment(
+    reservation,
+    released_by,
+    condition_at_release=None,
+    remarks='',
+    request=None,
+    *,
+    id_deposited=False,
+):
     """
     Physically releases the equipment to the student and records physical school ID deposit.
     Business rules:
     - Student identity is physically checked using their original school ID at pickup.
     - Students leave their physical school ID at the CBA office while borrowing equipment.
+    - FAIL-CLOSED: Physical School ID verification and custody is mandatory (id_deposited must be explicitly True).
     - Transitions reservation status: APPROVED -> RELEASED.
     - Transitions asset status: AVAILABLE -> BORROWED.
     - Requires Custodian authorization.
     """
     check_custodian_permission(released_by)
     auto_expire_uncollected_reservations()
+
+    # Mandatory School ID verification / custody rule — FAIL-CLOSED
+    if not id_deposited:
+        raise ValidationError(
+            "Cannot release equipment: Student's physical school ID must be verified and deposited at the CBA Property Office."
+        )
 
     with transaction.atomic():
         locked_res = StudentReservation.objects.select_for_update().select_related('asset').get(pk=reservation.pk)

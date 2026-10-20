@@ -294,7 +294,8 @@ class AssetConditionIntegrityTests(TestCase):
             student_res_services.release_equipment(
                 reservation=reservation,
                 released_by=self.admin,
-                condition_at_release=Asset.Condition.UNSERVICEABLE
+                condition_at_release=Asset.Condition.UNSERVICEABLE,
+                id_deposited=True
             )
         self.assertIn("in UNSERVICEABLE condition", str(ctx.exception))
 
@@ -304,6 +305,7 @@ class AssetConditionIntegrityTests(TestCase):
             student_res_services.release_equipment(
                 reservation=reservation,
                 released_by=self.admin,
-                condition_at_release=Asset.Condition.GOOD
+                condition_at_release=Asset.Condition.GOOD,
+                id_deposited=True
             )
         self.assertIn("is unserviceable", str(ctx.exception))

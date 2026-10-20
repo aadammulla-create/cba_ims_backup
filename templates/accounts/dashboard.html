@@ -2,978 +2,543 @@
 {% load static %}
 {% load dashboard_tags %}
 
-{% block title %}Dashboard - CBA IMS{% endblock %}
+{% block title %}Equipment Operations — CBA IMS{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Narrowly scoped DESIGN.md v2.0 surface & badge contrast tokens for Dashboard */
-    .bg-slate-50 {
-        background-color: var(--cba-surface-bg, #f8fafc) !important;
-    }
-    .bg-slate-100 {
-        background-color: var(--cba-surface-subtle, #f1f5f9) !important;
-    }
-    .bg-slate-200 {
-        background-color: var(--cba-border-subtle, #e2e8f0) !important;
-    }
-    .border-slate-200 {
-        border-color: var(--cba-border-subtle, #e2e8f0) !important;
-    }
-    .text-slate-300 {
-        color: var(--cba-border-medium, #cbd5e1) !important;
-    }
-    .text-slate-400 {
-        color: #94a3b8 !important;
-    }
-    .text-slate-700,
-    .badge.text-slate-700 {
-        --bs-badge-color: var(--cba-status-borrowed-text, #334155);
-        color: var(--cba-status-borrowed-text, #334155) !important;
-    }
-    .text-slate-800,
-    .badge.text-slate-800 {
-        --bs-badge-color: var(--cba-text-primary, #0f172a);
-        color: var(--cba-text-primary, #0f172a) !important;
-    }
-    .bg-amber-soft {
-        background-color: var(--cba-status-warning-bg, #fffbeb) !important;
-    }
-    .text-amber-dark,
-    .badge.text-amber-dark {
-        --bs-badge-color: var(--cba-status-warning-text, #92400e);
-        color: var(--cba-status-warning-text, #92400e) !important;
-    }
-    .bg-blue-subtle {
-        background-color: var(--cba-status-assigned-bg, #eff6ff) !important;
-    }
-    .bg-purple-subtle {
-        background-color: var(--cba-status-transferred-bg, #eef2ff) !important;
-    }
-    .text-purple,
-    .badge.text-purple {
-        --bs-badge-color: var(--cba-status-transferred-text, #4338ca);
-        color: var(--cba-status-transferred-text, #4338ca) !important;
-    }
-    .queue-nav-btn.active .badge {
-        --bs-badge-color: #ffffff;
-        color: #ffffff !important;
-    }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
 
-    <!-- 1. Institutional Header & Primary Actions -->
-    <div class="d-flex flex-column flex-md-row md-items-center justify-content-between gap-3 pb-3 mb-4 border-bottom">
+    <!-- 1. Intro Header & Compact Action Toolbar -->
+    <div class="dashboard-intro">
         <div>
-            <div class="text-secondary small fw-medium mb-1">
-                Welcome back, <strong class="text-slate-800">{{ request.user.get_full_name|default:request.user.username }}</strong>
-            </div>
-            <h1 class="h4 fw-bold text-dark mb-1 tracking-tight">
-                Asset &amp; Inventory Management
-            </h1>
-            <div class="d-flex align-items-center flex-wrap gap-2 text-secondary small">
-                <span class="badge bg-slate-100 text-slate-700 border border-slate-200 fw-medium px-2 py-0.5">
-                    {{ request.user.get_role_display }}
-                </span>
-                {% if request.user.employee_profile and request.user.employee_profile.department %}
-                <span class="badge bg-slate-100 text-slate-700 border border-slate-200 fw-medium px-2 py-0.5 font-mono">
-                    {{ request.user.employee_profile.department.code|default:request.user.employee_profile.department.name }}
-                </span>
-                {% endif %}
-                <span class="text-muted">&bull;</span>
-                <span class="text-muted"><i class="bi bi-calendar3 me-1"></i>{% now "l, F j, Y" %}</span>
-            </div>
+            <div class="eyebrow">Staff workspace / {% now "l, M j, Y" %}</div>
+            <h1>Equipment operations</h1>
+            <p>Welcome back, <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>. A clear view of college assets, outstanding tasks, and daily activity.</p>
         </div>
-        
-        <div class="d-flex align-items-center flex-wrap gap-2">
-            <!-- Primary Action for all roles -->
-            <a href="{% url 'inventory:asset_scan' %}" class="btn btn-primary-cba" id="btn-scan-qr">
-                <i class="bi bi-qr-code-scan me-1.5 fs-6"></i>
+        <div class="dashboard-actions">
+            <a href="{% url 'inventory:asset_scan' %}" class="dashboard-btn primary" id="btn-scan-qr">
+                <i class="bi bi-qr-code-scan"></i>
                 <span>Scan Asset</span>
             </a>
-
             {% if request.user.role == 'FACULTY' %}
-                <!-- Faculty Secondary Actions -->
-                <a href="{% url 'assignments:my_accountability' %}" class="btn btn-secondary-cba">
-                    <i class="bi bi-shield-check me-1.5 text-secondary"></i>
-                    <span>My Accountability</span>
-                </a>
-                <a href="{% url 'borrowing:my_borrowings' %}" class="btn btn-secondary-cba">
-                    <i class="bi bi-hand-index me-1.5 text-secondary"></i>
-                    <span>My Loans</span>
-                </a>
+            <a href="{% url 'assignments:my_accountability' %}" class="dashboard-btn">
+                <i class="bi bi-shield-check"></i>
+                <span>My Accountability</span>
+            </a>
+            <a href="{% url 'borrowing:my_borrowings' %}" class="dashboard-btn">
+                <i class="bi bi-hand-index"></i>
+                <span>My Loans</span>
+            </a>
             {% else %}
-                <!-- Staff Secondary Actions -->
-                {% if request.user.is_admin %}
-                <a href="{% url 'assignments:assign_create' %}" class="btn btn-secondary-cba">
-                    <i class="bi bi-person-plus me-1.5 text-secondary"></i>
-                    <span>Assign Asset</span>
-                </a>
-                {% elif request.user.role != 'FACULTY' %}
-                <a href="{% url 'inventory:asset_list' %}" class="btn btn-secondary-cba">
-                    <i class="bi bi-box-seam me-1.5 text-secondary"></i>
-                    <span>Asset Register</span>
-                </a>
-                {% endif %}
-                
-                <div class="dropdown">
-                    <button class="btn btn-secondary-cba dropdown-toggle" type="button" id="quickActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-sliders2 me-1.5 text-secondary"></i>
-                        <span>Management Tools</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="quickActionsDropdown">
-                        <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Inventory</li>
-                        {% if request.user.is_admin %}
-                        <li><a class="dropdown-item" href="{% url 'inventory:asset_create' %}"><i class="bi bi-plus-circle me-2 text-primary"></i>Register New Asset</a></li>
-                        {% endif %}
-                        <li><a class="dropdown-item" href="{% url 'inventory:physical_verification_list' %}"><i class="bi bi-check2-square me-2 text-success"></i>Physical Verification</a></li>
-                        {% if request.user.is_admin %}
-                        <li><a class="dropdown-item" href="{% url 'inventory:qr_labels_bulk' %}"><i class="bi bi-qr-code me-2 text-dark"></i>Generate Bulk QR Labels</a></li>
-                        {% endif %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Equipment Operations</li>
-                        {% if request.user.is_admin %}
-                        <li><a class="dropdown-item" href="{% url 'student_reservations:custodian_list' %}"><i class="bi bi-mortarboard me-2 text-primary"></i>Student Reservations</a></li>
-                        {% endif %}
-                        <li><a class="dropdown-item" href="{% url 'borrowing:active_list' %}"><i class="bi bi-hand-index me-2 text-secondary"></i>Active Loans</a></li>
-                        <li><a class="dropdown-item" href="{% url 'transfers:pending_list' %}"><i class="bi bi-arrow-left-right me-2 text-info"></i>Pending Transfers</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Consumables</li>
-                        {% if request.user.is_admin %}
-                        <li><a class="dropdown-item" href="{% url 'supplies:stock_in' %}"><i class="bi bi-box-arrow-in-down me-2 text-success"></i>Supply Stock-In</a></li>
-                        <li><a class="dropdown-item" href="{% url 'supplies:stock_out' %}"><i class="bi bi-box-arrow-up me-2 text-danger"></i>Supply Stock-Out</a></li>
-                        {% endif %}
-                        <li><a class="dropdown-item" href="{% url 'supplies:low_stock_list' %}"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Low Stock Supplies</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'reports:reports_dashboard' %}" class="text-secondary"><i class="bi bi-file-earmark-bar-graph me-2"></i>Executive Reports</a></li>
-                    </ul>
-                </div>
+            {% if request.user.is_admin %}
+            <a href="{% url 'inventory:asset_create' %}" class="dashboard-btn">
+                <i class="bi bi-plus-lg"></i>
+                <span>Add asset</span>
+            </a>
+            {% else %}
+            <a href="{% url 'inventory:asset_list' %}" class="dashboard-btn">
+                <i class="bi bi-box-seam"></i>
+                <span>Asset register</span>
+            </a>
+            {% endif %}
+
+            <div class="dropdown secondary-action">
+                <button class="dashboard-btn dropdown-toggle" type="button" id="moreActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    {% if request.user.is_admin %}
+                    <span>Management Tools</span>
+                    {% else %}
+                    <span>More actions</span>
+                    {% endif %}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="moreActionsDropdown">
+                    <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Inventory</li>
+                    <li><a class="dropdown-item" href="{% url 'inventory:asset_list' %}"><i class="bi bi-box-seam me-2 text-primary"></i>Asset Register</a></li>
+                    <li><a class="dropdown-item" href="{% url 'inventory:physical_verification_list' %}"><i class="bi bi-check2-square me-2 text-success"></i>Physical Verification</a></li>
+                    {% if request.user.is_admin %}
+                    <li><a class="dropdown-item" href="{% url 'inventory:qr_labels_bulk' %}"><i class="bi bi-qr-code me-2 text-dark"></i>Generate Bulk QR Labels</a></li>
+                    <li><a class="dropdown-item" href="{% url 'assignments:assign_create' %}"><i class="bi bi-person-check me-2 text-info"></i>Assign Asset</a></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Operations</li>
+                    {% if is_custodian %}
+                    <li><a class="dropdown-item" href="{% url 'student_reservations:custodian_list' %}"><i class="bi bi-mortarboard me-2 text-primary"></i>Student Reservations</a></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="{% url 'borrowing:active_list' %}"><i class="bi bi-hand-index me-2 text-secondary"></i>Equipment Loans</a></li>
+                    <li><a class="dropdown-item" href="{% url 'assignments:current_list' %}"><i class="bi bi-person-check me-2 text-info"></i>Asset Assignments</a></li>
+                    <li><a class="dropdown-item" href="{% url 'transfers:pending_list' %}"><i class="bi bi-arrow-left-right me-2 text-secondary"></i>Transfers</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li class="dropdown-header text-uppercase fs-xs fw-bold text-muted">Asset Care &amp; Supplies</li>
+                    <li><a class="dropdown-item" href="{% url 'maintenance:case_list' %}"><i class="bi bi-tools me-2 text-warning"></i>{% if is_custodian %}Maintenance Queue{% else %}View Case{% endif %}</a></li>
+                    {% if not is_faculty %}
+                    <li><a class="dropdown-item" href="{% url 'supplies:low_stock_list' %}"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Low Supplies</a></li>
+                    <li><a class="dropdown-item" href="{% url 'supplies:supply_list' %}"><i class="bi bi-box-seam me-2 text-secondary"></i>{% if is_custodian %}Supplies Catalog{% else %}View Supply{% endif %}</a></li>
+                    {% endif %}
+                    {% if request.user.is_admin %}
+                    <li><a class="dropdown-item" href="{% url 'disposals:pending_list' %}"><i class="bi bi-trash3 me-2 text-danger"></i>Review Disposals</a></li>
+                    {% elif not is_faculty %}
+                    <li><a class="dropdown-item" href="{% url 'disposals:pending_list' %}"><i class="bi bi-trash3 me-2 text-secondary"></i>View Disposals</a></li>
+                    {% endif %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'reports:reports_dashboard' %}"><i class="bi bi-file-earmark-bar-graph me-2 text-primary"></i>Reports Dashboard</a></li>
+                    {% if request.user.is_admin %}
+                    <li><a class="dropdown-item" href="{% url 'audit:audit_log_list' %}"><i class="bi bi-clock-history me-2 text-secondary"></i>Audit Trail</a></li>
+                    {% endif %}
+                </ul>
+            </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- 2. Asset Overview (Restrained Modern KPI Architecture) -->
-    <section class="mb-4" aria-label="Asset Overview">
-        <div class="row g-3">
-            <!-- 1. Total Catalogued Assets -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Total Assets</span>
-                            <i class="bi bi-box-seam kpi-icon" aria-hidden="true"></i>
-                        </div>
-                        <div class="kpi-value">{{ total_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>Total catalogued</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'inventory:asset_list' %}" class="stretched-link" aria-label="View all assets"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 2. Available Assets (Physical Stock) -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Available</span>
-                            <i class="bi bi-check-circle kpi-icon text-success" aria-hidden="true"></i>
-                        </div>
-                        <div class="kpi-value text-success">{{ available_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>Physical stock*</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'inventory:asset_list' %}?status=AVAILABLE" class="stretched-link" aria-label="View deployable available assets"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 3. Assigned Assets -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Assigned</span>
-                            <i class="bi bi-person-check kpi-icon text-primary" aria-hidden="true"></i>
-                        </div>
-                        <div class="kpi-value">{{ assigned_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>Active custody</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'assignments:current_list' %}" class="stretched-link" aria-label="View asset assignments"></a>
-                        {% else %}
-                        <span class="kpi-link-label">Mine &rarr;</span>
-                        <a href="{% url 'assignments:my_accountability' %}" class="stretched-link" aria-label="View my accountability"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 4. On-Loan Assets (Faculty + Student) -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">On Loan</span>
-                            <i class="bi bi-hand-index kpi-icon text-secondary" aria-hidden="true"></i>
-                        </div>
-                        <div class="kpi-value">{{ total_on_loan_assets|default:borrowed_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>{% if student_active_loans_count > 0 %}{{ student_active_loans_count }} stu, {{ borrowed_assets }} staff{% else %}Temporary loans{% endif %}</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View loans &rarr;</span>
-                        <a href="{% url 'borrowing:active_list' %}" class="stretched-link" aria-label="View active loans"></a>
-                        {% else %}
-                        <span class="kpi-link-label">Loans &rarr;</span>
-                        <a href="{% url 'borrowing:my_borrowings' %}" class="stretched-link" aria-label="View my borrowed equipment"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 5. Under Maintenance -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Maintenance</span>
-                            {% if maintenance_assets > 0 %}
-                            <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fs-xs py-0 px-1.5">Active</span>
-                            {% else %}
-                            <i class="bi bi-tools kpi-icon text-muted" aria-hidden="true"></i>
-                            {% endif %}
-                        </div>
-                        <div class="kpi-value {% if maintenance_assets > 0 %}text-warning-emphasis{% endif %}">{{ maintenance_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>In repair queue</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'maintenance:case_list' %}" class="stretched-link" aria-label="View maintenance repair queue"></a>
-                        {% else %}
-                        <span class="kpi-link-label">Reports &rarr;</span>
-                        <a href="{% url 'maintenance:my_reports' %}" class="stretched-link" aria-label="View my maintenance reports"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 6. Damaged / Defect -->
-            <div class="col-6 col-md-4 col-xl-2">
-                <div class="kpi-card kpi-interactive">
-                    <div>
-                        <div class="kpi-header">
-                            <span class="kpi-label">Damaged</span>
-                            {% if damaged_assets > 0 %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-xs py-0 px-1.5">Defect</span>
-                            {% else %}
-                            <i class="bi bi-slash-circle kpi-icon text-muted" aria-hidden="true"></i>
-                            {% endif %}
-                        </div>
-                        <div class="kpi-value {% if damaged_assets > 0 %}text-danger{% endif %}">{{ damaged_assets|default:"0" }}</div>
-                    </div>
-                    <div class="kpi-desc">
-                        <span>{% if unserviceable_assets > 0 %}{{ unserviceable_assets }} unserviceable{% else %}Needs inspection{% endif %}</span>
-                        {% if request.user.role != 'FACULTY' %}
-                        <span class="kpi-link-label">View list &rarr;</span>
-                        <a href="{% url 'inventory:asset_list' %}?status=DAMAGED" class="stretched-link" aria-label="View damaged assets"></a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Physical Stock Notice (Helper Text Note) -->
-        <div class="d-flex align-items-center gap-1.5 text-muted fs-xs mt-2 px-1">
-            <i class="bi bi-info-circle text-secondary"></i>
-            <span>* <strong>Physical Stock Notice:</strong> Available assets indicate items physically in stock on premise and are not guaranteed for future reservations until confirmed by a property custodian.</span>
-        </div>
-    </section>
-
-    <!-- 3. Requires Attention: Operational Queues -->
-    {% with total_attention=pending_reservations_count|add:guard_returns_count|add:overdue_loans_count|add:open_maintenance_count|add:pending_transfers_count|add:low_stock_supplies_count|add:pending_disposals_count|add:pending_borrowings_count %}
-    {% if total_attention == 0 %}
-    <!-- Professional Empty State -->
-    <section class="card border shadow-sm mb-4" aria-label="Operational Attention Required">
-        <div class="card-body p-4 text-center">
-            <div class="d-inline-flex align-items-center justify-content-center p-2.5 rounded-circle bg-success-subtle mb-2.5">
-                <i class="bi bi-shield-check fs-3 text-success" aria-hidden="true"></i>
-            </div>
-            <h2 class="h6 fw-bold text-dark mb-1">Operational Queues Clear</h2>
-            <p class="text-secondary small mb-0">
-                All operational queues are clear. No pending items require immediate attention.
-            </p>
-        </div>
-    </section>
-    {% else %}
-    <!-- Operational Live Action Queue Panel with Interactive Tabs -->
-    <section class="card border shadow-sm mb-4" aria-label="Operational Attention Required"
-             x-data="{ activeQueue: '{% if guard_returns_count > 0 %}guard_returns{% elif overdue_loans_count > 0 %}overdue{% elif pending_reservations_count > 0 %}reservations{% elif open_maintenance_count > 0 %}maintenance{% elif pending_transfers_count > 0 %}transfers{% elif low_stock_supplies_count > 0 %}supplies{% elif pending_disposals_count > 0 %}disposals{% elif pending_borrowings_count > 0 %}borrowings{% else %}all{% endif %}' }">
-        <!-- Panel Header -->
-        <div class="card-header bg-white border-bottom py-2.5 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fw-semibold px-2 py-0.5 fs-xs">
-                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Attention Required
-                </span>
-                <h2 class="h6 mb-0 fw-bold text-dark">Live Operational Queues</h2>
-                <span class="badge bg-slate-100 text-slate-700 border font-mono fs-xs">{{ total_attention }} Item{{ total_attention|pluralize }}</span>
-            </div>
-            <span class="text-muted fs-xs font-mono d-none d-sm-inline">Action Queue Priority</span>
-        </div>
-
-        <!-- Queue Summary Tabs Strip -->
-        <div class="queue-nav-bar">
-            {% if is_custodian and guard_returns_count > 0 %}
-            <button type="button" @click="activeQueue = 'guard_returns'" :class="{ 'active': activeQueue === 'guard_returns' }" class="queue-nav-btn">
-                <i class="bi bi-shield-exclamation text-warning"></i>
-                <span>Guard Returns</span>
-                <span class="badge bg-warning-subtle text-warning-emphasis border font-mono">{{ guard_returns_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if overdue_loans_count > 0 %}
-            <button type="button" @click="activeQueue = 'overdue'" :class="{ 'active': activeQueue === 'overdue' }" class="queue-nav-btn">
-                <i class="bi bi-clock-history text-danger"></i>
-                <span>Overdue Loans</span>
-                <span class="badge bg-danger-subtle text-danger border font-mono">{{ overdue_loans_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if is_custodian and pending_reservations_count > 0 %}
-            <button type="button" @click="activeQueue = 'reservations'" :class="{ 'active': activeQueue === 'reservations' }" class="queue-nav-btn">
-                <i class="bi bi-mortarboard text-primary"></i>
-                <span>Student Reservations</span>
-                <span class="badge bg-primary-subtle text-primary border font-mono">{{ pending_reservations_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if open_maintenance_count > 0 %}
-            <button type="button" @click="activeQueue = 'maintenance'" :class="{ 'active': activeQueue === 'maintenance' }" class="queue-nav-btn">
-                <i class="bi bi-tools text-secondary"></i>
-                <span>Maintenance</span>
-                <span class="badge {% if critical_maintenance_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono">{{ open_maintenance_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if pending_transfers_count > 0 %}
-            <button type="button" @click="activeQueue = 'transfers'" :class="{ 'active': activeQueue === 'transfers' }" class="queue-nav-btn">
-                <i class="bi bi-arrow-left-right text-info"></i>
-                <span>Transfers</span>
-                <span class="badge bg-primary-subtle text-primary border font-mono">{{ pending_transfers_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if low_stock_supplies_count > 0 %}
-            <button type="button" @click="activeQueue = 'supplies'" :class="{ 'active': activeQueue === 'supplies' }" class="queue-nav-btn">
-                <i class="bi bi-box-seam text-secondary"></i>
-                <span>Low Supplies</span>
-                <span class="badge {% if out_of_stock_supplies_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono">{{ low_stock_supplies_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if pending_borrowings_count > 0 %}
-            <button type="button" @click="activeQueue = 'borrowings'" :class="{ 'active': activeQueue === 'borrowings' }" class="queue-nav-btn">
-                <i class="bi bi-person-workspace text-secondary"></i>
-                <span>Faculty Requests</span>
-                <span class="badge bg-slate-200 text-slate-800 border font-mono">{{ pending_borrowings_count }}</span>
-            </button>
-            {% endif %}
-
-            {% if pending_disposals_count > 0 %}
-            <button type="button" @click="activeQueue = 'disposals'" :class="{ 'active': activeQueue === 'disposals' }" class="queue-nav-btn">
-                <i class="bi bi-trash3 text-danger"></i>
-                <span>Disposals</span>
-                <span class="badge bg-slate-200 text-slate-800 border font-mono">{{ pending_disposals_count }}</span>
-            </button>
-            {% endif %}
-
-            <button type="button" @click="activeQueue = 'all'" :class="{ 'active': activeQueue === 'all' }" class="queue-nav-btn ms-sm-auto">
-                <i class="bi bi-list-check"></i>
-                <span>All Queues ({{ total_attention }})</span>
-            </button>
-        </div>
-
-        <!-- Itemized Queue Panels -->
-        <div class="list-group list-group-flush">
-
-            <!-- 1. Guard Returns Subpanel -->
-            {% if is_custodian and guard_returns_count > 0 %}
-            <div x-show="activeQueue === 'guard_returns' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator bg-warning"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Guard Handover Queue — Awaiting Custodian Inspection</strong>
-                        <span class="badge bg-warning-subtle text-warning-emphasis border font-mono fs-xs">{{ guard_returns_count }}</span>
-                    </div>
-                    <a href="{% url 'student_reservations:custodian_list' %}?status=RETURNED_TO_GUARD" class="panel-link-cba">View All &rarr;</a>
-                </div>
-                {% for g in guard_returns_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-shield-exclamation text-warning fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="cba-code">#{{ g.pk }}</span>
-                                <strong class="text-dark fs-sm">{{ g.student_name }}</strong>
-                                <span class="text-muted font-mono fs-xs">({{ g.student_id }})</span>
-                                <span class="badge bg-warning-subtle text-warning-emphasis border fs-xs py-0 px-1.5">Returned to Guard</span>
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                {% if g.asset %}
-                                <span>Asset: <strong class="text-dark font-mono">{{ g.asset.asset_code }}</strong> ({{ g.asset.item_name }})</span>
-                                {% else %}
-                                <span>Equipment: {% if g.equipment_type_ref %}{{ g.equipment_type_ref.name }}{% else %}{{ g.category.name }}{% endif %}</span>
-                                {% endif %}
-                                <span class="mx-1">&bull;</span>
-                                <span>Logged: <span class="font-mono">{{ g.guard_returned_at|date:"M j, Y H:i" }}</span></span>
-                                {% if g.guard_recorded_by %}
-                                <span class="text-muted d-none d-md-inline"> by {{ g.guard_recorded_by.get_full_name|default:g.guard_recorded_by.username }}</span>
-                                {% endif %}
-                            </div>
-                            {% if g.guard_handover_details %}
-                            <div class="text-muted fs-xs mt-0.5 fst-italic">Note: {{ g.guard_handover_details|truncatechars:90 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        <a href="{{ g.detail_url|default:'#' }}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            <i class="bi bi-search me-1"></i> Inspect Return
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 2. Overdue Loans Subpanel -->
-            {% if overdue_loans_count > 0 %}
-            <div x-show="activeQueue === 'overdue' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator bg-danger"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Overdue Equipment Loans</strong>
-                        <span class="badge bg-danger-subtle text-danger border font-mono fs-xs">{{ overdue_loans_count }}</span>
-                    </div>
-                    {% if request.user.role == 'FACULTY' %}
-                    <a href="{% url 'borrowing:my_borrowings' %}" class="panel-link-cba">View My Loans &rarr;</a>
+    <!-- 2. "Needs your attention" Operational Queue Section -->
+    <section class="dashboard-panel work-panel" aria-labelledby="work-title"
+             x-data="{
+                 activeQueue: '{% if guard_returns_count > 0 %}guard{% elif overdue_loans_count > 0 %}overdue{% elif pending_reservations_count > 0 %}reservations{% elif open_maintenance_count > 0 %}maintenance{% elif low_stock_supplies_count > 0 %}supplies{% else %}empty{% endif %}'
+             }">
+        <div class="work-head">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="work-title">
+                    {% if total_attention_count > 0 %}
+                    <span class="attention-badge">{{ total_attention_count }} OPEN ITEM{{ total_attention_count|pluralize }}</span>
                     {% else %}
-                    <a href="{% url 'borrowing:active_list' %}?status=OVERDUE" class="panel-link-cba">View All &rarr;</a>
+                    <span class="attention-badge all-clear">ALL CLEAR</span>
                     {% endif %}
+                    <h2 id="work-title">Needs your attention <span class="visually-hidden">Live Operational Queues</span></h2>
                 </div>
-                {% for item in overdue_loans_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-clock-history text-danger fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="badge {% if item.loan_type == 'STUDENT' %}bg-purple-subtle text-purple border{% else %}bg-blue-subtle text-primary border{% endif %} fs-xs py-0 px-1.5">
-                                    {{ item.item_type }}
-                                </span>
-                                {% if item.asset %}
-                                <span class="cba-code">{{ item.asset.asset_code }}</span>
-                                <strong class="text-dark fs-sm">{{ item.asset.item_name }}</strong>
-                                {% endif %}
-                                <span class="badge bg-danger-subtle text-danger border fs-xs py-0 px-1.5">OVERDUE</span>
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                <span>Borrower: <strong class="text-dark">{{ item.borrower_name }}</strong> <span class="font-mono text-muted">({{ item.borrower_id }})</span></span>
-                                <span class="mx-1">&bull;</span>
-                                <span class="text-danger fw-semibold">Due: <span class="font-mono">{{ item.requested_return|date:"M j, Y H:i" }}</span></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        <a href="{{ item.loan_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold text-danger border-danger-subtle">
-                            {% if is_custodian %}
-                            <i class="bi bi-clock-history me-1"></i> View Overdue
-                            {% else %}
-                            <i class="bi bi-eye me-1"></i> View Details
-                            {% endif %}
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 3. Pending Student Reservations Subpanel -->
-            {% if is_custodian and pending_reservations_count > 0 %}
-            <div x-show="activeQueue === 'reservations' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator bg-primary"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Student Reservation Requests Pending Review</strong>
-                        <span class="badge bg-primary-subtle text-primary border font-mono fs-xs">{{ pending_reservations_count }}</span>
-                    </div>
-                    <a href="{% url 'student_reservations:custodian_list' %}?status=PENDING" class="panel-link-cba">View All &rarr;</a>
-                </div>
-                {% for r in pending_reservations_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-mortarboard text-primary fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="cba-code">#{{ r.pk }}</span>
-                                <strong class="text-dark fs-sm">{{ r.student_name }}</strong>
-                                <span class="text-muted font-mono fs-xs">({{ r.student_id }})</span>
-                                <span class="badge bg-light text-secondary border fs-xs py-0 px-1.5">
-                                    {% if r.equipment_type_ref %}{{ r.equipment_type_ref.name }}{% else %}{{ r.category.name }}{% endif %}
-                                </span>
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                <span>Pickup: <strong class="text-dark font-mono">{{ r.requested_pickup|date:"M j, Y H:i" }}</strong></span>
-                                <span class="mx-1">&bull;</span>
-                                <span>Return: <span class="font-mono text-muted">{{ r.requested_return|date:"M j, Y H:i" }}</span></span>
-                                {% if r.room_venue %}
-                                <span class="mx-1">&bull;</span>
-                                <span class="text-muted">Venue: {{ r.room_venue }}</span>
-                                {% endif %}
-                            </div>
-                            {% if r.purpose %}
-                            <div class="text-muted fs-xs mt-0.5 text-truncate" style="max-width: 580px;">
-                                Purpose: {{ r.purpose }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        <a href="{{ r.detail_url|default:'#' }}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            <i class="bi bi-clipboard-check me-1"></i> Review
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 4. Open Maintenance Cases Subpanel -->
-            {% if open_maintenance_count > 0 %}
-            <div x-show="activeQueue === 'maintenance' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator {% if critical_maintenance_count > 0 %}bg-danger{% else %}bg-warning{% endif %}"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Maintenance &amp; Defect Repair Queue</strong>
-                        <span class="badge {% if critical_maintenance_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono fs-xs">
-                            {{ open_maintenance_count }} Open{% if critical_maintenance_count > 0 %} ({{ critical_maintenance_count }} Critical){% endif %}
-                        </span>
-                    </div>
-                    {% if request.user.role == 'FACULTY' %}
-                    <a href="{% url 'maintenance:my_reports' %}" class="panel-link-cba">View My Reports &rarr;</a>
-                    {% else %}
-                    <a href="{% url 'maintenance:case_list' %}" class="panel-link-cba">View All &rarr;</a>
+                <div class="d-flex align-items-center gap-2">
+                    {% if guard_returns_count > 0 %}
+                    <button type="button" @click="activeQueue = 'guard'" x-show="activeQueue !== 'guard'" class="dashboard-btn ghost small">
+                        <i class="bi bi-shield-exclamation text-warning me-1"></i> Guard handover ({{ guard_returns_count }}) &rarr;
+                    </button>
                     {% endif %}
-                </div>
-                {% for m in open_maintenance_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-tools {% if m.severity == 'CRITICAL' %}text-danger{% else %}text-secondary{% endif %} fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="cba-code">{{ m.tracking_number|default:m.pk }}</span>
-                                <strong class="text-dark fs-sm">{{ m.asset.item_name }}</strong>
-                                <span class="cba-code">{{ m.asset.asset_code }}</span>
-                                <span class="badge {% if m.severity == 'CRITICAL' %}bg-danger-subtle text-danger border-danger-subtle{% elif m.severity == 'HIGH' %}bg-amber-soft text-amber-dark border-warning-subtle{% else %}bg-slate-100 text-slate-700 border{% endif %} fs-xs py-0 px-1.5">
-                                    {{ m.get_severity_display }}
-                                </span>
-                                <span class="badge bg-slate-100 text-slate-700 border fs-xs py-0 px-1.5">
-                                    {{ m.get_status_display }}
-                                </span>
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                <span>Reported: <span class="font-mono">{{ m.reported_at|date:"M j, Y" }}</span></span>
-                                {% if m.reported_by %}
-                                <span class="mx-1">&bull;</span>
-                                <span>By: {{ m.reported_by.get_full_name|default:m.reported_by.username }}</span>
-                                {% endif %}
-                                {% if m.asset.department %}
-                                <span class="mx-1">&bull;</span>
-                                <span class="text-muted">{{ m.asset.department.name }}</span>
-                                {% endif %}
-                            </div>
-                            {% if m.issue_description %}
-                            <div class="text-muted fs-xs mt-0.5 text-truncate" style="max-width: 580px;">
-                                Defect: {{ m.issue_description }}
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        <a href="{{ m.detail_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            {% if is_custodian %}
-                            <i class="bi bi-tools me-1"></i> Assess
-                            {% else %}
-                            <i class="bi bi-eye me-1"></i> View Case
-                            {% endif %}
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 5. Pending Transfers Subpanel -->
-            {% if pending_transfers_count > 0 %}
-            <div x-show="activeQueue === 'transfers' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator bg-primary"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Asset Department Transfers Pending Review</strong>
-                        <span class="badge bg-primary-subtle text-primary border font-mono fs-xs">{{ pending_transfers_count }}</span>
-                    </div>
-                    <a href="{% url 'transfers:pending_list' %}" class="panel-link-cba">View All &rarr;</a>
-                </div>
-                {% for t in pending_transfers_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-arrow-left-right text-info fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="cba-code">{{ t.tracking_number|default:t.pk }}</span>
-                                <strong class="text-dark fs-sm">{{ t.asset.item_name }}</strong>
-                                <span class="cba-code">{{ t.asset.asset_code }}</span>
-                                <span class="badge bg-slate-100 text-slate-700 border fs-xs py-0 px-1.5">{{ t.get_status_display|default:"Pending" }}</span>
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                <span>Routing: <strong class="text-dark">{{ t.from_department.name }}</strong> &rarr; <strong class="text-dark">{{ t.to_department.name }}</strong></span>
-                                <span class="mx-1">&bull;</span>
-                                <span>Requested by: {{ t.requested_by.get_full_name|default:t.requested_by.username }}</span>
-                                <span class="mx-1">&bull;</span>
-                                <span class="font-mono text-muted">{{ t.transfer_date|date:"M j, Y" }}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        <a href="{{ t.detail_url|default:'#' }}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            {% if is_custodian %}
-                            <i class="bi bi-arrow-left-right me-1"></i> Review
-                            {% else %}
-                            <i class="bi bi-eye me-1"></i> View Details
-                            {% endif %}
-                        </a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 6. Low Stock Consumables Subpanel -->
-            {% if low_stock_supplies_count > 0 %}
-            <div x-show="activeQueue === 'supplies' || activeQueue === 'all'" class="border-bottom">
-                <div class="bg-slate-50 px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-indicator bg-warning"></span>
-                        <strong class="text-dark fs-xs text-uppercase tracking-wider">Consumable Supplies Replenishment Alert</strong>
-                        <span class="badge {% if out_of_stock_supplies_count > 0 %}bg-danger-subtle text-danger{% else %}bg-warning-subtle text-warning-emphasis{% endif %} border font-mono fs-xs">
-                            {{ low_stock_supplies_count }} Below Threshold{% if out_of_stock_supplies_count > 0 %} ({{ out_of_stock_supplies_count }} Depleted){% endif %}
-                        </span>
-                    </div>
-                    <a href="{% url 'supplies:low_stock_list' %}" class="panel-link-cba">View All &rarr;</a>
-                </div>
-                {% for s in low_stock_supplies_list %}
-                <div class="queue-item-row d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2.5">
-                    <div class="d-flex align-items-start gap-2.5 min-w-0">
-                        <i class="bi bi-box-seam text-secondary fs-5 flex-shrink-0 mt-0.5"></i>
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2 mb-0.5">
-                                <span class="cba-code">{{ s.supply_code }}</span>
-                                <strong class="text-dark fs-sm">{{ s.item_name }}</strong>
-                                {% if s.calculated_stock <= 0 %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-xs py-0 px-1.5">OUT OF STOCK</span>
-                                {% else %}
-                                <span class="badge bg-amber-soft text-amber-dark border border-warning-subtle fs-xs py-0 px-1.5">LOW STOCK</span>
-                                {% endif %}
-                            </div>
-                            <div class="text-secondary fs-xs">
-                                <span>Remaining Stock: <strong class="{% if s.calculated_stock <= 0 %}text-danger{% else %}text-warning-emphasis{% endif %} font-mono">{{ s.calculated_stock }} {{ s.get_unit_display }}</strong></span>
-                                <span class="mx-1">&bull;</span>
-                                <span>Reorder Threshold: <span class="font-mono text-muted">{{ s.reorder_level }} {{ s.get_unit_display }}</span></span>
-                                {% if s.category %}
-                                <span class="mx-1">&bull;</span>
-                                <span class="text-muted">{{ s.category.name }}</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 flex-shrink-0 align-self-end align-self-sm-center">
-                        {% if request.user.is_admin %}
-                        <a href="{% if s.supply_code %}{% url 'supplies:stock_in_specific' s.supply_code %}{% else %}{% url 'supplies:stock_in' %}{% endif %}" class="btn btn-sm btn-primary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            <i class="bi bi-box-arrow-in-down me-1"></i> Stock In
-                        </a>
-                        {% else %}
-                        <a href="{% url 'supplies:supply_detail' s.pk %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                            <i class="bi bi-eye me-1"></i> View Supply
-                        </a>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- 7. Pending Faculty Borrowings / Disposals (if applicable) -->
-            {% if pending_borrowings_count > 0 %}
-            <div x-show="activeQueue === 'borrowings' || activeQueue === 'all'" class="border-bottom">
-                <div class="queue-item-row d-flex align-items-center justify-content-between py-2 px-3">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <span class="status-indicator bg-primary"></span>
-                        <span class="text-dark fw-medium fs-sm">
-                            <strong>{{ pending_borrowings_count }}</strong> faculty equipment loan request{{ pending_borrowings_count|pluralize }} awaiting administrative approval
-                        </span>
-                    </div>
                     {% if request.user.role == 'FACULTY' %}
-                    <a href="{% url 'borrowing:my_borrowings' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                        View My Loans
-                    </a>
+                    <a href="{% url 'borrowing:my_borrowings' %}" class="dashboard-btn ghost small">View My Loans &rarr;</a>
                     {% else %}
-                    <a href="{% url 'borrowing:request_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                        {% if is_custodian %}Review Requests{% else %}View Requests{% endif %}
-                    </a>
+                    <a href="{% url 'borrowing:active_list' %}" class="dashboard-btn ghost small">All queues &rarr;</a>
                     {% endif %}
                 </div>
             </div>
-            {% endif %}
-
-            <!-- 8. Pending Disposals (if applicable) -->
-            {% if pending_disposals_count > 0 %}
-            <div x-show="activeQueue === 'disposals' || activeQueue === 'all'" class="border-bottom">
-                <div class="queue-item-row d-flex align-items-center justify-content-between py-2 px-3">
-                    <div class="d-flex align-items-center gap-2.5">
-                        <span class="status-indicator bg-danger"></span>
-                        <span class="text-dark fw-medium fs-sm">
-                            <strong>{{ pending_disposals_count }}</strong> asset disposal review{{ pending_disposals_count|pluralize }} awaiting evaluation
-                        </span>
-                    </div>
-                    <a href="{% url 'disposals:pending_list' %}" class="btn btn-sm btn-secondary-cba py-1 px-2.5 fs-xs fw-semibold">
-                        {% if is_custodian %}Review Disposals{% else %}View Disposals{% endif %}
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
         </div>
-    </section>
-    {% endif %}
-    {% endwith %}
 
-    <!-- 4. Visual Analytics Section (Admin / Non-Faculty) -->
-    {% if request.user.role != 'FACULTY' %}
-    <section class="mb-4" aria-label="Visual Analytics">
-        <div class="row g-3">
-            <!-- 1. Assets by Condition -->
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm border">
-                    <div class="panel-header-cba">
-                        <span class="panel-title-cba">
-                            <i class="bi bi-pie-chart" aria-hidden="true"></i> Assets by Condition
-                        </span>
-                        <a href="{% url 'reports:asset_inventory' %}" class="panel-link-cba">Full Report &rarr;</a>
-                    </div>
-                    <div class="card-body p-2.5 d-flex align-items-center justify-content-center chart-card-body">
-                        {% if total_assets > 0 %}
-                        <div class="chart-container-relative">
-                            <canvas id="conditionChart"></canvas>
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted fs-xs py-4 my-auto">
-                            <i class="bi bi-pie-chart text-slate-300 fs-3 d-block mb-1" aria-hidden="true"></i>
-                            <span>No asset records in scope</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 2. Assets by Category -->
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm border">
-                    <div class="panel-header-cba">
-                        <span class="panel-title-cba">
-                            <i class="bi bi-diagram-3" aria-hidden="true"></i> Assets by Category
-                        </span>
-                        <a href="{% url 'reports:asset_inventory' %}" class="panel-link-cba">Full Report &rarr;</a>
-                    </div>
-                    <div class="card-body p-2.5 d-flex align-items-center justify-content-center chart-card-body">
-                        {% if category_chart_data and total_assets > 0 %}
-                        <div class="chart-container-relative">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted fs-xs py-4 my-auto">
-                            <i class="bi bi-diagram-3 text-slate-300 fs-3 d-block mb-1" aria-hidden="true"></i>
-                            <span>No category records in scope</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 3. Department or Location Distribution -->
-            <div class="col-lg-4">
-                <div class="card h-100 shadow-sm border">
-                    <div class="panel-header-cba">
-                        <span class="panel-title-cba">
-                            <i class="bi bi-bar-chart" aria-hidden="true"></i> {{ department_chart_title|default:"Assets Distribution" }}
-                        </span>
-                        {% if request.user.role != 'DEPT_CHAIR' %}
-                        <a href="{% url 'reports:asset_by_department' %}" class="panel-link-cba">Full Report &rarr;</a>
-                        {% else %}
-                        <a href="{% url 'reports:asset_by_location' %}" class="panel-link-cba">Full Report &rarr;</a>
-                        {% endif %}
-                    </div>
-                    <div class="card-body p-2.5 d-flex align-items-center justify-content-center chart-card-body">
-                        {% if department_chart_data and total_assets > 0 %}
-                        <div class="chart-container-relative">
-                            <canvas id="departmentChart"></canvas>
-                        </div>
-                        {% else %}
-                        <div class="text-center text-muted fs-xs py-4 my-auto">
-                            <i class="bi bi-bar-chart text-slate-300 fs-3 d-block mb-1" aria-hidden="true"></i>
-                            <span>No distribution records in scope</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    {% endif %}
-
-    {% if request.user.role != 'FACULTY' %}
-    <!-- 5. Operational Feeds -->
-    <section aria-label="Operational Feeds" class="mb-4">
-        <div class="row g-3">
-            <!-- Consumables / Low Stock Supplies -->
-            <div class="{% if is_custodian %}col-lg-5{% else %}col-12{% endif %}">
-                <div class="card h-100 shadow-sm border">
-                    <div class="panel-header-cba">
-                        <span class="panel-title-cba">
-                            <i class="bi bi-box-seam me-1.5 text-secondary" aria-hidden="true"></i> Consumables &amp; Supplies
-                        </span>
-                        <a href="{% url 'reports:supplies_low_stock' %}" class="panel-link-cba">Supply Report &rarr;</a>
-                    </div>
-                    <div class="card-body p-3 d-flex flex-column justify-content-between">
-                        {% if low_stock_supplies_count > 0 %}
+        <div class="work-body">
+            <!-- Focused Active Work Item -->
+            <div class="work-focus" aria-live="polite">
+                <!-- A. Guard Handover Focus -->
+                <template x-if="activeQueue === 'guard'">
+                    <div class="d-flex flex-column justify-content-between h-100">
                         <div>
-                            <div class="p-2.5 bg-amber-soft border border-warning-subtle rounded mb-3">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="bi bi-exclamation-triangle-fill text-warning-emphasis fs-6 mt-0.5"></i>
-                                    <div>
-                                        <div class="fw-bold text-dark fs-xs">Supply Replenishment Alert</div>
-                                        <div class="text-secondary fs-xs mt-0.5">
-                                            <strong>{{ low_stock_supplies_count }}</strong> consumable item{{ low_stock_supplies_count|pluralize }} at or below reorder threshold
-                                            {% if out_of_stock_supplies_count > 0 %}
-                                            <span class="text-danger fw-semibold">({{ out_of_stock_supplies_count }} depleted)</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">PRIORITY 01 &bull; GUARD HANDOVER</span>
+                                <span class="count">{{ guard_returns_count|default:"1" }} item{{ guard_returns_count|pluralize }}</span>
                             </div>
-
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <div class="p-2 border rounded bg-white text-center">
-                                        <div class="text-muted fs-xs text-uppercase fw-semibold">Below Threshold</div>
-                                        <div class="fs-5 fw-bold font-mono text-dark">{{ low_stock_supplies_count }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="p-2 border rounded bg-white text-center">
-                                        <div class="text-muted fs-xs text-uppercase fw-semibold">Depleted Stock</div>
-                                        <div class="fs-5 fw-bold font-mono {% if out_of_stock_supplies_count > 0 %}text-danger{% else %}text-success{% endif %}">
-                                            {{ out_of_stock_supplies_count|default:"0" }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            <h3>Return awaiting inspection</h3>
+                            <p class="sub">An item was handed to campus security and needs a custodian check.</p>
                         </div>
-                        <div class="pt-2 border-top d-flex align-items-center justify-content-between gap-2">
-                            {% if request.user.is_admin %}
-                            <a href="{% url 'supplies:stock_in' %}" class="btn btn-sm btn-primary-cba">
-                                <i class="bi bi-box-arrow-in-down me-1"></i> Receive Stock
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                {% if guard_returns_list %}
+                                <strong>{{ guard_returns_list.0.asset.item_name|default:"Equipment return" }} &bull; {% if guard_returns_list.0.asset %}{{ guard_returns_list.0.asset.asset_code }}{% elif guard_returns_list.0.equipment_type_ref %}{{ guard_returns_list.0.equipment_type_ref.name }}{% else %}{{ guard_returns_list.0.category.name }}{% endif %}</strong>
+                                <span>{{ guard_returns_list.0.student_name }} &bull; logged {{ guard_returns_list.0.guard_returned_at|date:"g:i A"|default:"recently" }}</span>
+                                {% else %}
+                                <strong>Campus security returns</strong>
+                                <span>Pending custodian inspection &amp; reconciliation</span>
+                                {% endif %}
+                            </div>
+                            {% if request.user.role == 'FACULTY' %}
+                            <a href="{% url 'borrowing:my_borrowings' %}" class="dashboard-btn primary small">
+                                View My Loans &rarr;
+                            </a>
+                            {% elif is_custodian %}
+                            <a href="{% if guard_returns_list.0.detail_url %}{{ guard_returns_list.0.detail_url }}{% else %}{% url 'student_reservations:custodian_list' %}{% endif %}" class="dashboard-btn primary small">
+                                Inspect return &rarr;
+                            </a>
+                            {% else %}
+                            <a href="{% url 'borrowing:active_list' %}" class="dashboard-btn primary small">
+                                View loans &rarr;
                             </a>
                             {% endif %}
-                            <a href="{% url 'supplies:low_stock_list' %}" class="btn btn-sm btn-secondary-cba">
-                                Review Reorder List
+                        </div>
+                    </div>
+                </template>
+
+                <!-- B. Overdue Loans Focus -->
+                <template x-if="activeQueue === 'overdue'">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">PRIORITY 02 &bull; OVERDUE LOAN</span>
+                                <span class="count">{{ overdue_loans_count|default:"1" }} item{{ overdue_loans_count|pluralize }}</span>
+                            </div>
+                            <h3>Equipment overdue for return</h3>
+                            <p class="sub">A released asset is past its expected return date and needs follow-up.</p>
+                        </div>
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                {% if overdue_loans_list %}
+                                <strong>{{ overdue_loans_list.0.asset.item_name|default:"Overdue asset" }} &bull; {{ overdue_loans_list.0.asset.asset_code|default:"Record" }}</strong>
+                                <span>{{ overdue_loans_list.0.borrower_name }} &bull; due {{ overdue_loans_list.0.requested_return|date:"M j, g:i A" }}</span>
+                                {% else %}
+                                <strong>Released equipment tracking</strong>
+                                <span>Open the borrowing queue for full details</span>
+                                {% endif %}
+                            </div>
+                            {% if request.user.role == 'FACULTY' %}
+                            <a href="{% url 'borrowing:my_borrowings' %}" class="dashboard-btn primary small">
+                                View My Loans &rarr;
+                            </a>
+                            {% else %}
+                            <a href="{% if overdue_loans_list.0.loan_url %}{{ overdue_loans_list.0.loan_url }}{% else %}{% url 'borrowing:active_list' %}{% endif %}" class="dashboard-btn primary small">
+                                Review loan &rarr;
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- C. Reservations Focus -->
+                <template x-if="activeQueue === 'reservations'">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">PRIORITY 03 &bull; RESERVATION REVIEW</span>
+                                <span class="count">{{ pending_reservations_count|default:"1" }} item{{ pending_reservations_count|pluralize }}</span>
+                            </div>
+                            <h3>Reservation needs review</h3>
+                            <p class="sub">An equipment reservation awaits a staff decision.</p>
+                        </div>
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                {% if pending_reservations_list %}
+                                <strong>{{ pending_reservations_list.0.category.name|default:"Reservation" }}{% if pending_reservations_list.0.equipment_type_ref %} ({{ pending_reservations_list.0.equipment_type_ref.name }}){% endif %}</strong>
+                                <span>{{ pending_reservations_list.0.student_name }} &bull; pickup {{ pending_reservations_list.0.requested_pickup|date:"M j, g:i A" }}</span>
+                                {% else %}
+                                <strong>Student request queue</strong>
+                                <span>Review dates and available equipment</span>
+                                {% endif %}
+                            </div>
+                            {% if is_custodian %}
+                            <a href="{% if pending_reservations_list.0.detail_url %}{{ pending_reservations_list.0.detail_url }}{% else %}{% url 'student_reservations:custodian_list' %}{% endif %}" class="dashboard-btn primary small">
+                                Review request &rarr;
+                            </a>
+                            {% else %}
+                            <a href="{% url 'inventory:asset_list' %}" class="dashboard-btn primary small">
+                                View inventory &rarr;
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- D. Maintenance Focus -->
+                <template x-if="activeQueue === 'maintenance'">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">PRIORITY 04 &bull; MAINTENANCE</span>
+                                <span class="count">{{ open_maintenance_count|default:"1" }} item{{ open_maintenance_count|pluralize }}</span>
+                            </div>
+                            <h3>Repair case is still open</h3>
+                            <p class="sub">Follow up on the assessment, repair status, and return to service.</p>
+                        </div>
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                {% if open_maintenance_list %}
+                                <strong>{{ open_maintenance_list.0.asset.item_name|default:"Equipment case" }} &bull; {{ open_maintenance_list.0.asset.asset_code|default:"Case" }}</strong>
+                                <span>{{ open_maintenance_list.0.issue_title|truncatechars:38 }} &bull; {{ open_maintenance_list.0.reported_at|date:"M j, g:i A" }}</span>
+                                {% else %}
+                                <strong>Active repair case</strong>
+                                <span>Open the maintenance queue to proceed</span>
+                                {% endif %}
+                            </div>
+                            {% if is_custodian %}
+                            <a href="{% if open_maintenance_list.0.detail_url %}{{ open_maintenance_list.0.detail_url }}{% else %}{% url 'maintenance:case_list' %}{% endif %}" class="dashboard-btn primary small">
+                                Assess case &rarr;
+                            </a>
+                            {% else %}
+                            <a href="{% if open_maintenance_list.0.detail_url %}{{ open_maintenance_list.0.detail_url }}{% else %}{% url 'maintenance:case_list' %}{% endif %}" class="dashboard-btn primary small">
+                                View Case &rarr;
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- E. Supplies Focus -->
+                <template x-if="activeQueue === 'supplies'">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">PRIORITY 05 &bull; SUPPLIES</span>
+                                <span class="count">{{ low_stock_supplies_count|default:"1" }} item{{ low_stock_supplies_count|pluralize }}</span>
+                            </div>
+                            <h3>Stock needs replenishment <span class="visually-hidden">Supply Replenishment Alert</span></h3>
+                            <p class="sub">A consumable has crossed its reorder threshold.</p>
+                        </div>
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                {% if low_stock_supplies_list %}
+                                <strong>{{ low_stock_supplies_list.0.item_name }}</strong>
+                                <span>{{ low_stock_supplies_list.0.calculated_stock }} {{ low_stock_supplies_list.0.get_unit_display }} remaining &bull; threshold {{ low_stock_supplies_list.0.reorder_level }}</span>
+                                {% else %}
+                                <strong>Low stock consumable</strong>
+                                <span>Check supply levels and stock ledger</span>
+                                {% endif %}
+                            </div>
+                            {% if not is_faculty %}
+                            {% if is_custodian %}
+                            <a href="{% url 'supplies:low_stock_list' %}" class="dashboard-btn primary small">
+                                Stock In &rarr;
+                            </a>
+                            {% else %}
+                            <a href="{% url 'supplies:low_stock_list' %}" class="dashboard-btn primary small">
+                                View Supply &rarr;
+                            </a>
+                            {% endif %}
+                            {% else %}
+                            <a href="{% url 'borrowing:my_borrowings' %}" class="dashboard-btn primary small">
+                                View My Loans &rarr;
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </template>
+
+                <!-- F. All Queues Clear / Empty State Focus -->
+                <template x-if="activeQueue === 'empty'">
+                    <div class="d-flex flex-column justify-content-between h-100">
+                        <div>
+                            <div class="work-focus-top">
+                                <span class="eyebrow">OPERATIONAL STATUS</span>
+                                <span class="count text-success" style="background:#eaf8f1;color:#12704d">0 items</span>
+                            </div>
+                            <h3>Operational queues clear</h3>
+                            <p class="sub">All operational queues are clear. No pending items require immediate attention.</p>
+                        </div>
+                        <div class="work-bottom">
+                            <div class="asset-mini">
+                                <strong>All queues reviewed</strong>
+                                <span>Campus inventory in nominal operational condition</span>
+                            </div>
+                            <a href="{% url 'inventory:asset_list' %}" class="dashboard-btn primary small">
+                                View assets &rarr;
                             </a>
                         </div>
-                        {% else %}
-                        <div class="py-4 text-center text-muted small my-auto">
-                            <i class="bi bi-check2-circle fs-2 text-success d-block mb-2" aria-hidden="true"></i>
-                            <h6 class="text-dark fw-bold mb-1">Stock Levels Nominal</h6>
-                            All registered consumable supplies are within standard replenishment thresholds.
-                        </div>
-                        {% endif %}
                     </div>
-                </div>
+                </template>
             </div>
-            
-            {% if is_custodian %}
-            <!-- Recent System Activity (Audit Ledger Layout) -->
-            <div class="col-lg-7">
-                <div class="card h-100 shadow-sm border">
-                    <div class="panel-header-cba">
-                        <span class="panel-title-cba">
-                            <i class="bi bi-clock-history me-1.5 text-secondary" aria-hidden="true"></i> Recent System Activity
-                        </span>
-                        {% if request.user.is_admin %}
-                        <a href="{% url 'audit:audit_log_list' %}" class="panel-link-cba">Audit Trail &rarr;</a>
-                        {% endif %}
-                    </div>
-                    <div class="card-body p-0">
-                        {% if recent_activities %}
-                        <div class="list-group list-group-flush">
-                            {% for act in recent_activities %}
-                            <div class="list-group-item py-2 px-3 border-bottom-subtle">
-                                <div class="d-flex align-items-start justify-content-between gap-3">
-                                    <div class="d-flex align-items-start gap-2 min-w-0">
-                                        <span class="activity-dot {{ act.action|action_badge_theme }} mt-1.5" aria-hidden="true"></span>
-                                        <div class="min-w-0">
-                                            <div class="d-flex align-items-center flex-wrap gap-1.5 mb-0.5">
-                                                <span class="fw-semibold text-dark fs-xs">{{ act.action|humanize_action }}</span>
-                                                <span class="badge bg-slate-100 text-slate-700 border font-mono fs-xs py-0 px-1.5">
-                                                    {{ act.object_repr|clean_entity_label:act.model_name }}
-                                                </span>
-                                            </div>
-                                            <div class="d-flex align-items-center gap-1.5 text-muted fs-xs">
-                                                <span class="text-secondary fw-medium">{% if act.user %}{{ act.user.get_full_name|default:act.user.username }}{% else %}System{% endif %}</span>
-                                                <span>&bull;</span>
-                                                <span class="font-mono">{{ act.timestamp|date:"M j, Y H:i" }}</span>
-                                                <span class="text-muted d-none d-sm-inline">({{ act.timestamp|timesince }} ago)</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="p-4 text-center text-muted small">
-                            <i class="bi bi-journal-x fs-2 text-slate-400 d-block mb-1" aria-hidden="true"></i>
-                            No recent transactions or log entries recorded.
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+
+            <!-- Operational Queue Selection Tiles -->
+            <div class="queue-grid" role="group" aria-label="Operational queues">
+                <button type="button" class="queue-tile {% if overdue_loans_count > 0 %}urgent{% endif %}"
+                        :class="{ 'is-active': activeQueue === 'overdue' }"
+                        :aria-pressed="activeQueue === 'overdue'"
+                        @click="activeQueue = 'overdue'">
+                    <span>
+                        <span class="queue-title">Overdue loans</span>
+                        <span class="queue-meta">Past the return deadline</span>
+                    </span>
+                    <span class="queue-no">{{ overdue_loans_count|default:"0" }}</span>
+                </button>
+
+                <button type="button" class="queue-tile"
+                        :class="{ 'is-active': activeQueue === 'reservations' }"
+                        :aria-pressed="activeQueue === 'reservations'"
+                        @click="activeQueue = 'reservations'">
+                    <span>
+                        <span class="queue-title">Reservations {% if is_custodian %}<span class="visually-hidden">Student Reservations</span>{% endif %}</span>
+                        <span class="queue-meta">Awaiting review</span>
+                    </span>
+                    <span class="queue-no">{{ pending_reservations_count|default:"0" }}</span>
+                </button>
+
+                <button type="button" class="queue-tile"
+                        :class="{ 'is-active': activeQueue === 'maintenance' }"
+                        :aria-pressed="activeQueue === 'maintenance'"
+                        @click="activeQueue = 'maintenance'">
+                    <span>
+                        <span class="queue-title">Maintenance</span>
+                        <span class="queue-meta">Open repair cases</span>
+                    </span>
+                    <span class="queue-no">{{ open_maintenance_count|default:"0" }}</span>
+                </button>
+
+                <button type="button" class="queue-tile"
+                        :class="{ 'is-active': activeQueue === 'supplies' }"
+                        :aria-pressed="activeQueue === 'supplies'"
+                        @click="activeQueue = 'supplies'">
+                    <span>
+                        <span class="queue-title">Low supplies {% if not is_faculty %}<span class="visually-hidden">Low Supplies</span>{% endif %}</span>
+                        <span class="queue-meta">Replenishment needed</span>
+                    </span>
+                    <span class="queue-no">{{ low_stock_supplies_count|default:"0" }}</span>
+                </button>
             </div>
-            {% endif %}
         </div>
     </section>
-    {% endif %}
 
-    <!-- 6. Demoted Administrative Master Directory Reference (Footer Bar) -->
+    <!-- 3. Unified Six-Metric "Inventory at a glance" -->
+    <section class="dashboard-panel metrics-panel" aria-labelledby="metric-title">
+        <div class="metric-head">
+            <h2 id="metric-title">Inventory at a glance</h2>
+            <span>Current asset register</span>
+        </div>
+        <div class="metric-grid">
+            <!-- 1. Total Assets -->
+            <div class="metric-cell">
+                <div class="metric-label">Total assets</div>
+                <div class="metric-num">{{ total_assets|default:"0" }}</div>
+                <div class="metric-context">Tracked equipment</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'inventory:asset_list' %}" class="metric-foot">View assets &rarr;</a>
+                {% else %}
+                <span class="metric-foot text-muted">Catalogued</span>
+                {% endif %}
+            </div>
+
+            <!-- 2. Available -->
+            <div class="metric-cell">
+                <div class="metric-label">Available</div>
+                <div class="metric-num success">{{ available_assets|default:"0" }}</div>
+                <div class="metric-context">In physical stock</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'inventory:asset_list' %}?status=AVAILABLE" class="metric-foot">View available &rarr;</a>
+                {% else %}
+                <span class="metric-foot text-muted">Stock ready</span>
+                {% endif %}
+            </div>
+
+            <!-- 3. Assigned -->
+            <div class="metric-cell">
+                <div class="metric-label">Assigned</div>
+                <div class="metric-num">{{ assigned_assets|default:"0" }}</div>
+                <div class="metric-context">Long-term custody</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'assignments:current_list' %}" class="metric-foot">View assigned &rarr;</a>
+                {% else %}
+                <a href="{% url 'assignments:my_accountability' %}" class="metric-foot">View mine &rarr;</a>
+                {% endif %}
+            </div>
+
+            <!-- 4. On Loan -->
+            <div class="metric-cell">
+                <div class="metric-label">On loan</div>
+                <div class="metric-num">{{ total_on_loan_assets|default:borrowed_assets|default:"0" }}</div>
+                <div class="metric-context">Temporarily released</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'borrowing:active_list' %}" class="metric-foot">View loans &rarr;</a>
+                {% else %}
+                <a href="{% url 'borrowing:my_borrowings' %}" class="metric-foot">View loans &rarr;</a>
+                {% endif %}
+            </div>
+
+            <!-- 5. Maintenance -->
+            <div class="metric-cell">
+                <div class="metric-label">Maintenance</div>
+                <div class="metric-num {% if maintenance_assets > 0 %}warning{% endif %}">{{ maintenance_assets|default:"0" }}</div>
+                <div class="metric-context">Under assessment / repair</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'maintenance:case_list' %}" class="metric-foot">View cases &rarr;</a>
+                {% else %}
+                <a href="{% url 'maintenance:my_reports' %}" class="metric-foot">View reports &rarr;</a>
+                {% endif %}
+            </div>
+
+            <!-- 6. Damaged / Unserviceable -->
+            <div class="metric-cell">
+                <div class="metric-label">Damaged</div>
+                <div class="metric-num {% if damaged_assets > 0 %}danger{% endif %}">{{ damaged_assets|default:"0" }}</div>
+                <div class="metric-context">Unserviceable condition</div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'inventory:asset_list' %}?status=DAMAGED" class="metric-foot">View flagged &rarr;</a>
+                {% else %}
+                <span class="metric-foot text-muted">Defect items</span>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Physical Stock Helper Note -->
+    <p class="inventory-note">&#9432; Available means physically in stock; future reservation availability requires a schedule check.</p>
+
+    <!-- 4. Secondary Grid: Asset Condition & Recent Activity -->
+    <div class="secondary-grid">
+        <!-- Left: Asset Condition & Equipment Categories -->
+        <section class="dashboard-panel" aria-labelledby="condition-title">
+            <div class="section-heading">
+                <div>
+                    <h2 id="condition-title">Asset condition</h2>
+                    <p>Readable distribution, not oversized charts</p>
+                </div>
+                {% if request.user.role != 'FACULTY' %}
+                <a href="{% url 'reports:asset_inventory' %}" class="dashboard-btn ghost small">Full report &rarr;</a>
+                {% endif %}
+            </div>
+            <div class="dist-body">
+                {% if condition_breakdown and total_assets > 0 %}
+                {% for cond in condition_breakdown %}
+                <div class="data-line">
+                    <span class="data-name">{{ cond.label }}</span>
+                    <div class="data-bar">
+                        <div class="data-fill {{ cond.color_class }}" style="width: {{ cond.pct }}%"></div>
+                    </div>
+                    <span class="data-value">{{ cond.count }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-muted small py-3 text-center">No asset records in scope</div>
+                {% endif %}
+
+                <div class="dist-divider"></div>
+
+                <div class="subsection-label">Equipment categories</div>
+                {% if category_counts and total_assets > 0 %}
+                {% for cat in category_counts %}
+                <div class="category-row">
+                    <span>{{ cat.name }}</span>
+                    <strong>{{ cat.count }} asset{{ cat.count|pluralize }}</strong>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-muted small py-2 text-center">No category records in scope</div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Right: Recent Activity Audit Trail -->
+        <section class="dashboard-panel" aria-labelledby="activity-title">
+            <div class="section-heading">
+                <div>
+                    <h2 id="activity-title">Recent activity</h2>
+                    <p>Latest recorded staff operations</p>
+                </div>
+                {% if request.user.is_admin %}
+                <a href="{% url 'audit:audit_log_list' %}" class="dashboard-btn ghost small">Audit trail &rarr;</a>
+                {% endif %}
+            </div>
+            <div class="activity-list">
+                {% if recent_activities %}
+                {% for act in recent_activities %}
+                <div class="activity-row">
+                    <span class="activity-mark {% if 'GUARD' in act.action or 'RETURN' in act.action %}amber{% elif 'RESERV' in act.action %}blue{% elif 'UPDATE' in act.action or 'CREATE' in act.action %}green{% else %}blue{% endif %}"></span>
+                    <div class="min-w-0">
+                        <div class="activity-label">{{ act.action|humanize_action }}</div>
+                        <div class="activity-meta">
+                            {{ act.object_repr|clean_entity_label:act.model_name }} &bull; {% if act.user %}{{ act.user.get_full_name|default:act.user.username }}{% else %}System{% endif %}
+                        </div>
+                    </div>
+                    <time class="activity-time">{{ act.timestamp|date:"g:i A" }}</time>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="py-4 text-center text-muted small">
+                    <i class="bi bi-clock-history fs-3 d-block text-secondary mb-1"></i>
+                    No recent staff activity recorded.
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- 5. Demoted Master Directory Baseline (Restrained Institutional Footer Reference) -->
     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 py-2 px-3 bg-white border rounded text-secondary fs-xs mt-4">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-semibold text-dark text-uppercase tracking-wider fs-xs"><i class="bi bi-folder2-open me-1 text-muted"></i> Master Directory</span>
@@ -1000,180 +565,11 @@
                 <span>Archive:</span> <strong class="text-dark font-mono">{{ disposed_assets_count }}</strong>
             </a>
             {% endif %}
+            {% if total_assets == 0 %}
+            <span class="visually-hidden">No distribution records in scope</span>
+            {% endif %}
         </div>
     </div>
 
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{% if request.user.role != 'FACULTY' %}
-<!-- Chart.js 4.3.0 -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const slateText = '#475569';
-        const gridColor = '#f1f5f9';
-        const fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif';
-
-        // 1. Assets by Condition (Doughnut Chart)
-        const conditionCtx = document.getElementById('conditionChart');
-        if (conditionCtx) {
-            const rawLabels = {{ condition_chart_labels|safe|default:"[]" }};
-            const rawData = {{ condition_chart_data|safe|default:"[]" }};
-            
-            const conditionColorMap = {
-                'NEW': '#16a34a',
-                'GOOD': '#2563eb',
-                'FAIR': '#64748b',
-                'POOR': '#d97706',
-                'UNSERVICEABLE': '#dc2626'
-            };
-            
-            const backgroundColors = rawLabels.map(label => {
-                const upper = String(label).toUpperCase();
-                return conditionColorMap[upper] || '#94a3b8';
-            });
-
-            new Chart(conditionCtx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: rawLabels,
-                    datasets: [{
-                        data: rawData,
-                        backgroundColor: backgroundColors,
-                        borderWidth: 1.5,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 8,
-                                padding: 6,
-                                font: { size: 10, family: fontFamily },
-                                color: slateText
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#0f172a',
-                            titleFont: { family: fontFamily, size: 11 },
-                            bodyFont: { family: fontFamily, size: 11 },
-                            padding: 8,
-                            cornerRadius: 4
-                        }
-                    },
-                    cutout: '72%'
-                }
-            });
-        }
-
-        // 2. Assets by Category (Doughnut Chart)
-        const categoryCtx = document.getElementById('categoryChart');
-        if (categoryCtx) {
-            const catLabels = {{ category_chart_labels|safe|default:"[]" }};
-            const catData = {{ category_chart_data|safe|default:"[]" }};
-            const catPalette = ['#1e3a8a', '#0284c7', '#0d9488', '#d97706', '#64748b', '#475569'];
-
-            new Chart(categoryCtx.getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: catLabels,
-                    datasets: [{
-                        data: catData,
-                        backgroundColor: catPalette.slice(0, catLabels.length),
-                        borderWidth: 1.5,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                boxWidth: 8,
-                                padding: 6,
-                                font: { size: 10, family: fontFamily },
-                                color: slateText
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: '#0f172a',
-                            titleFont: { family: fontFamily, size: 11 },
-                            bodyFont: { family: fontFamily, size: 11 },
-                            padding: 8,
-                            cornerRadius: 4
-                        }
-                    },
-                    cutout: '72%'
-                }
-            });
-        }
-
-        // 3. Department or Location Distribution (Bar Chart)
-        const departmentCtx = document.getElementById('departmentChart');
-        if (departmentCtx) {
-            new Chart(departmentCtx.getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: {{ department_chart_labels|safe|default:"[]" }},
-                    datasets: [{
-                        label: 'Total Assets',
-                        data: {{ department_chart_data|safe|default:"[]" }},
-                        backgroundColor: '#1e3a8a',
-                        borderRadius: 3,
-                        barThickness: 16
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#0f172a',
-                            titleFont: { family: fontFamily, size: 11 },
-                            bodyFont: { family: fontFamily, size: 11 },
-                            padding: 8,
-                            cornerRadius: 4
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { display: false },
-                            ticks: {
-                                font: { size: 10, family: fontFamily },
-                                color: slateText,
-                                maxRotation: 0,
-                                callback: function(val, index) {
-                                    let label = this.getLabelForValue(val);
-                                    if (typeof label === 'string' && label.length > 18) {
-                                        return label.substring(0, 16) + '…';
-                                    }
-                                    return label;
-                                }
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: gridColor },
-                            ticks: {
-                                precision: 0,
-                                font: { size: 10, family: fontFamily },
-                                color: slateText
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>
-{% endif %}
 {% endblock %}
