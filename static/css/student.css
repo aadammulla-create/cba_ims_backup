@@ -448,10 +448,10 @@
 
 .student-ui .cba-featured-projector-card {
   border: 1px solid #cbd5e1;
-  border-top: 3px solid var(--student-blue) !important;
   border-radius: 14px;
   background: #ffffff;
   min-width: 0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
 }
 
 .student-ui .cba-featured-image-box {
@@ -567,3 +567,16 @@
   }
 }
 
+
+/* Modern Student Hero & Step Rules */
+.student-ui .student-hero-modern {
+  padding-block: clamp(20px, 3.5vw, 48px);
+}
+
+.student-ui .student-process-steps .card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.student-ui .student-process-steps .card:hover {
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.08);
+}

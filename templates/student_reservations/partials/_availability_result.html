@@ -4,16 +4,14 @@
     <div>{{ error }}</div>
 </div>
 {% else %}
-<div class="schedule-check-summary p-3 bg-light rounded border border-light-subtle mb-4">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div class="small text-secondary">
-            <i class="bi bi-clock-history me-1.5 text-primary"></i>
-            Schedule Checked: <strong class="text-dark">{{ pickup_display }}</strong> &rarr; <strong class="text-dark">{{ return_display }}</strong>
-        </div>
-        <span class="badge bg-white text-secondary border font-mono small py-1 px-2">
-            Duration: {{ duration_hours }} hr{{ duration_hours|pluralize }}
-        </span>
+<div class="schedule-check-summary p-2.5 px-3 bg-light rounded border border-light-subtle mb-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div class="small text-secondary d-flex align-items-center gap-1.5">
+        <i class="bi bi-clock-history text-primary fs-6"></i>
+        <span>Selected Schedule: <strong class="text-dark">{{ pickup_display }}</strong> &rarr; <strong class="text-dark">{{ return_display }}</strong></span>
     </div>
+    <span class="badge bg-white text-secondary border font-mono small py-1 px-2.5">
+        {{ duration_hours }} hr{{ duration_hours|pluralize }} duration
+    </span>
 </div>
 
 {% if not featured_projector and not secondary_available_cards and not unavailable_cards and not catalog_cards %}
@@ -27,7 +25,7 @@
 <!-- 1. FEATURED PRIMARY EQUIPMENT: PROJECTORS FIRST -->
 {% if featured_projector %}
 <div class="cba-featured-projector-section mb-4">
-    <div class="card border shadow-xs cba-featured-projector-card" style="border-radius: 14px; overflow: hidden; border-color: #cbd5e1; border-top: 3px solid #1d4ed8; background: #ffffff;">
+    <div class="card border shadow-xs cba-featured-projector-card" style="border-radius: 14px; overflow: hidden; border: 1px solid #cbd5e1; background: #ffffff;">
         <div class="card-body p-3 p-md-4">
             <div class="row align-items-center g-3 g-md-4">
                 <!-- Large Projector Thumbnail / Illustration -->
@@ -90,9 +88,15 @@
                                 </div>
                             </div>
 
-                            <p class="text-secondary small mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+                            <p class="text-secondary small mb-2" style="font-size: 0.85rem; line-height: 1.5;">
                                 {{ featured_projector.category.description|default:"High-demand classroom and presentation projectors for CBA academic activities, lectures, and thesis defense." }}
                             </p>
+
+                            <!-- Included Accessories Guidance -->
+                            <div class="d-flex align-items-center gap-2 mb-3 py-1.5 px-2.5 rounded bg-light border border-light-subtle small text-secondary" style="font-size: 0.775rem;">
+                                <i class="bi bi-info-circle text-primary flex-shrink-0"></i>
+                                <span>Included accessories may vary. Confirm the issued equipment and accessories with the CBA Property Office at pickup.</span>
+                            </div>
 
                             {% if featured_projector.has_multiple_types %}
                             <!-- If multiple types exist under Projectors, list each with its own Reserve button -->
@@ -130,7 +134,7 @@
 
                             {% if featured_projector.available_units > 0 %}
                                 <a href="{% url 'student_reservations:public_request' %}?category={{ featured_projector.category.id }}{% if featured_projector.primary_type %}&type={{ featured_projector.primary_type.id }}{% endif %}&pickup={{ pickup_raw|urlencode }}&return={{ return_raw|urlencode }}"
-                                   class="btn btn-primary-cba px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center text-nowrap"
+                                   class="btn btn-primary-cba px-4 py-2 fw-semibold d-inline-flex align-items-center justify-content-center text-nowrap shadow-xs"
                                    style="min-height: 44px;">
                                     Reserve Projector &rarr;
                                 </a>

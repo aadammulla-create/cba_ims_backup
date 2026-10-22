@@ -11,15 +11,16 @@
         <p class="text-secondary">Choose your pickup and return times to see real-time availability for your class or event.</p>
     </header>
 
-    <div class="student-policy-note mb-4">
-        <i class="bi bi-info-circle text-primary me-1.5"></i> Bring your original School ID when collecting approved equipment at the CBA Property Office. Pickup has a 15-minute grace period.
+    <div class="student-policy-note mb-4 d-flex align-items-center gap-2">
+        <i class="bi bi-shield-check text-primary fs-5 flex-shrink-0"></i>
+        <span>Bring your original School ID when collecting approved equipment at the CBA Property Office. Pickup has a 15-minute grace period.</span>
     </div>
 
     <!-- Schedule Selector Card -->
-    <div class="card border shadow-xs mb-4 p-3 p-md-4 bg-white" style="border-radius: 12px;">
+    <div class="card border shadow-xs mb-4 p-3 p-md-4 bg-white" style="border-radius: 14px; border-color: #cbd5e1;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <span class="cba-kicker mb-0">STEP 1 OF 2 · CHECK SCHEDULE</span>
+                <span class="cba-kicker mb-0">STEP 1 OF 2 &bull; CHECK SCHEDULE</span>
                 <h2 class="h5 fw-bold text-dark mb-0">When do you need it?</h2>
             </div>
             <div class="spinner-border spinner-border-sm text-primary htmx-indicator" id="availability-spinner" role="status">
@@ -33,8 +34,22 @@
               hx-trigger="submit, change delay:400ms from:#pickup-input, change delay:400ms from:#return-input"
               class="row g-3 align-items-end"
               x-data="{
+                  getManilaNow() {
+                      try {
+                          const str = new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' });
+                          return new Date(str);
+                      } catch(e) {
+                          return new Date();
+                      }
+                  },
+                  isPast(startH, startM, daysAhead) {
+                      if (daysAhead > 0) return false;
+                      const now = this.getManilaNow();
+                      return now.getHours() > startH || (now.getHours() === startH && now.getMinutes() >= startM);
+                  },
                   setPreset(startH, startM, endH, endM, daysAhead) {
-                      const now = new Date();
+                      if (this.isPast(startH, startM, daysAhead)) return;
+                      const now = this.getManilaNow();
                       now.setDate(now.getDate() + daysAhead);
                       const s = new Date(now);
                       s.setHours(startH, startM, 0, 0);
@@ -67,26 +82,45 @@
                 <input type="datetime-local" class="form-control" id="return-input" name="return" value="{{ default_return }}" required>
             </div>
 
+            <!-- Distinct Secondary Tool Action: Check Schedule Button -->
             <div class="col-12 col-md-2">
-                <button type="submit" class="btn btn-primary-cba w-100 fw-semibold d-flex align-items-center justify-content-center" style="min-height: 44px;">
+                <button type="submit"
+                        class="btn btn-outline-primary w-100 fw-semibold d-flex align-items-center justify-content-center"
+                        style="min-height: 44px; border-width: 1.5px; background-color: #ffffff;">
                     <i class="bi bi-search me-1.5"></i> Check
                 </button>
             </div>
 
-            <!-- Quick-Select Timeslots Presets -->
+            <!-- Quick-Select Timeslots Presets with Intelligent Past Prevention -->
             <div class="col-12 mt-2">
                 <div class="d-flex flex-wrap align-items-center gap-1.5 text-secondary" style="font-size: 0.8rem;">
                     <span class="text-muted me-1 fw-medium"><i class="bi bi-lightning-charge text-warning me-0.5"></i> Quick timeslots:</span>
-                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill" @click="setPreset(8, 0, 12, 0, 0)">
+                    
+                    <button type="button" class="btn btn-sm py-1 px-2.5 rounded-pill"
+                            :class="isPast(8, 0, 0) ? 'btn-light text-muted opacity-50 border-dashed text-decoration-line-through' : 'btn-light border'"
+                            :disabled="isPast(8, 0, 0)"
+                            @click="setPreset(8, 0, 12, 0, 0)"
+                            :title="isPast(8, 0, 0) ? 'This timeslot has passed for today' : 'Select today 8 AM - 12 PM'">
                         Today 8 AM &ndash; 12 PM
+                        <template x-if="isPast(8, 0, 0)"><span class="text-muted small ms-1" style="font-size: 0.7rem;">(Past)</span></template>
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill" @click="setPreset(13, 0, 17, 0, 0)">
+                    
+                    <button type="button" class="btn btn-sm py-1 px-2.5 rounded-pill"
+                            :class="isPast(13, 0, 0) ? 'btn-light text-muted opacity-50 border-dashed text-decoration-line-through' : 'btn-light border'"
+                            :disabled="isPast(13, 0, 0)"
+                            @click="setPreset(13, 0, 17, 0, 0)"
+                            :title="isPast(13, 0, 0) ? 'This timeslot has passed for today' : 'Select today 1 PM - 5 PM'">
                         Today 1 PM &ndash; 5 PM
+                        <template x-if="isPast(13, 0, 0)"><span class="text-muted small ms-1" style="font-size: 0.7rem;">(Past)</span></template>
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill" @click="setPreset(8, 0, 12, 0, 1)">
+                    
+                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill"
+                            @click="setPreset(8, 0, 12, 0, 1)">
                         Tomorrow 8 AM &ndash; 12 PM
                     </button>
-                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill" @click="setPreset(13, 0, 17, 0, 1)">
+                    
+                    <button type="button" class="btn btn-sm btn-light border py-1 px-2.5 rounded-pill"
+                            @click="setPreset(13, 0, 17, 0, 1)">
                         Tomorrow 1 PM &ndash; 5 PM
                     </button>
                 </div>

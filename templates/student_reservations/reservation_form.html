@@ -40,12 +40,10 @@
 
                     <!-- SECTION 1: Equipment & Schedule (Prefilled Summary + Accessible Change Disclosure) -->
                     <div class="mb-4">
-                        {% if selection_prefilled and not form.errors %}
-                        <!-- Mobile: compact summary above student details (Single summary for mobile viewports) -->
-                        <div class="d-lg-none">
+                        <!-- Mobile: compact selection summary above student details -->
+                        <div class="d-lg-none mb-3">
                             {% include "student_reservations/partials/_selection_summary.html" with is_mobile=True %}
                         </div>
-                        {% endif %}
 
                         <!-- Accessible Collapsible Selection Editor -->
                         <details class="cba-selection-editor"
@@ -450,6 +448,10 @@ function reservationForm() {
             return this.categoryTypesMap[String(this.selectedCategory)] || [];
         },
 
+        get hasSelection() {
+            return Boolean(this.selectedCategory || this.selectedType || this.pickupVal || this.returnVal || defaultTypeName);
+        },
+
         get displayEquipmentName() {
             if (this.selectedType) {
                 const found = this.currentTypes.find(t => String(t.id) === String(this.selectedType));
@@ -459,7 +461,7 @@ function reservationForm() {
             if (catSelect && catSelect.selectedIndex > 0) {
                 return catSelect.options[catSelect.selectedIndex].text;
             }
-            return defaultTypeName || 'Equipment selected in catalog';
+            return defaultTypeName || '';
         },
 
         get displayCategoryName() {
@@ -467,7 +469,7 @@ function reservationForm() {
             if (catSelect && catSelect.selectedIndex > 0) {
                 return catSelect.options[catSelect.selectedIndex].text;
             }
-            return defaultCategoryName || 'Instructional Equipment';
+            return defaultCategoryName || '';
         },
 
         formatDateTime(val) {
@@ -483,17 +485,17 @@ function reservationForm() {
         },
 
         get displayPickup() {
-            if (this.hasChanged && this.pickupVal) {
+            if (this.pickupVal) {
                 return this.formatDateTime(this.pickupVal);
             }
-            return defaultPickupDisplay || (this.pickupVal ? this.formatDateTime(this.pickupVal) : 'Selected in schedule');
+            return defaultPickupDisplay || '';
         },
 
         get displayReturn() {
-            if (this.hasChanged && this.returnVal) {
+            if (this.returnVal) {
                 return this.formatDateTime(this.returnVal);
             }
-            return defaultReturnDisplay || (this.returnVal ? this.formatDateTime(this.returnVal) : 'Selected in schedule');
+            return defaultReturnDisplay || '';
         },
 
         get displayDuration() {
