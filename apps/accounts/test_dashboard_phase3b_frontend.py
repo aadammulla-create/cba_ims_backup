@@ -71,21 +71,20 @@ class DashboardFrontendPhase3BTests(TestCase):
             status=Asset.Status.AVAILABLE
         )
 
-    def test_sidebar_seven_sections_rendered_for_admin(self):
-        """Admin should see all approved 7 sections in sidebar."""
+    def test_sidebar_sections_rendered_for_admin(self):
+        """Admin should see all approved primary navigation sections and management tool groups in sidebar."""
         self.client.force_login(self.admin)
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
 
-        # Check section headers
-        self.assertIn('OVERVIEW', content)
-        self.assertIn('INVENTORY', content)
-        self.assertIn('EQUIPMENT OPERATIONS', content)
-        self.assertIn('ASSET CARE', content)
-        self.assertIn('SUPPLIES', content)
-        self.assertIn('REPORTS &amp; ACTIVITY', content)
-        self.assertIn('ADMINISTRATION', content)
+        # Check primary section headers and management tool group labels
+        self.assertIn('Overview &amp; Queues', content)
+        self.assertIn('Management Tools', content)
+        self.assertIn('Inventory Tools', content)
+        self.assertIn('Asset Operations', content)
+        self.assertIn('Supplies', content)
+        self.assertIn('Administration', content)
 
         # Check specific key links
         self.assertIn(reverse('inventory:asset_list'), content)
@@ -108,25 +107,40 @@ class DashboardFrontendPhase3BTests(TestCase):
         self.assertIn(reverse('accounts:user_list'), content)
 
     def test_sidebar_role_filtering_for_faculty(self):
-        """Faculty user should not see restricted administrative sections."""
+        """Faculty user should see personal workspace tools and not restricted administrative sections."""
         self.client.force_login(self.faculty)
         response = self.client.get(reverse('dashboard'))
         self.assertEqual(response.status_code, 200)
         content = response.content.decode('utf-8')
 
-        # Faculty sees Overview and personal actions
-        self.assertIn('OVERVIEW', content)
+        # Faculty sees My Workspace, Reference & Directory, and personal actions
+        self.assertIn('My Workspace', content)
+        self.assertIn('Reference &amp; Directory', content)
+        self.assertIn('Directory', content)
+        self.assertIn(reverse('dashboard'), content)
         self.assertIn(reverse('inventory:asset_scan'), content)
         self.assertIn(reverse('borrowing:my_borrowings'), content)
         self.assertIn(reverse('assignments:my_accountability'), content)
         self.assertIn(reverse('maintenance:my_reports'), content)
+        self.assertIn(reverse('borrowing:request_create'), content)
+        self.assertIn(reverse('maintenance:report_create'), content)
 
-        # Faculty must NOT see admin/custodian links
+        # Faculty must NOT see admin/custodian links or management headers
+        self.assertNotIn('Overview &amp; Queues', content)
+        self.assertNotIn('Management Tools', content)
         self.assertNotIn('Asset Register', content)
         self.assertNotIn('Bulk QR Labels', content)
         self.assertNotIn('Student Reservations', content)
-        self.assertNotIn('Reports &amp; Activity', content)
-        self.assertNotIn('Users', content)
+        self.assertNotIn('Audit History', content)
+        self.assertNotIn(f'href="{reverse("student_reservations:custodian_list")}"', content)
+        self.assertNotIn(f'href="{reverse("accounts:user_list")}"', content)
+        self.assertNotIn(f'href="{reverse("audit:audit_log_list")}"', content)
+
+        # Sidebar navigation specifically excludes Asset Register
+        sidebar_start = content.find('class="sidebar-nav"')
+        sidebar_end = content.find('<!-- Main Content Area -->')
+        sidebar_content = content[sidebar_start:sidebar_end] if sidebar_start != -1 else content
+        self.assertNotIn(f'href="{reverse("inventory:asset_list")}"', sidebar_content)
 
     def test_dashboard_empty_state_when_queues_clear(self):
         """When no items require attention, the professional empty state is rendered."""
