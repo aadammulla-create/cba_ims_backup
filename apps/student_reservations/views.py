@@ -900,7 +900,7 @@ class CustodianReservationDetailView(CustodianRequiredMixin, DetailView):
                     cond = form.cleaned_data['condition_at_return']
                     remarks = form.cleaned_data.get('return_remarks', '')
                     id_col = form.cleaned_data.get('id_collected_now', True)
-                    services.return_equipment_office(
+                    services.return_equipment_to_office(
                         reservation=res,
                         returned_to=request.user,
                         condition_at_return=cond,
@@ -922,7 +922,7 @@ class CustodianReservationDetailView(CustodianRequiredMixin, DetailView):
                     g_time = form.cleaned_data['guard_returned_at']
                     g_details = form.cleaned_data['guard_handover_details']
                     remarks = form.cleaned_data.get('remarks', '')
-                    services.return_equipment_guard(
+                    services.record_guard_return(
                         reservation=res,
                         recorded_by=request.user,
                         guard_returned_at=g_time,

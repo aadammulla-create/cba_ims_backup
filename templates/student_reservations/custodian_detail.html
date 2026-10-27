@@ -29,9 +29,13 @@
                 <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle">
                     <i class="bi bi-box-arrow-up-right me-1"></i> RELEASED &bull; IN USE
                 </span>
-                {% elif reservation.status == 'RETURNED' %}
+            {% elif reservation.status == 'RETURNED' %}
                 <span class="badge bg-light text-secondary border">
                     <i class="bi bi-archive me-1"></i> COMPLETED &amp; RETURNED
+                </span>
+                {% elif reservation.status == 'RETURNED_TO_GUARD' %}
+                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                    <i class="bi bi-shield-check me-1"></i> RETURNED TO GUARD &bull; PENDING INSPECTION
                 </span>
                 {% elif reservation.status == 'OVERDUE' %}
                 <span class="badge bg-danger text-white">
@@ -474,10 +478,9 @@
                                         Inspected Condition <span class="text-danger">*</span>
                                     </label>
                                     <select name="condition_at_return" id="id_condition_at_return" class="form-select form-select-sm" required>
-                                        <option value="GOOD" selected>Good Condition (Normal Wear)</option>
-                                        <option value="FAIR">Fair Condition</option>
-                                        <option value="EXCELLENT">Excellent</option>
-                                        <option value="DAMAGED">Damaged / Needs Repair</option>
+                                        {% for val, label in office_return_form.fields.condition_at_return.choices %}
+                                        <option value="{{ val }}" {% if office_return_form.condition_at_return.value %}{% if office_return_form.condition_at_return.value == val %}selected{% endif %}{% elif val == 'GOOD' %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
                                     </select>
                                 </div>
 
@@ -535,6 +538,14 @@
                 </div>
             </div>
 
+            {% elif reservation.status == 'RETURNED_TO_GUARD' %}
+            <div class="card shadow-xs border-info-subtle bg-light">
+                <div class="card-body p-3 text-center">
+                    <i class="bi bi-shield-check text-info fs-3 d-block mb-1"></i>
+                    <h3 class="h6 fw-bold text-dark mb-1">Returned to Security Guard</h3>
+                    <p class="text-secondary small mb-0">Handed over after hours. Equipment is pending Property Office inspection and physical unit remains unavailable.</p>
+                </div>
+            </div>
             {% elif reservation.status == 'RETURNED' %}
             <div class="card shadow-xs bg-light">
                 <div class="card-body p-3 text-center">
