@@ -41,7 +41,8 @@
 }
 .cba-staff-workflow .card,
 .cba-staff-workflow .cba-panel {
-  border: 1px solid var(--wf-border) !important;
+  /* Keep semantic Bootstrap/status border widths and inline overdue borders. */
+  border-color: var(--wf-border);
   border-radius: 16px;
   box-shadow: var(--wf-shadow);
   min-width: 0;
@@ -152,7 +153,6 @@
   .cba-staff-workflow .cba-page-header .cba-header-actions .btn { flex: 1 1 auto; }
   .cba-staff-workflow .card, .cba-staff-workflow .cba-panel { border-radius: 13px; }
   .cba-staff-workflow .card-header, .cba-staff-workflow .cba-panel-header { padding: 14px; border-radius: 13px 13px 0 0 !important; }
-  .cba-staff-workflow .card-body { padding: 18px !important; }
   .cba-staff-workflow .btn-sm { min-height: 44px; }
   .cba-staff-workflow .form-actions { flex-wrap: wrap; gap: 10px; }
   .cba-staff-workflow .form-actions .btn { flex: 1 1 auto; }
