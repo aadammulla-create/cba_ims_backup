@@ -241,3 +241,69 @@
     gap: 10px;
   }
 }
+
+
+/* Supply stock-control and institutional transfer workflows. */
+.cba-staff-workflow[class*="workflow-supplies"] .cba-page-header,
+.cba-staff-workflow[class*="workflow-transfer"] .cba-page-header {
+  border-color: #d8e4f0;
+}
+.cba-staff-workflow[class*="workflow-supplies"] .card-header.bg-white,
+.cba-staff-workflow[class*="workflow-transfer"] .card-header.bg-white {
+  background: linear-gradient(115deg, #fff 4%, #f6faff) !important;
+  border-bottom: 1px solid #e2eaf3 !important;
+}
+.cba-staff-workflow[class*="workflow-supplies"] .cba-page-header .btn,
+.cba-staff-workflow[class*="workflow-transfer"] .cba-page-header .btn {
+  border-radius: 10px;
+  min-height: 44px;
+}
+.cba-staff-workflow.workflow-supplies-low .card,
+.cba-staff-workflow.workflow-supplies-history .card,
+.cba-staff-workflow.workflow-transfer-pending .card,
+.cba-staff-workflow.workflow-transfer-history .card {
+  border-color: #dbe5ef !important;
+}
+.cba-staff-workflow.workflow-supplies-low .alert-warning,
+.cba-staff-workflow.workflow-supplies-adjust .alert-warning {
+  background-color: #fff9ee !important;
+  border-color: #f0ddb6 !important;
+  color: #82530b;
+}
+.cba-staff-workflow.workflow-supplies-stock-in .card.border-success {
+  border-color: #aadcc7 !important;
+}
+.cba-staff-workflow.workflow-supplies-stock-out .card.border-primary {
+  border-color: #b5d0f4 !important;
+}
+.cba-staff-workflow.workflow-supplies-adjust .card.border-warning {
+  border-color: #f1d8a5 !important;
+}
+.cba-staff-workflow.workflow-supplies-detail .cba-code,
+.cba-staff-workflow.workflow-transfer-detail .cba-code {
+  overflow-wrap: anywhere;
+}
+.cba-staff-workflow.workflow-transfer-detail .card .badge,
+.cba-staff-workflow.workflow-transfer-pending .card .badge,
+.cba-staff-workflow.workflow-supplies-detail .card .badge {
+  white-space: normal;
+  line-height: 1.4;
+}
+.cba-staff-workflow.workflow-transfer-request .form-control,
+.cba-staff-workflow.workflow-transfer-request .form-select {
+  min-height: 44px;
+}
+.cba-staff-workflow.workflow-transfer-pending .cba-panel,
+.cba-staff-workflow.workflow-supplies-catalog .cba-panel {
+  overflow: visible;
+}
+@media (max-width: 767.98px) {
+  .cba-staff-workflow[class*="workflow-supplies"] .cba-page-header .cba-header-actions,
+  .cba-staff-workflow[class*="workflow-transfer"] .cba-page-header .cba-header-actions {
+    flex-wrap: wrap;
+  }
+  .cba-staff-workflow[class*="workflow-supplies"] .card-body,
+  .cba-staff-workflow[class*="workflow-transfer"] .card-body {
+    overflow-wrap: anywhere;
+  }
+}
