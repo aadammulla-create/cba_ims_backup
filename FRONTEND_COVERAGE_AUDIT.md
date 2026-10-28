@@ -1,59 +1,45 @@
 # CBA IMS — Frontend Page Coverage Audit
 
-**Updated:** 2026-10-28
+Updated: 2026-10-28. Draft feature branch: `feat/cba-frontend-storefront-staff-polish` (private GitHub PR #1, **not merged**). Baseline `develop` at `1894d69d36c59601282d7caf54b79543af33c177` when created.
 
-**Branch:** `feat/cba-frontend-storefront-staff-polish` (private draft PR #1, unmerged). The baseline `develop` commit was `1894d69` when the frontend branch was created.
+## Scope and interpretation
 
-## Definitions and important limits
+This audit counts **standalone top-level Django HTML templates** within the 12 feature directories. It does not count reusable partials, shared root templates, error pages, or CSS files. Some files are print layouts or include-only aliases rather than a unique routable screen. A ✓ mark means a scoped frontend presentation patch exists **in the draft branch**, NOT that it has been run, browser-tested, accessibility-reviewed, or approved for production.
 
-This audit counts **standalone top-level Django HTML templates** in the 12 feature folders, not distinct URLs, user permissions, or reusable partials. It excludes root-level error/shared templates, print styles, and reusable HTML partials. “Patched” means presentation changes are committed on this draft feature branch; it does **not** mean browser-tested, fully redesigned, accessible, or production-ready.
+The public Student journey has presentation patches across all five standalone screens: home, catalog, request form, confirmation, and tracking. The availability result partial is styled by the catalog's scoped CSS; the reusable public tracking status card is also a modified partial. The Staff Custodian queue and detail pages are deliberately **not modified** because local Phase 4E2 work may still be uncommitted.
 
-The public Student journey (landing, catalog, reservation form, confirmation, tracking) has a storefront presentation pass across all five standalone pages. The Staff pages below receive consistent, scoped card, header, form, focus, spacing and mobile styling. The Phase 4E2 Custodian files are untouched to protect the user's local uncommitted work.
+## Coverage by feature
 
-## Coverage by module
-
-| Module | HTML templates | Patched in draft branch | Not patched |
+| Directory | Top-level HTML | Patched in draft | Remaining |
 | --- | ---: | ---: | ---: |
-| accounts | 6 | 1 | 5 |
+| accounts | 6 | 4 | 2 |
 | assignments | 6 | 5 | 1 |
-| audit | 1 | 0 | 1 |
+| audit | 1 | 1 | 0 |
 | borrowing | 9 | 9 | 0 |
-| disposals | 8 | 0 | 8 |
-| inventory | 15 | 3 | 12 |
+| disposals | 8 | 7 | 1 |
+| inventory | 15 | 6 | 9 |
 | maintenance | 10 | 5 | 5 |
-| organizations | 7 | 0 | 7 |
-| reports | 17 | 0 | 17 |
+| organizations | 7 | 7 | 0 |
+| reports | 17 | 16 | 1 |
 | student_reservations | 8 | 5 | 3 |
 | supplies | 8 | 8 | 0 |
 | transfers | 4 | 4 | 0 |
-| **Total** | **99** | **40** | **59** |
+| **Total** | **99** | **77** | **22** |
 
-### Student public journey
+## Patch highlights
 
-- ✓ `landing.html`: storefront landing and collection links
-- ✓ `catalog.html`: category browsing, schedule picker visuals
-- ✓ `reservation_form.html`: checkout progress and form presentation
-- ✓ `confirmation.html`: private token presentation and confirmation
-- ✓ `lookup.html`: status lookup and returned status styling
-- ○ `base_student.html`: shared template remains unchanged; existing navigation retained
-- ○ Custodian `custodian_list.html` and `custodian_detail.html`: intentionally deferred to avoid overwriting separate Phase 4E2 work
-
-### Staff areas patched in this branch
-
-- Dashboard and primary inventory list/detail/create-edit
-- Borrowing queue, active loans, detail, request, release, return, rejection, archive, and personal borrowings
-- Assignments: active/history, create, return, personal accountability
-- Maintenance queue, detail, assess, dispatch repair, complete repair
-- Supplies: catalog/detail, add/edit, stock in/out, adjustments, low stock and transactions
-- Transfers: pending queue, request, detail and history
+- **Student (5)**: storefront landing/catalog, checkout-style request form, success confirmation and tracking/status presentation.
+- **Staff operations**: dashboard; borrowing; assignments; supplies; transfers; high-use inventory and maintenance screens.
+- **Administration**: asset disposal review and approval screens; organizations directory, employees/departments/locations; user account forms; audit logs; inventory categories, brands and physical verification.
+- **Reports (16)**: on-screen reports dashboard, inventory, loan, accountability, audit, disposals, maintenance, supplies and transfers. Print-specific `reports/report_print.html` remains untouched to preserve printed output.
 
 ## Exact template checklist
 
-✓ = presentation patch in draft PR. ○ = no presentation patch in draft PR.
+✓ = presentation patch committed on draft branch. ○ = unchanged by this feature branch. Neither symbol is a runtime test result.
 
 ### accounts (6)
 
-✓ `templates/accounts/dashboard.html`; ○ `templates/accounts/landing.html`; ○ `templates/accounts/login.html`; ○ `templates/accounts/password_change.html`; ○ `templates/accounts/user_form.html`; ○ `templates/accounts/user_list.html`
+✓ `templates/accounts/dashboard.html`; ○ `templates/accounts/landing.html`; ○ `templates/accounts/login.html`; ✓ `templates/accounts/password_change.html`; ✓ `templates/accounts/user_form.html`; ✓ `templates/accounts/user_list.html`
 
 ### assignments (6)
 
@@ -61,7 +47,7 @@ The public Student journey (landing, catalog, reservation form, confirmation, tr
 
 ### audit (1)
 
-○ `templates/audit/audit_log_list.html`
+✓ `templates/audit/audit_log_list.html`
 
 ### borrowing (9)
 
@@ -69,11 +55,11 @@ The public Student journey (landing, catalog, reservation form, confirmation, tr
 
 ### disposals (8)
 
-○ `templates/disposals/disposal_approve_form.html`; ○ `templates/disposals/disposal_cancel_form.html`; ○ `templates/disposals/disposal_complete_form.html`; ○ `templates/disposals/disposal_detail.html`; ○ `templates/disposals/disposal_list.html`; ○ `templates/disposals/disposal_print.html`; ○ `templates/disposals/disposal_reject_form.html`; ○ `templates/disposals/disposal_request_form.html`
+✓ `templates/disposals/disposal_approve_form.html`; ✓ `templates/disposals/disposal_cancel_form.html`; ✓ `templates/disposals/disposal_complete_form.html`; ✓ `templates/disposals/disposal_detail.html`; ✓ `templates/disposals/disposal_list.html`; ○ `templates/disposals/disposal_print.html`; ✓ `templates/disposals/disposal_reject_form.html`; ✓ `templates/disposals/disposal_request_form.html`
 
 ### inventory (15)
 
-○ `templates/inventory/asset_confirm_delete.html`; ✓ `templates/inventory/asset_detail.html`; ✓ `templates/inventory/asset_form.html`; ✓ `templates/inventory/asset_list.html`; ○ `templates/inventory/asset_qr_label.html`; ○ `templates/inventory/asset_verify_form.html`; ○ `templates/inventory/brand_form.html`; ○ `templates/inventory/brand_list.html`; ○ `templates/inventory/bulk_qr_labels.html`; ○ `templates/inventory/bulk_qr_labels_print.html`; ○ `templates/inventory/category_form.html`; ○ `templates/inventory/category_list.html`; ○ `templates/inventory/physical_verification_list.html`; ○ `templates/inventory/qr_asset_lookup.html`; ○ `templates/inventory/scan_asset.html`
+○ `templates/inventory/asset_confirm_delete.html`; ✓ `templates/inventory/asset_detail.html`; ✓ `templates/inventory/asset_form.html`; ✓ `templates/inventory/asset_list.html`; ○ `templates/inventory/asset_qr_label.html`; ○ `templates/inventory/asset_verify_form.html`; ○ `templates/inventory/brand_form.html`; ✓ `templates/inventory/brand_list.html`; ○ `templates/inventory/bulk_qr_labels.html`; ○ `templates/inventory/bulk_qr_labels_print.html`; ○ `templates/inventory/category_form.html`; ✓ `templates/inventory/category_list.html`; ✓ `templates/inventory/physical_verification_list.html`; ○ `templates/inventory/qr_asset_lookup.html`; ○ `templates/inventory/scan_asset.html`
 
 ### maintenance (10)
 
@@ -81,11 +67,11 @@ The public Student journey (landing, catalog, reservation form, confirmation, tr
 
 ### organizations (7)
 
-○ `templates/organizations/department_form.html`; ○ `templates/organizations/department_list.html`; ○ `templates/organizations/employee_detail.html`; ○ `templates/organizations/employee_form.html`; ○ `templates/organizations/employee_list.html`; ○ `templates/organizations/location_form.html`; ○ `templates/organizations/location_list.html`
+✓ `templates/organizations/department_form.html`; ✓ `templates/organizations/department_list.html`; ✓ `templates/organizations/employee_detail.html`; ✓ `templates/organizations/employee_form.html`; ✓ `templates/organizations/employee_list.html`; ✓ `templates/organizations/location_form.html`; ✓ `templates/organizations/location_list.html`
 
 ### reports (17)
 
-○ `templates/reports/accountability_report.html`; ○ `templates/reports/asset_by_department.html`; ○ `templates/reports/asset_by_location.html`; ○ `templates/reports/asset_inventory_report.html`; ○ `templates/reports/audit_log_report.html`; ○ `templates/reports/borrowing_report.html`; ○ `templates/reports/disposal_report.html`; ○ `templates/reports/employee_accountability_report.html`; ○ `templates/reports/maintenance_cost_summary.html`; ○ `templates/reports/maintenance_report.html`; ○ `templates/reports/report_print.html`; ○ `templates/reports/reports_dashboard.html`; ○ `templates/reports/supply_department_usage.html`; ○ `templates/reports/supply_stock_report.html`; ○ `templates/reports/supply_transactions_report.html`; ○ `templates/reports/transfer_report.html`; ○ `templates/reports/verification_report.html`
+✓ `templates/reports/accountability_report.html`; ✓ `templates/reports/asset_by_department.html`; ✓ `templates/reports/asset_by_location.html`; ✓ `templates/reports/asset_inventory_report.html`; ✓ `templates/reports/audit_log_report.html`; ✓ `templates/reports/borrowing_report.html`; ✓ `templates/reports/disposal_report.html`; ✓ `templates/reports/employee_accountability_report.html`; ✓ `templates/reports/maintenance_cost_summary.html`; ✓ `templates/reports/maintenance_report.html`; ○ `templates/reports/report_print.html`; ✓ `templates/reports/reports_dashboard.html`; ✓ `templates/reports/supply_department_usage.html`; ✓ `templates/reports/supply_stock_report.html`; ✓ `templates/reports/supply_transactions_report.html`; ✓ `templates/reports/transfer_report.html`; ✓ `templates/reports/verification_report.html`
 
 ### student_reservations (8)
 
@@ -99,15 +85,17 @@ The public Student journey (landing, catalog, reservation form, confirmation, tr
 
 ✓ `templates/transfers/pending_transfer_list.html`; ✓ `templates/transfers/transfer_detail.html`; ✓ `templates/transfers/transfer_form.html`; ✓ `templates/transfers/transfer_history_list.html`
 
-## Remaining frontend work
+## Intentionally excluded or still needing work
 
-1. Keep `develop` and persistent SQLite databases untouched. Finish and integrate Phase 4E2 guard inspection / School ID collection separately before rebasing this draft PR.
-2. Verify current draft changes with Django checks and regression suite, then browser screenshots at 390, 768, 1440 widths on a verified disposable database; check Student workflow plus Admin/Faculty/Chair/Dean roles.
-3. Review unpatched operational templates: disposals, staff reporting/export, inventory QR/verification, organizations, account management, category/brand lists, specialist maintenance and supply partials.
-4. Finish shared shell design/accessibility consistency, printer layouts, keyboard focus, error states and responsive overflow checks. Do not assume “patched” pages are final designs.
+- Phase 4E2 Custodian templates (`student_reservations/custodian_list.html`, `custodian_detail.html`): avoid overwriting separate local guard inspection / School ID workflow changes.
+- Shared Student base template, specialized inventory QR/scan/print screens, certain maintenance and assignment views, login and error/print templates.
+- Standalone printable disposal/report templates: require a dedicated print layout acceptance pass rather than general dashboard CSS.
+- Remaining reusable partials, navbar/sidebar, keyboard navigation, accessibility, 390/768/1440 responsive overflow checks, and role-specific browser review.
 
-## Security and architecture
+## Merge gate and evidence
 
-The feature branch uses Bootstrap 5.3, HTMX and Alpine and adds only scoped CSS and Django template presentation. No server-side view, form, service, model, migration or permission code was edited. Existing CSRF controls, POST actions, search/filter endpoints, role guards and tracking-token logic should remain intact; structural source inspections have verified that controls were not intentionally removed. This is **not** a substitute for runtime tests.
+**Code-level checks performed:** file-scope diff inspections; Django `if`/`for`/`block` open/close count checks when generating each template; preserving existing form tags, CSRF markers, HTMX/JS action counts; CSS brace balance. These are structural checks, **not actual Django template rendering or browser acceptance**.
 
-No code from this draft PR should be merged into the canonical branch until Phase 4E2 and this frontend branch are independently regression- and browser-tested.
+**Not yet executed:** `python manage.py check`, full Django regression suite, true browser screenshots, request form submissions or export tests. Those must be run using isolated Django tests and the verified disposable SQLite browser database, never on the protected staff/student/integrated persistent databases. Review semantic status borders, form errors, CSP/static file serving and permissions before merging.
+
+Current feature branch is intended as a reviewable frontend staging branch only. No backend services, models, migrations, authorization, production site, Neon, Vercel or public GitHub repository were modified. Keep PR #1 draft until Phase 4E2 is safely integrated and the frontend has passed complete test and visual review.
