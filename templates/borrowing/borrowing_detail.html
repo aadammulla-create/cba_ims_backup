@@ -1,10 +1,15 @@
 {% extends 'base.html' %}
+{% load static %}
+
 
 {% block title %}Borrowing Record #{{ borrowing.pk }} - CBA IMS{% endblock %}
 {% block page_title %}Borrowing Record #{{ borrowing.pk }}{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff_polish.css' %}?v=20261028">
+{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center staff-borrowing-detail-modern">
     <div class="col-12 col-xl-10">
         <!-- Breadcrumb Navigation -->
         <nav aria-label="breadcrumb" class="mb-3">

@@ -1,10 +1,15 @@
 {% extends 'base.html' %}
+{% load static %}
+
 
 {% block title %}Active Equipment Loans - CBA IMS{% endblock %}
 {% block page_title %}Active Equipment Loans{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff_polish.css' %}?v=20261028">
+{% endblock %}
 {% block content %}
-<div class="container-fluid px-0">
+<div class="container-fluid px-0 staff-borrowing-modern">
     <!-- Institutional Page Header -->
     <div class="cba-page-header">
         <div>

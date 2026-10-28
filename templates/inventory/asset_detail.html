@@ -1,9 +1,12 @@
 {% extends 'base.html' %}
+{% load static %}
+
 
 {% block title %}{{ asset.asset_code }} - {{ asset.item_name }} - CBA IMS{% endblock %}
 {% block page_title %}Asset Details{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff_polish.css' %}?v=20261028">
 <style>
     /* Scoped DESIGN.md v2.0 refinements for Asset Detail panels, tables, and semantic badges */
     .asset-detail-shell .card {
@@ -98,7 +101,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="asset-detail-shell container-fluid px-0">
+<div class="asset-detail-shell container-fluid px-0 staff-asset-detail-modern">
 <!-- Breadcrumb Navigation -->
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb small mb-0">
