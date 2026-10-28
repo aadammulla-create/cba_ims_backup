@@ -244,8 +244,10 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="{% static 'css/staff_login.css' %}?v=20261028">
 </head>
-<body>
+<body class="cba-staff-login">
+  <a class="login-skip" href="#staff-login-form">Skip to sign in</a>
   <main class="shell">
     <section class="intro">
       <div class="brand">
@@ -294,7 +296,7 @@
           </div>
         {% endif %}
 
-        <form method="post" novalidate>
+        <form id="staff-login-form" method="post" novalidate>
           {% csrf_token %}
           {% if next %}
             <input type="hidden" name="next" value="{{ next }}">

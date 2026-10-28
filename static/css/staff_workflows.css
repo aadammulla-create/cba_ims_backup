@@ -307,3 +307,57 @@
     overflow-wrap: anywhere;
   }
 }
+
+
+/* Closing the maintenance loop: cancellation, replacement, reporting and archive. */
+.cba-staff-workflow.workflow-maintenance-cancel .card.border-secondary,
+.cba-staff-workflow.workflow-maintenance-replacement .card.border-danger {
+  border-top-width:4px !important;
+}
+.cba-staff-workflow.workflow-maintenance-cancel .card.border-secondary {
+  border-top-color:#738398 !important;
+}
+.cba-staff-workflow.workflow-maintenance-replacement .card.border-danger {
+  border-top-color:#c33e51 !important;
+}
+.cba-staff-workflow.workflow-maintenance-replacement .alert-danger {
+  background-color:#fff2f3;
+  border-color:#f1c4ca;
+  color:#822437;
+}
+.cba-staff-workflow.workflow-maintenance-cancel .alert-light,
+.cba-staff-workflow.workflow-maintenance-report .alert-info {
+  background-color:#f3f8ff !important;
+  border-color:#d9e7f5 !important;
+}
+.cba-staff-workflow.workflow-maintenance-history .cba-page-header,
+.cba-staff-workflow.workflow-maintenance-personal .cba-page-header {
+  padding:clamp(20px,2.8vw,30px);
+  border:1px solid #dce7f4;
+  border-radius:18px;
+  background:linear-gradient(120deg,#fff,#f3f8ff);
+  margin-bottom:22px;
+}
+.cba-staff-workflow.workflow-maintenance-history .card .form-select,
+.cba-staff-workflow.workflow-maintenance-history .card .form-control {
+  min-height:42px;
+}
+.cba-staff-workflow.workflow-maintenance-personal .kpi-card {
+  border:1px solid #dbe5ef;
+  border-radius:15px;
+  box-shadow:0 5px 20px rgba(20,47,88,.045);
+}
+.cba-staff-workflow.workflow-maintenance-report .card-header.bg-white {
+  background:linear-gradient(115deg,#fff,#f8fbff) !important;
+}
+.cba-staff-workflow.workflow-maintenance-report .card-header .text-danger,
+.cba-staff-workflow.workflow-maintenance-replacement .card-header .text-danger {
+  color:#a32843 !important;
+}
+@media(max-width:767.98px) {
+  .cba-staff-workflow.workflow-maintenance-history .cba-page-header,
+  .cba-staff-workflow.workflow-maintenance-personal .cba-page-header {
+    padding:18px;
+    border-radius:14px;
+  }
+}

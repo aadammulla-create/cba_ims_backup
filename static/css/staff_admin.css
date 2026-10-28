@@ -190,3 +190,112 @@
 .cba-admin-ui.admin-directory-employee-form .card-header {
   background:linear-gradient(120deg,#fff,#f5faff) !important;
 }
+
+
+/* Inventory actions: high-stakes deletion, QR lookup, physical verification and scanner. */
+.cba-admin-ui.admin-inventory .card-header.bg-dark {
+  background:linear-gradient(115deg,#183858,#275388) !important;
+  border-radius:16px 16px 0 0 !important;
+}
+.cba-admin-ui.admin-inventory .card-header.bg-danger {
+  background:linear-gradient(115deg,#98283b,#b93f51) !important;
+  border-radius:16px 16px 0 0 !important;
+  color:#fff;
+}
+.cba-admin-ui.admin-inventory-delete .admin-page-lead {
+  border-color:#efbdc5;
+  background:linear-gradient(120deg,#fff,#fff6f7);
+}
+.cba-admin-ui.admin-inventory-delete .admin-eyebrow {color:#ae2a41;}
+.cba-admin-ui.admin-inventory-delete .card.border-danger {
+  border-color:#e5a3ae !important;
+  overflow:hidden;
+}
+.cba-admin-ui.admin-inventory-delete .card-body .bg-light {
+  background:#f8fbff !important;
+  border-radius:12px !important;
+}
+.cba-admin-ui.admin-inventory-delete .card-body .col-8 {
+  min-width:0;
+  overflow-wrap:anywhere;
+}
+.cba-admin-ui.admin-inventory-delete form .btn-danger {min-height:44px;}
+.cba-admin-ui.admin-inventory-verify .card.border-primary {
+  border-color:#bfd5ef !important;
+}
+.cba-admin-ui.admin-inventory-verify .card-body > .bg-light {
+  background-color:#f4f8ff !important;
+  border-color:#dce8f5 !important;
+  border-radius:13px !important;
+}
+.cba-admin-ui.admin-inventory-verify .card-body > .bg-light img {
+  flex:0 0 auto;
+  object-fit:cover;
+}
+.cba-admin-ui.admin-inventory-scanner .scanner-viewport {
+  border-radius:17px;
+  border-color:#173651;
+  box-shadow:0 12px 25px rgba(12,31,56,.14);
+}
+.cba-admin-ui.admin-inventory-scanner .scanner-overlay {
+  max-width:calc(100% - 48px);
+}
+.cba-admin-ui.admin-inventory-scanner #scanner-feedback,
+.cba-admin-ui.admin-inventory-scanner #scanner-error {
+  border:1px solid #d9e6f1;
+  border-radius:11px;
+}
+.cba-admin-ui.admin-inventory-scanner #btn-start-camera {
+  border-radius:11px;
+  min-height:50px;
+}
+.cba-admin-ui.admin-inventory-scanner .card-footer {
+  background:#f5f9fe !important;
+  border-top-color:#e4ebf3;
+}
+.cba-admin-ui.admin-inventory-qr-lookup .bg-dark.text-white {
+  background:linear-gradient(115deg,#163451,#28558a) !important;
+}
+.cba-admin-ui.admin-inventory-qr-lookup .card.overflow-hidden {
+  border:1px solid #d8e6f3 !important;
+}
+.cba-admin-ui.admin-inventory-qr-lookup .card-body .row > div {
+  min-width:0;
+}
+.cba-admin-ui.admin-inventory-qr-lookup .font-monospace {
+  overflow-wrap:anywhere;
+}
+.cba-admin-ui.admin-inventory-bulk-qr .card .form-control,
+.cba-admin-ui.admin-inventory-bulk-qr .card .form-select {
+  min-width:0;
+}
+.cba-admin-ui.admin-inventory-bulk-qr .page-header {
+  flex-wrap:wrap;
+  gap:14px;
+}
+.cba-admin-ui.admin-inventory-bulk-qr .page-header .btn {
+  min-height:44px;
+}
+.cba-admin-ui.admin-inventory-bulk-qr .card img {
+  max-width:100%;
+  height:auto;
+}
+.cba-admin-ui.admin-inventory-brand .admin-form-help,
+.cba-admin-ui.admin-inventory-category .admin-form-help {
+  padding:14px;
+}
+@media(max-width:767.98px) {
+  .cba-admin-ui.admin-inventory-delete .card-body .row .col-4 {
+    width:38%;
+  }
+  .cba-admin-ui.admin-inventory-delete .card-body .row .col-8 {
+    width:62%;
+  }
+  .cba-admin-ui.admin-inventory-scanner .scanner-viewport {
+    min-height:245px;
+  }
+  .cba-admin-ui.admin-inventory-scanner .card-header {
+    flex-wrap:wrap;
+    gap:8px;
+  }
+}
