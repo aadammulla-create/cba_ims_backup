@@ -3,17 +3,26 @@
 
 {% block title %}Reserve Equipment — CBA Equipment Reservations{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/student_storefront.css' %}?v=20261028">
+{% endblock %}
+
 {% block content %}
-<div class="cba-page-wrap">
+<div class="cba-page-wrap student-storefront-request">
 
     <!-- Form Breadcrumb & Heading -->
-    <header class="student-page-heading mb-4">
+    <header class="student-page-heading storefront-request-heading mb-4">
         <a class="student-back" href="{% url 'student_reservations:catalog' %}">
             <i class="bi bi-arrow-left me-1"></i> Back to equipment
         </a>
-        <span class="cba-kicker">STEP 2 OF 2 · YOUR REQUEST</span>
-        <h1 class="h2 fw-bold text-dark mb-1">Complete your reservation</h1>
-        <p class="text-secondary">Provide your student contact details to submit your reservation. No account needed.</p>
+        <div class="storefront-eyebrow mt-3">STEP 2 OF 2 &bull; RESERVATION REQUEST</div>
+        <h1 class="h2 fw-bold text-dark mb-2">Complete your reservation</h1>
+        <p class="text-secondary mb-3">Review your equipment and pickup times, then tell the CBA Property Office how to contact you. No account required.</p>
+        <div class="storefront-checkout-steps" aria-label="Reservation progress">
+            <span class="is-complete"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Choose equipment</span>
+            <span class="is-current" aria-current="step"><i class="bi bi-pencil-square" aria-hidden="true"></i> Request details</span>
+            <span><i class="bi bi-hourglass-split" aria-hidden="true"></i> Await approval</span>
+        </div>
     </header>
 
     {{ category_types_data|json_script:"category-types-data" }}
@@ -25,7 +34,7 @@
         <div class="row g-4 align-items-start">
             <!-- Left Column: Form Details Card -->
             <div class="col-12 col-lg-7 col-xl-8">
-                <div class="card border shadow-xs p-3 p-md-4 bg-white" style="border-radius: 14px;">
+                <div class="card border shadow-xs p-3 p-md-4 bg-white storefront-form-surface" style="border-radius: 14px;">
 
                     {% if form.non_field_errors %}
                     <div class="alert alert-danger py-2.5 px-3 mb-4 d-flex align-items-center gap-2 small rounded border" role="alert">
@@ -156,7 +165,7 @@
 
                     <!-- SECTION 2: Student Details -->
                     <div class="mb-4">
-                        <span class="cba-kicker">STUDENT INFORMATION</span>
+                        <span class="cba-kicker"><i class="bi bi-person-lines-fill me-1" aria-hidden="true"></i> STUDENT INFORMATION</span>
                         <h2 class="h5 fw-bold text-dark mb-3">Your details</h2>
 
                         <div class="row g-3">
@@ -201,7 +210,7 @@
                                             <i class="bi bi-chat-left-dots text-primary me-1"></i> Contact Information <span class="text-danger">*</span>
                                         </label>
                                         <p class="text-secondary small mb-0" style="font-size: 0.8rem; line-height: 1.4;">
-                                            Provide an email address or mobile number so the Property Office can send updates.
+                                            Provide an email address or mobile number so Property Office staff can contact you if needed. Automated SMS and email notifications are not sent.
                                         </p>
                                     </div>
 
@@ -361,7 +370,7 @@
                     </div>
 
                     <!-- Bottom Action Row -->
-                    <div class="pt-3 border-top border-light-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
+                    <div class="storefront-submit-row pt-3 border-top border-light-subtle d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
                         <div class="text-muted small" style="font-size: 0.8rem;">
                             <i class="bi bi-info-circle me-1 text-primary"></i>
                             <strong>Physical School ID Custody Policy:</strong> Bring your original School ID when collecting approved equipment.
