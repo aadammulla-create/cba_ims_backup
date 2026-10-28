@@ -3,8 +3,12 @@
 
 {% block title %}CBA Equipment Reservations — College of Business Administration{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/student_storefront.css' %}?v=20261028">
+{% endblock %}
+
 {% block content %}
-<div class="cba-page-wrap">
+<div class="cba-page-wrap student-storefront-home">
 
   <!-- Hero Section: Balanced Two-Column Composition -->
   <section class="student-hero-modern py-2 py-md-4 mb-4" aria-labelledby="student-home-title">
@@ -12,7 +16,7 @@
       
       <!-- Left Column: Primary Messaging & CTAs -->
       <div class="col-12 col-lg-7">
-        <span class="cba-kicker">COLLEGE OF BUSINESS ADMINISTRATION &bull; INSTRUCTIONAL SERVICES</span>
+        <span class="cba-kicker">CBA EQUIPMENT COLLECTION &bull; STUDENT SERVICES</span>
         <h1 id="student-home-title" class="fw-bold text-dark display-6 mb-3">
           Reserve equipment for your next class.
         </h1>
@@ -85,6 +89,17 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <section class="storefront-collection mb-4" aria-labelledby="storefront-collection-title">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+      <div><span class="storefront-eyebrow">EXPLORE THE CATALOG</span><h2 id="storefront-collection-title" class="storefront-section-title mb-0">Find what you need for class</h2></div>
+      <a href="{% url 'student_reservations:catalog' %}" class="small fw-semibold text-decoration-none">Browse all equipment <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+    <div class="row g-3">
+      <div class="col-12 col-md-6"><a class="storefront-category" href="{% url 'student_reservations:catalog' %}"><span class="storefront-category-icon" aria-hidden="true"><i class="bi bi-projector"></i></span><span><strong class="d-block fs-5 mb-1">Projectors</strong><span class="storefront-category-caption d-block mb-2">Explore presentation equipment and check availability for your schedule.</span><span class="storefront-category-link">View projectors <i class="bi bi-arrow-right" aria-hidden="true"></i></span></span></a></div>
+      <div class="col-12 col-md-6"><a class="storefront-category" href="{% url 'student_reservations:catalog' %}"><span class="storefront-category-icon" aria-hidden="true"><i class="bi bi-grid-3x3-gap"></i></span><span><strong class="d-block fs-5 mb-1">Full equipment collection</strong><span class="storefront-category-caption d-block mb-2">Browse the categories currently offered by the CBA Property Office.</span><span class="storefront-category-link">Explore catalog <i class="bi bi-arrow-right" aria-hidden="true"></i></span></span></a></div>
     </div>
   </section>
 

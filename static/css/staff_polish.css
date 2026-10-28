@@ -1,0 +1,33 @@
+/* Scoped visual polish for the Staff dashboard and asset register only. */
+.staff-operations-modern,.staff-inventory-modern { --work-border:#dce6ef; }
+.staff-operations-modern .dashboard-intro {
+  align-items:center; padding:clamp(20px,3vw,32px); border:1px solid #dce7f5; border-radius:20px;
+  background:radial-gradient(circle at 95% 10%,#dceafe,transparent 38%),linear-gradient(125deg,#fff,#f4f8ff);
+  margin-bottom:24px;
+}
+.staff-operations-modern .dashboard-intro .eyebrow { color:#1e55a4; font-size:.68rem; }
+.staff-operations-modern .dashboard-intro h1 { font-size:clamp(1.65rem,2.7vw,2.2rem); letter-spacing:-.04em; margin:8px 0; }
+.staff-operations-modern .dashboard-intro p { max-width:58ch; color:#54687e; font-size:.84rem; line-height:1.6; }
+.staff-operations-modern .dashboard-intro .dashboard-btn { min-height:43px; border-radius:10px; padding-inline:14px; }
+.staff-operations-modern .dashboard-panel { border-color:var(--work-border); border-radius:16px; box-shadow:0 4px 18px rgba(20,47,88,.04); }
+.staff-operations-modern .kpi-card { border-color:var(--work-border) !important; border-radius:15px; box-shadow:0 4px 16px rgba(20,47,88,.04); }
+.staff-operations-modern .kpi-card.kpi-interactive:hover { border-color:#a0bfe9 !important; box-shadow:0 10px 25px rgba(20,47,88,.07); }
+.staff-inventory-modern .cba-page-header {
+  padding:clamp(20px,3vw,30px); border:1px solid #dce7f4; border-radius:20px;
+  background:linear-gradient(115deg,#fff 7%,#f4f8ff);
+}
+.staff-inventory-modern .cba-header-title { font-size:clamp(1.4rem,2.4vw,1.9rem); letter-spacing:-.035em; }
+.staff-inventory-modern .cba-header-subtitle { max-width:68ch; line-height:1.6; }
+.staff-inventory-modern .cba-page-header .btn { min-height:43px; border-radius:10px; }
+.staff-inventory-modern .cba-panel { border-color:var(--work-border); border-radius:16px; box-shadow:0 5px 22px rgba(20,47,88,.04); }
+.staff-inventory-modern #assetFilterForm .form-control,
+.staff-inventory-modern #assetFilterForm .form-select,
+.staff-inventory-modern #assetFilterForm .input-group-text { min-height:43px; border-color:#d5e0eb; }
+.staff-operations-modern .dashboard-btn:focus-visible,
+.staff-inventory-modern .btn:focus-visible,
+.staff-inventory-modern .form-control:focus-visible { outline:3px solid #8bb6f5; outline-offset:2px; }
+@media(max-width:767.98px) {
+  .staff-operations-modern .dashboard-intro { flex-direction:column; align-items:stretch; border-radius:16px; }
+  .staff-operations-modern .dashboard-actions { width:100%; }
+  .staff-inventory-modern .cba-page-header { border-radius:15px; }
+}

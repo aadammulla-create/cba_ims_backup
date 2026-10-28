@@ -3,8 +3,13 @@
 {% block title %}{{ page_title }} - CBA IMS{% endblock %}
 {% block page_title %}{{ page_title }}{% endblock %}
 
+{% load static %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff_polish.css' %}?v=20261028">
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid px-0">
+<div class="container-fluid px-0 staff-inventory-modern">
     <!-- Institutional Page Header -->
     <div class="cba-page-header">
         <div>

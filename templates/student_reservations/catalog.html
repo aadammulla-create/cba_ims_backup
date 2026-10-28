@@ -3,12 +3,17 @@
 
 {% block title %}Find Equipment — CBA Equipment Reservations{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/student_storefront.css' %}?v=20261028">
+{% endblock %}
+
 {% block content %}
-<div class="cba-page-wrap">
-    <header class="student-page-heading mb-3">
-        <span class="cba-kicker">EQUIPMENT CATALOG</span>
-        <h1 class="h2 fw-bold text-dark mb-1">Find equipment</h1>
-        <p class="text-secondary">Choose your pickup and return times to see real-time availability for your class or event.</p>
+<div class="cba-page-wrap student-storefront-catalog">
+    <header class="storefront-catalog-banner mb-4" aria-labelledby="catalog-title">
+        <div><span class="storefront-eyebrow">CBA EQUIPMENT CATALOG</span><h1 id="catalog-title">Find equipment</h1>
+        <p>Explore equipment, select your pickup and return schedule, and request the items available for your class. No payments or student account needed.</p>
+        <a href="#schedule-selector" class="storefront-banner-link">Check availability <i class="bi bi-arrow-down" aria-hidden="true"></i></a></div>
+        <div class="storefront-catalog-illustration" aria-hidden="true"><i class="bi bi-projector"></i></div>
     </header>
 
     <div class="student-policy-note mb-4 d-flex align-items-center gap-2">
@@ -17,7 +22,7 @@
     </div>
 
     <!-- Schedule Selector Card -->
-    <div class="card border shadow-xs mb-4 p-3 p-md-4 bg-white" style="border-radius: 14px; border-color: #cbd5e1;">
+    <div id="schedule-selector" class="card border shadow-xs mb-4 p-3 p-md-4 bg-white storefront-schedule-card" style="border-radius: 14px; border-color: #cbd5e1;">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <span class="cba-kicker mb-0">STEP 1 OF 2 &bull; CHECK SCHEDULE</span>
