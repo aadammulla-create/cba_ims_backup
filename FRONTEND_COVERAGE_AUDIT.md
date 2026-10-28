@@ -1,36 +1,55 @@
-# CBA IMS — Frontend Coverage Inventory
+# CBA IMS — Frontend Page Coverage Audit
 
-Updated: 2026-10-28. Working branch: `feat/cba-frontend-storefront-staff-polish`, draft PR #1 against private `develop`.
+**Updated:** 2026-10-28
 
-**Audit scope:** Django top-level HTML templates under twelve feature directories. Shared top-level templates, reusable partials, error pages, JavaScript and print/PDF styles require separate review. These counts are templates, not a census of distinct routable views or permissions.
+**Branch:** `feat/cba-frontend-storefront-staff-polish` (private draft PR #1, unmerged). The baseline `develop` commit was `1894d69` when the frontend branch was created.
 
-## Current frontend changes
+## Definitions and important limits
 
-- Public Student screens: **5 of 5** standalone pages have a scoped storefront presentation pass (home, catalog, reservation form, confirmation, tracking). Included availability results and status cards inherit their page-specific styling. The shared student base template is unchanged.
-- Staff: **7** key standalone templates have a scoped presentation pass (dashboard, asset list/detail/form, active loans/detail, maintenance queue). Other staff pages retain their existing interface and remain on the roadmap.
-- These changes are **not yet browser-tested**; they are draft code subject to testing and design review. No server-side access, booking logic, or database changes were made.
+This audit counts **standalone top-level Django HTML templates** in the 12 feature folders, not distinct URLs, user permissions, or reusable partials. It excludes root-level error/shared templates, print styles, and reusable HTML partials. “Patched” means presentation changes are committed on this draft feature branch; it does **not** mean browser-tested, fully redesigned, accessible, or production-ready.
 
-## Template inventory (excluding partials)
+The public Student journey (landing, catalog, reservation form, confirmation, tracking) has a storefront presentation pass across all five standalone pages. The Staff pages below receive consistent, scoped card, header, form, focus, spacing and mobile styling. The Phase 4E2 Custodian files are untouched to protect the user's local uncommitted work.
 
-| Directory | Templates | Touched in feature branch | Untouched |
+## Coverage by module
+
+| Module | HTML templates | Patched in draft branch | Not patched |
 | --- | ---: | ---: | ---: |
 | accounts | 6 | 1 | 5 |
-| assignments | 6 | 0 | 6 |
+| assignments | 6 | 5 | 1 |
 | audit | 1 | 0 | 1 |
-| borrowing | 9 | 2 | 7 |
+| borrowing | 9 | 9 | 0 |
 | disposals | 8 | 0 | 8 |
 | inventory | 15 | 3 | 12 |
-| maintenance | 10 | 1 | 9 |
+| maintenance | 10 | 5 | 5 |
 | organizations | 7 | 0 | 7 |
 | reports | 17 | 0 | 17 |
 | student_reservations | 8 | 5 | 3 |
-| supplies | 8 | 0 | 8 |
-| transfers | 4 | 0 | 4 |
-| **Total** | **99** | **12** | **87** |
+| supplies | 8 | 8 | 0 |
+| transfers | 4 | 4 | 0 |
+| **Total** | **99** | **40** | **59** |
+
+### Student public journey
+
+- ✓ `landing.html`: storefront landing and collection links
+- ✓ `catalog.html`: category browsing, schedule picker visuals
+- ✓ `reservation_form.html`: checkout progress and form presentation
+- ✓ `confirmation.html`: private token presentation and confirmation
+- ✓ `lookup.html`: status lookup and returned status styling
+- ○ `base_student.html`: shared template remains unchanged; existing navigation retained
+- ○ Custodian `custodian_list.html` and `custodian_detail.html`: intentionally deferred to avoid overwriting separate Phase 4E2 work
+
+### Staff areas patched in this branch
+
+- Dashboard and primary inventory list/detail/create-edit
+- Borrowing queue, active loans, detail, request, release, return, rejection, archive, and personal borrowings
+- Assignments: active/history, create, return, personal accountability
+- Maintenance queue, detail, assess, dispatch repair, complete repair
+- Supplies: catalog/detail, add/edit, stock in/out, adjustments, low stock and transactions
+- Transfers: pending queue, request, detail and history
 
 ## Exact template checklist
 
-✓ = scoped frontend update in this PR; ○ = no change in this PR. **Neither mark is a statement of test pass or production readiness.**
+✓ = presentation patch in draft PR. ○ = no presentation patch in draft PR.
 
 ### accounts (6)
 
@@ -38,7 +57,7 @@ Updated: 2026-10-28. Working branch: `feat/cba-frontend-storefront-staff-polish`
 
 ### assignments (6)
 
-○ `templates/assignments/assignment_confirm_return.html`; ○ `templates/assignments/assignment_form.html`; ○ `templates/assignments/assignment_history_list.html`; ○ `templates/assignments/current_assignment_list.html`; ○ `templates/assignments/my_accountability.html`; ○ `templates/assignments/printable_accountability.html`
+✓ `templates/assignments/assignment_confirm_return.html`; ✓ `templates/assignments/assignment_form.html`; ✓ `templates/assignments/assignment_history_list.html`; ✓ `templates/assignments/current_assignment_list.html`; ✓ `templates/assignments/my_accountability.html`; ○ `templates/assignments/printable_accountability.html`
 
 ### audit (1)
 
@@ -46,7 +65,7 @@ Updated: 2026-10-28. Working branch: `feat/cba-frontend-storefront-staff-polish`
 
 ### borrowing (9)
 
-✓ `templates/borrowing/borrowing_active_list.html`; ✓ `templates/borrowing/borrowing_detail.html`; ○ `templates/borrowing/borrowing_form.html`; ○ `templates/borrowing/borrowing_history_list.html`; ○ `templates/borrowing/borrowing_list.html`; ○ `templates/borrowing/borrowing_reject_form.html`; ○ `templates/borrowing/borrowing_release_form.html`; ○ `templates/borrowing/borrowing_return_form.html`; ○ `templates/borrowing/my_borrowings.html`
+✓ `templates/borrowing/borrowing_active_list.html`; ✓ `templates/borrowing/borrowing_detail.html`; ✓ `templates/borrowing/borrowing_form.html`; ✓ `templates/borrowing/borrowing_history_list.html`; ✓ `templates/borrowing/borrowing_list.html`; ✓ `templates/borrowing/borrowing_reject_form.html`; ✓ `templates/borrowing/borrowing_release_form.html`; ✓ `templates/borrowing/borrowing_return_form.html`; ✓ `templates/borrowing/my_borrowings.html`
 
 ### disposals (8)
 
@@ -58,7 +77,7 @@ Updated: 2026-10-28. Working branch: `feat/cba-frontend-storefront-staff-polish`
 
 ### maintenance (10)
 
-○ `templates/maintenance/maintenance_assess_form.html`; ○ `templates/maintenance/maintenance_cancel_form.html`; ○ `templates/maintenance/maintenance_complete_form.html`; ○ `templates/maintenance/maintenance_detail.html`; ○ `templates/maintenance/maintenance_for_replacement_form.html`; ○ `templates/maintenance/maintenance_history_list.html`; ✓ `templates/maintenance/maintenance_list.html`; ○ `templates/maintenance/maintenance_report_form.html`; ○ `templates/maintenance/maintenance_start_repair_form.html`; ○ `templates/maintenance/my_maintenance_list.html`
+✓ `templates/maintenance/maintenance_assess_form.html`; ○ `templates/maintenance/maintenance_cancel_form.html`; ✓ `templates/maintenance/maintenance_complete_form.html`; ✓ `templates/maintenance/maintenance_detail.html`; ○ `templates/maintenance/maintenance_for_replacement_form.html`; ○ `templates/maintenance/maintenance_history_list.html`; ✓ `templates/maintenance/maintenance_list.html`; ○ `templates/maintenance/maintenance_report_form.html`; ✓ `templates/maintenance/maintenance_start_repair_form.html`; ○ `templates/maintenance/my_maintenance_list.html`
 
 ### organizations (7)
 
@@ -74,20 +93,21 @@ Updated: 2026-10-28. Working branch: `feat/cba-frontend-storefront-staff-polish`
 
 ### supplies (8)
 
-○ `templates/supplies/low_stock_list.html`; ○ `templates/supplies/stock_adjustment_form.html`; ○ `templates/supplies/stock_in_form.html`; ○ `templates/supplies/stock_out_form.html`; ○ `templates/supplies/supply_detail.html`; ○ `templates/supplies/supply_form.html`; ○ `templates/supplies/supply_list.html`; ○ `templates/supplies/transaction_list.html`
+✓ `templates/supplies/low_stock_list.html`; ✓ `templates/supplies/stock_adjustment_form.html`; ✓ `templates/supplies/stock_in_form.html`; ✓ `templates/supplies/stock_out_form.html`; ✓ `templates/supplies/supply_detail.html`; ✓ `templates/supplies/supply_form.html`; ✓ `templates/supplies/supply_list.html`; ✓ `templates/supplies/transaction_list.html`
 
 ### transfers (4)
 
-○ `templates/transfers/pending_transfer_list.html`; ○ `templates/transfers/transfer_detail.html`; ○ `templates/transfers/transfer_form.html`; ○ `templates/transfers/transfer_history_list.html`
+✓ `templates/transfers/pending_transfer_list.html`; ✓ `templates/transfers/transfer_detail.html`; ✓ `templates/transfers/transfer_form.html`; ✓ `templates/transfers/transfer_history_list.html`
 
-## Prioritized remainder
+## Remaining frontend work
 
-1. Protect and integrate the separate Phase 4E2 guard inspection and School ID collection work. The `student_reservations/custodian_detail.html` and `custodian_list.html` templates are intentionally untouched by this frontend branch.
-2. Verify present draft frontend changes on disposable SQLite: Django checks, full tests, screenshots at 390px/768px/1440px, Student booking and tracking, Staff roles and navigation.
-3. Staff operational processes: assignment forms, borrowing request/release/return screens, maintenance assessment and repair, transfers, disposals, supplies and category/brand management.
-4. Reporting, administrative, QR, audit, employee/accountability, and print templates; mobile/accessibility review by role.
-5. End-to-end visual consistency; test responsive overflow and keyboard interaction before merge.
+1. Keep `develop` and persistent SQLite databases untouched. Finish and integrate Phase 4E2 guard inspection / School ID collection separately before rebasing this draft PR.
+2. Verify current draft changes with Django checks and regression suite, then browser screenshots at 390, 768, 1440 widths on a verified disposable database; check Student workflow plus Admin/Faculty/Chair/Dean roles.
+3. Review unpatched operational templates: disposals, staff reporting/export, inventory QR/verification, organizations, account management, category/brand lists, specialist maintenance and supply partials.
+4. Finish shared shell design/accessibility consistency, printer layouts, keyboard focus, error states and responsive overflow checks. Do not assume “patched” pages are final designs.
 
-## Engineering constraints
+## Security and architecture
 
-Preserve the current Django architecture, Bootstrap 5.3/HTMX/Alpine, no React/Tailwind or frontend build system. No database writes, migrations, backend edits, permission edits, public GitHub changes or pushes to `develop` until explicit approval. Current CSS is loaded per page to avoid unexpected global effects. No screenshot or automated Django regression test has been executed from this remote GitHub-only implementation environment.
+The feature branch uses Bootstrap 5.3, HTMX and Alpine and adds only scoped CSS and Django template presentation. No server-side view, form, service, model, migration or permission code was edited. Existing CSRF controls, POST actions, search/filter endpoints, role guards and tracking-token logic should remain intact; structural source inspections have verified that controls were not intentionally removed. This is **not** a substitute for runtime tests.
+
+No code from this draft PR should be merged into the canonical branch until Phase 4E2 and this frontend branch are independently regression- and browser-tested.
