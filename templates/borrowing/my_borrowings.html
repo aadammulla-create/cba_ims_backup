@@ -1,9 +1,15 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}My Equipment Borrowings - CBA IMS{% endblock %}
 {% block page_title %}My Equipment Borrowings{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/staff_workflows.css' %}?v=20261028">
+{% endblock %}
+
 {% block content %}
+<div class="cba-staff-workflow workflow-borrowing workflow-personal">
 <div class="container-fluid px-0">
     <!-- Institutional Page Header -->
     <div class="cba-page-header">
@@ -351,5 +357,6 @@
     </div>
 
     {% endif %}
+</div>
 </div>
 {% endblock %}
