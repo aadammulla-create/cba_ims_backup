@@ -164,3 +164,80 @@
   .cba-staff-workflow .cba-panel,
   .cba-staff-workflow .btn { transition: none !important; }
 }
+
+
+/* Assignment custody and maintenance inspection workflows. */
+.cba-staff-workflow[class*="workflow-assignment"] .cba-page-header {
+  border-color: #d8e6f2;
+}
+.cba-staff-workflow[class*="workflow-assignment"] .card-header.bg-white,
+.cba-staff-workflow[class*="workflow-maintenance"] .card-header.bg-white {
+  background: linear-gradient(115deg, #fff, #f8fbff) !important;
+  border-bottom: 1px solid #e2eaf3 !important;
+}
+.cba-staff-workflow[class*="workflow-assignment"] .card-header h5,
+.cba-staff-workflow[class*="workflow-maintenance"] .card-header h5 {
+  line-height: 1.45;
+  letter-spacing: -.015em;
+}
+.cba-staff-workflow[class*="workflow-assignment"] .table td,
+.cba-staff-workflow[class*="workflow-assignment"] .table th {
+  padding-block: 9px;
+  overflow-wrap: anywhere;
+}
+.cba-staff-workflow.workflow-assignment-current .search-filter-bar {
+  padding: 2px;
+}
+.cba-staff-workflow.workflow-assignment-current .search-filter-bar .input-group {
+  min-width: 0;
+}
+.cba-staff-workflow.workflow-assignment-current #assignmentFilterControls {
+  min-width: 0;
+  row-gap: 10px;
+}
+.cba-staff-workflow.workflow-assignment-current #assignmentFilterControls .form-select {
+  min-height: 42px;
+}
+.cba-staff-workflow.workflow-assignment-return .card-body > .bg-light,
+.cba-staff-workflow.workflow-assignment-form .card-body > .bg-light {
+  background: #f4f8ff !important;
+}
+.cba-staff-workflow.workflow-assignment-personal .card-body > .row h4 {
+  color: #183a66;
+  letter-spacing: -.015em;
+}
+.cba-staff-workflow[class*="workflow-maintenance"] .card > .card-body > .alert {
+  border: 1px solid #dce6f0 !important;
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+.cba-staff-workflow.workflow-maintenance-start .alert-warning {
+  background-color: #fff9ee !important;
+  border-color: #efdfb8 !important;
+}
+.cba-staff-workflow.workflow-maintenance-complete .alert-info {
+  background-color: #f0f7ff !important;
+  border-color: #cfe2f5 !important;
+}
+.cba-staff-workflow.workflow-maintenance-detail .card-body .row.g-4,
+.cba-staff-workflow.workflow-assignment-history .card-body {
+  min-width: 0;
+}
+.cba-staff-workflow.workflow-maintenance-detail .badge,
+.cba-staff-workflow.workflow-assignment-return .badge {
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767.98px) {
+  .cba-staff-workflow.workflow-assignment-current #assignmentFilterControls .form-select {
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+  .cba-staff-workflow.workflow-assignment-return .table th {
+    width: auto !important;
+  }
+  .cba-staff-workflow[class*="workflow-maintenance"] .card-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+}
